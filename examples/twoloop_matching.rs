@@ -1,20 +1,3 @@
-# vakint
-
-Library for the computation of (single-scale) vacuum integrals in High Energy Physics.
-
-The code will perform the matching of user input onto known topologies, and then perform their computation either:
-
-* analytically, if the topology is known, using tensor reduction and parametric integration by parts.
-To this end, it uses a combination of `Symbolica` and `FORM` scripts, and `FMFT` for the four-loop case.
-
-* numerically, if the topology is not known, using the sector decomposition algorithm implemented in `pySecDec`.
-
-## Usage
-
-Checkout the examples directory for a few examples of how to use this library.
-For example:
-
-```rust
 use symbolica::atom::Atom;
 use vakint::{Vakint, VakintExpression, VakintSettings};
 
@@ -49,8 +32,3 @@ fn main() {
         VakintExpression::try_from(output).unwrap()
     );
 }
-```
-
-yields:
-
-![Result](result_readme.png)
