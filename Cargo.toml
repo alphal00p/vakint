@@ -11,3 +11,13 @@ anyhow = "1.0.86"
 thiserror = "1.0.63"
 arrayvec = "0.7.4"
 colored = "2.1.0"
+string-template-plus = "*"
+version-compare = "*"
+regex = "*"
+log = "*"
+[dependencies.phf]
+version = "*"
+features = ["macros"]
+
+[dev-dependencies]
+test-log = "*"

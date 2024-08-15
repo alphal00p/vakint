@@ -1,31 +1,9 @@
-use colored::Colorize;
+mod test_utils;
 use symbolica::atom::Atom;
-use vakint::{Vakint, VakintError, VakintSettings};
+use test_utils::{compare_output, get_vakint};
+use vakint::{VakintError, VakintSettings};
 
-fn get_vakint(vakint_settings: VakintSettings) -> Vakint {
-    match Vakint::new(Some(vakint_settings)) {
-        Ok(r) => r,
-        Err(err) => panic!("Failed to initialize vakint: {}", err),
-    }
-}
-
-fn compare_output(output: Result<Atom, VakintError>, expected_output: Atom) {
-    match output {
-        Ok(r) => {
-            if r != expected_output {
-                println!(
-                    "Output does not match expected output:\n{}\n!=\n{}",
-                    format!("{}", r).red(),
-                    format!("{}", expected_output).green()
-                );
-            }
-            assert_eq!(r, expected_output)
-        }
-        Err(err) => panic!("Error: {}", err),
-    }
-}
-
-#[test]
+#[test_log::test]
 fn test_1l_matching() {
     let vakint = get_vakint(VakintSettings {
         allow_unknown_integrals: false,
@@ -141,7 +119,7 @@ fn test_2l_matching_3prop() {
     );
 }
 
-#[test]
+#[test_log::test]
 fn test_2l_matching_pinched() {
     let vakint = get_vakint(VakintSettings {
         allow_unknown_integrals: false,

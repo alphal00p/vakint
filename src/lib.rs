@@ -1,17 +1,60 @@
 use anyhow::Result;
 use colored::Colorize;
+#[allow(unused)]
+use log::{debug, info, warn};
+
+use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},
-    fmt,
+    env, fmt, fs,
+    process::{Command, ExitStatus, Stdio},
 };
+use string_template_plus::{Render, RenderOptions, Template};
 use symbolica::{
     atom::{representation::InlineNum, AsAtomView, Atom, AtomView, SliceType, Symbol},
     coefficient::CoefficientView,
     fun,
     id::{Condition, Match, MatchSettings, Pattern, PatternRestriction, WildcardAndRestriction},
+    printer::{AtomPrinter, PrintOptions},
     state::{FunctionAttribute, State},
 };
 use thiserror::Error;
+use version_compare::{compare_to, Cmp};
+
+use phf::phf_map;
+
+static MINIMAL_FORM_VERSION: &str = "4.2.1";
+
+#[allow(unused)]
+static METRIC_SYMBOL: &str = "g";
+static LOOP_MOMENTUM_SYMBOL: &str = "k";
+static EXTERNAL_MOMENTUM_SYMBOL: &str = "p";
+
+static FORM_SRC: phf::Map<&'static str, &'static str> = phf_map! {
+    "integrateduv.frm" =>  include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/form_src/integrateduv.frm"
+    )),
+    "tensorreduce.frm" =>  include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/form_src/tensorreduce.frm"
+    )),
+    "pvtab10.h" =>  include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/form_src/pvtab10.h"
+    )),
+    "fmft.frm" =>  include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/form_src/fmft.frm"
+    )),
+};
+
+static TEMPLATES: phf::Map<&'static str, &'static str> = phf_map! {
+    "run_tensor_reduction.txt" =>  include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/templates/run_tensor_reduction.txt"
+    )),
+};
 
 #[derive(Error, Debug)]
 pub enum VakintError {
@@ -23,6 +66,8 @@ pub enum VakintError {
     InvalidMomentumExpression(String),
     #[error("invalid short expression supplied for integral: {0}")]
     InvalidShortExpression(String),
+    #[error("invalid numerator expression: {0}")]
+    InvalidNumerator(String),
     #[error(
         "the following integral could not be identified using any of the supported topologies: {0}"
     )]
@@ -34,6 +79,18 @@ pub enum VakintError {
         \nLeft-over: {1}"
     )]
     NumeratorNotReplaced(String, String),
+    #[error("FORM run crashed with the following error:\nstderr: {0}\nYou can rerun the script using:\n{1}")]
+    FormError(String, String, String),
+    #[error("{0}")]
+    FormVersion(String),
+    #[error("FORM is not installed in your system and required for vakint to work.")]
+    FormUnavailable,
+    #[error("Could not find FORM output file 'out.txt':\nstderr: {0}\nYou can rerun the script using:\n{1}")]
+    MissingFormOutput(String, String, String),
+    #[error("Symbolica could not parse FORM output:\n{0}\nError:{1}")]
+    FormOutputParsingError(String, String),
+    #[error(transparent)]
+    IoError(#[from] std::io::Error), // Add this variant to convert std::io::Error to VakintError
     #[error("unknown vakint error")]
     Unknown,
 }
@@ -100,6 +157,16 @@ fn range_condition(min: i64, max: i64) -> PatternRestriction {
 fn number_condition() -> PatternRestriction {
     PatternRestriction::Filter(Box::new(move |m| {
         matches!(m, Match::Single(AtomView::Num(_)))
+    }))
+}
+
+fn even_condition() -> PatternRestriction {
+    PatternRestriction::Filter(Box::new(move |m| {
+        if let Match::Single(AtomView::Num(_)) = m {
+            get_integer_from_match(&m).unwrap() % 2 == 0
+        } else {
+            false
+        }
     }))
 }
 
@@ -883,7 +950,17 @@ impl Integral {
                             a.to_owned(),
                         );
                     }
+                    if let Some(Match::Single(a)) = m1
+                        .match_stack
+                        .get(State::get_symbol(format!("msq{}_", i_prop)))
+                    {
+                        replacement_rules.canonical_expression_substitutions.insert(
+                            Atom::parse(format!("msq({})", i_prop).as_str()).unwrap(),
+                            a.to_owned(),
+                        );
+                    }
                 }
+
                 // Dummy substitutions for the numerator in this case
                 for i_loop in 1..=self.n_loops {
                     replacement_rules.numerator_substitutions.insert(
@@ -1126,7 +1203,8 @@ impl Integral {
 pub struct VakintSettings {
     #[allow(unused)]
     pub use_pysecdec: bool,
-    pub external_momenta_symbol: String,
+    pub epsilon_symbol: String,
+    pub form_exe_path: String,
     pub verify_numerator_identification: bool,
     pub allow_unknown_integrals: bool,
 }
@@ -1136,7 +1214,8 @@ impl Default for VakintSettings {
     fn default() -> Self {
         VakintSettings {
             use_pysecdec: false,
-            external_momenta_symbol: "p".into(),
+            epsilon_symbol: "ε".into(),
+            form_exe_path: "form".into(),
             verify_numerator_identification: true,
             allow_unknown_integrals: true,
         }
@@ -1170,6 +1249,7 @@ pub struct Vakint {
 pub struct VakintTerm {
     pub integral: Atom,
     pub numerator: Atom,
+    pub vectors: Vec<(String, i64)>,
 }
 
 impl From<VakintTerm> for Atom {
@@ -1223,11 +1303,17 @@ impl VakintTerm {
         }
 
         // Make sure to also set all externals to zero for the test
-        test = Pattern::parse(
-            format!("{}(momID_,idx_)", vakint.settings.external_momenta_symbol).as_str(),
-        )
-        .unwrap()
-        .replace_all(
+        test = Pattern::parse(format!("{}(momID_,idx_)", EXTERNAL_MOMENTUM_SYMBOL).as_str())
+            .unwrap()
+            .replace_all(
+                test.as_view(),
+                &Atom::parse("1").unwrap().into_pattern(),
+                None,
+                None,
+            );
+
+        // Substitute metric in as well
+        test = Pattern::parse("g(idx1_,idx2_)").unwrap().replace_all(
             test.as_view(),
             &Atom::parse("1").unwrap().into_pattern(),
             None,
@@ -1236,12 +1322,126 @@ impl VakintTerm {
 
         if vakint.settings.verify_numerator_identification && !matches!(test, Atom::Num(_)) {
             return Err(VakintError::NumeratorNotReplaced(
-                vakint.settings.external_momenta_symbol.clone(),
+                EXTERNAL_MOMENTUM_SYMBOL.into(),
                 test.to_string(),
             ));
         }
         self.numerator = new_numerator;
 
+        self.vectors = VakintTerm::identify_vectors_in_numerator(self.numerator.as_view())?;
+
+        Ok(())
+    }
+
+    pub fn identify_vectors_in_numerator(
+        numerator: AtomView,
+    ) -> Result<Vec<(String, i64)>, VakintError> {
+        let mut vectors = HashSet::new();
+
+        let vector_matcher_pattern = Pattern::parse("vec_(id_,idx_)").unwrap();
+        let vector_conditions = Condition::from((State::get_symbol("vec_"), symbol_condition()))
+            & Condition::from((State::get_symbol("id_"), number_condition()))
+            & Condition::from((State::get_symbol("idx_"), number_condition()));
+        let vector_match_settings = MatchSettings::default();
+        let mut vector_matcher = vector_matcher_pattern.pattern_match(
+            numerator,
+            &vector_conditions,
+            &vector_match_settings,
+        );
+
+        while let Some(m) = vector_matcher.next() {
+            if let Match::FunctionName(vec_symbol) =
+                m.match_stack.get(State::get_symbol("vec_")).unwrap()
+            {
+                if *vec_symbol == State::get_symbol(LOOP_MOMENTUM_SYMBOL)
+                    || *vec_symbol == State::get_symbol(EXTERNAL_MOMENTUM_SYMBOL)
+                {
+                    vectors.insert((
+                        vec_symbol.to_string(),
+                        get_integer_from_match(
+                            m.match_stack.get(State::get_symbol("id_")).unwrap(),
+                        )
+                        .unwrap(),
+                    ));
+                }
+            } else {
+                unreachable!("Vector name should be a symbol.")
+            }
+        }
+        Ok(vectors.iter().cloned().collect::<Vec<_>>())
+    }
+
+    pub fn tensor_reduce(
+        &mut self,
+        vakint: &Vakint,
+        keep_dot_product_notation: bool,
+    ) -> Result<(), VakintError> {
+        let mut form_numerator = self.numerator.clone();
+
+        // Make sure to undo the dot product notation.
+        // If it was not used, the command below will do nothing.
+        form_numerator = Vakint::convert_from_dot_notation(form_numerator.as_view());
+        for (vec, id) in self.vectors.iter() {
+            form_numerator = Pattern::parse(format!("{}({},idx_)", vec, id).as_str())
+                .unwrap()
+                .replace_all(
+                    form_numerator.as_view(),
+                    &Pattern::parse(
+                        format!(
+                            "vec{}({}{},idx_)",
+                            if *vec == EXTERNAL_MOMENTUM_SYMBOL {
+                                "1"
+                            } else {
+                                ""
+                            },
+                            vec,
+                            id
+                        )
+                        .as_str(),
+                    )
+                    .unwrap(),
+                    Some(&Condition::from((
+                        State::get_symbol("idx_"),
+                        number_condition(),
+                    ))),
+                    None,
+                )
+        }
+
+        let template =
+            Template::parse_template(TEMPLATES.get("run_tensor_reduction.txt").unwrap()).unwrap();
+        let mut vars: HashMap<String, String> = HashMap::new();
+        vars.insert(
+            "numerator".into(),
+            vakint.prepare_expression_for_form(form_numerator)?,
+        );
+        let rendered = template
+            .render(&RenderOptions {
+                variables: vars,
+                ..Default::default()
+            })
+            .unwrap();
+        let form_result = vakint.run_form(
+            &["tensorreduce.frm".into(), "pvtab10.h".into()],
+            ("run_tensor_reduction.frm".into(), rendered),
+        )?;
+        let mut reduced_numerator = vakint.process_form_output(form_result)?;
+        for (vec, id) in self.vectors.iter() {
+            reduced_numerator = Pattern::parse(format!("{}{}", vec, id).as_str())
+                .unwrap()
+                .replace_all(
+                    reduced_numerator.as_view(),
+                    &Pattern::parse(format!("{}({})", vec, id).as_str()).unwrap(),
+                    None,
+                    None,
+                );
+        }
+
+        if !keep_dot_product_notation {
+            reduced_numerator = Vakint::convert_from_dot_notation(reduced_numerator.as_view());
+        }
+
+        self.numerator = reduced_numerator;
         Ok(())
     }
 }
@@ -1277,6 +1477,7 @@ impl VakintExpression {
             res.push(VakintTerm {
                 integral: integral.clone(),
                 numerator: numerator.clone(),
+                vectors: VakintTerm::identify_vectors_in_numerator(numerator.as_view())?,
             });
         }
         Ok(res)
@@ -1303,6 +1504,17 @@ impl VakintExpression {
         Ok(())
     }
 
+    pub fn tensor_reduce(
+        &mut self,
+        vakint: &Vakint,
+        keep_dot_product_notation: bool,
+    ) -> Result<(), VakintError> {
+        for term in self.0.iter_mut() {
+            term.tensor_reduce(vakint, keep_dot_product_notation)?;
+        }
+        Ok(())
+    }
+
     #[allow(dead_code)]
     pub fn map<F>(&mut self, f: F) -> VakintExpression
     where
@@ -1322,6 +1534,7 @@ impl VakintExpression {
                 .map(|term| VakintTerm {
                     integral: term.integral.clone(),
                     numerator: f(term.numerator.as_view()),
+                    vectors: term.vectors.clone(),
                 })
                 .collect(),
         )
@@ -1338,6 +1551,7 @@ impl VakintExpression {
                 .map(|term| VakintTerm {
                     integral: f(term.integral.as_view()),
                     numerator: term.numerator.clone(),
+                    vectors: term.vectors.clone(),
                 })
                 .collect(),
         )
@@ -1375,8 +1589,173 @@ impl From<VakintExpression> for Atom {
 
 impl Vakint {
     fn initialize_symbolica_symbols() {
+        // unoriented edge
         _ = State::get_symbol_with_attributes("uedge", &[FunctionAttribute::Symmetric]);
+        // dot product
+        _ = State::get_symbol_with_attributes("dot", &[FunctionAttribute::Symmetric]);
+        // metric tensor
+        _ = State::get_symbol_with_attributes("g", &[FunctionAttribute::Symmetric]);
     }
+
+    fn get_form_version(&self) -> Result<String, VakintError> {
+        let mut cmd = Command::new(self.settings.form_exe_path.as_str());
+        cmd.arg("-version");
+        let output = cmd.output()?;
+
+        if !ExitStatus::success(&output.status) {
+            return Err(VakintError::FormUnavailable);
+        }
+        let output_str = String::from_utf8_lossy(&output.stdout).into_owned();
+        let re = Regex::new(r"FORM\s([\.|\d]+)").unwrap();
+        let mut versions = vec![];
+        for (_, [version]) in re.captures_iter(output_str.as_str()).map(|c| c.extract()) {
+            versions.push(version);
+        }
+        if versions.is_empty() {
+            return Err(VakintError::FormVersion(format!(
+                "Could not obtain form version from command:\n{:?}\nOutput was:\n{}",
+                cmd, output_str
+            )));
+        }
+        Ok(versions[0].into())
+    }
+
+    pub fn convert_from_dot_notation(atom: AtomView) -> Atom {
+        let mut expr = atom.to_owned();
+        let mut running_dummy_index = 1;
+        while let Some(m) = Pattern::parse("dot(v1_(id1_),v2_(id2_))")
+            .unwrap()
+            .pattern_match(
+                expr.as_view(),
+                &(Condition::from((State::get_symbol("v1_"), symbol_condition()))
+                    & Condition::from((State::get_symbol("v2_"), symbol_condition()))
+                    & Condition::from((State::get_symbol("id1_"), number_condition()))
+                    & Condition::from((State::get_symbol("id2_"), number_condition()))),
+                &MatchSettings::default(),
+            )
+            .next()
+        {
+            let (id1, id2) = (
+                get_integer_from_match(m.match_stack.get(State::get_symbol("id1_")).unwrap())
+                    .unwrap(),
+                get_integer_from_match(m.match_stack.get(State::get_symbol("id2_")).unwrap())
+                    .unwrap(),
+            );
+            let (v1, v2) = match (
+                m.match_stack.get(State::get_symbol("v1_")),
+                m.match_stack.get(State::get_symbol("v2_")),
+            ) {
+                (Some(Match::FunctionName(s1)), Some(Match::FunctionName(s2))) => (s1, s2),
+                _ => unreachable!("Vectors have to be symbols"),
+            };
+            expr = Pattern::parse(format!("dot({}({}),{}({}))", v1, id1, v2, id2).as_str())
+                .unwrap()
+                .replace_all(
+                    expr.as_view(),
+                    &Pattern::parse(
+                        format!(
+                            "{}({},{})*{}({},{})",
+                            v1, id1, running_dummy_index, v2, id2, running_dummy_index
+                        )
+                        .as_str(),
+                    )
+                    .unwrap(),
+                    None,
+                    None,
+                );
+            running_dummy_index += 1;
+        }
+        expr
+    }
+
+    pub fn convert_to_dot_notation(atom: AtomView) -> Atom {
+        let mut expr = atom.to_owned();
+        // Norm of vectors
+        while let Some(m) = Pattern::parse("v_(id_,idx_)^n_")
+            .unwrap()
+            .pattern_match(
+                expr.as_view(),
+                &(Condition::from((State::get_symbol("v_"), symbol_condition()))
+                    & Condition::from((State::get_symbol("id_"), number_condition()))
+                    & Condition::from((State::get_symbol("idx_"), number_condition()))
+                    & Condition::from((State::get_symbol("n_"), even_condition()))),
+                &MatchSettings::default(),
+            )
+            .next()
+        {
+            let (id1, id2, idx, n) = (
+                get_integer_from_match(m.match_stack.get(State::get_symbol("id1_")).unwrap())
+                    .unwrap(),
+                get_integer_from_match(m.match_stack.get(State::get_symbol("id2_")).unwrap())
+                    .unwrap(),
+                get_integer_from_match(m.match_stack.get(State::get_symbol("idx_")).unwrap())
+                    .unwrap(),
+                get_integer_from_match(m.match_stack.get(State::get_symbol("n_")).unwrap())
+                    .unwrap(),
+            );
+            let (v1, v2) = match (
+                m.match_stack.get(State::get_symbol("v1_")),
+                m.match_stack.get(State::get_symbol("v2_")),
+            ) {
+                (Some(Match::FunctionName(s1)), Some(Match::FunctionName(s2))) => (s1, s2),
+                _ => unreachable!("Vectors have to be symbols"),
+            };
+            expr = Pattern::parse(
+                format!("{}({},{})*{}({},{})^{}", v1, id1, idx, v2, id2, idx, n).as_str(),
+            )
+            .unwrap()
+            .replace_all(
+                expr.as_view(),
+                &Pattern::parse(format!("dot({}({}),{}({}))^{}", v1, id1, v2, id2, n / 2).as_str())
+                    .unwrap(),
+                None,
+                None,
+            );
+        }
+
+        // dot products
+        while let Some(m) = Pattern::parse("v1_(id1_,idx_)*v2_(id2_,idx_)")
+            .unwrap()
+            .pattern_match(
+                expr.as_view(),
+                &(Condition::from((State::get_symbol("v1_"), symbol_condition()))
+                    & Condition::from((State::get_symbol("v2_"), symbol_condition()))
+                    & Condition::from((State::get_symbol("id1_"), number_condition()))
+                    & Condition::from((State::get_symbol("id2_"), number_condition()))
+                    & Condition::from((State::get_symbol("idx_"), number_condition()))),
+                &MatchSettings::default(),
+            )
+            .next()
+        {
+            let (id1, id2, idx) = (
+                get_integer_from_match(m.match_stack.get(State::get_symbol("id1_")).unwrap())
+                    .unwrap(),
+                get_integer_from_match(m.match_stack.get(State::get_symbol("id2_")).unwrap())
+                    .unwrap(),
+                get_integer_from_match(m.match_stack.get(State::get_symbol("idx_")).unwrap())
+                    .unwrap(),
+            );
+            let (v1, v2) = match (
+                m.match_stack.get(State::get_symbol("v1_")),
+                m.match_stack.get(State::get_symbol("v2_")),
+            ) {
+                (Some(Match::FunctionName(s1)), Some(Match::FunctionName(s2))) => (s1, s2),
+                _ => unreachable!("Vectors have to be symbols"),
+            };
+            expr =
+                Pattern::parse(format!("{}({},{})*{}({},{})", v1, id1, idx, v2, id2, idx).as_str())
+                    .unwrap()
+                    .replace_all(
+                        expr.as_view(),
+                        &Pattern::parse(format!("dot({}({}),{}({}))", v1, id1, v2, id2).as_str())
+                            .unwrap(),
+                        None,
+                        None,
+                    );
+        }
+        expr
+    }
+
     pub fn new(settings: Option<VakintSettings>) -> Result<Self, VakintError> {
         Vakint::initialize_symbolica_symbols();
         let vakint_settings = settings.unwrap_or_default();
@@ -1385,7 +1764,103 @@ impl Vakint {
             settings: vakint_settings,
             topologies,
         };
+        let form_version = vakint.get_form_version()?;
+        match compare_to(form_version.clone(), MINIMAL_FORM_VERSION, Cmp::Ge) {
+            Ok(valid) => {
+                if valid {
+                    debug!(
+                        "FORM successfully detected with version '{}'.",
+                        form_version
+                    );
+                } else {
+                    return Err(VakintError::FormVersion(format!(
+                        "FORM version installed on your system does not meet minimal requirements: {}<{}.",
+                        form_version, MINIMAL_FORM_VERSION
+                    )));
+                }
+            }
+            Err(_) => {
+                return Err(VakintError::FormVersion(format!(
+                    "Could not parse FORM version '{}'.",
+                    form_version
+                )))
+            }
+        };
         Ok(vakint)
+    }
+
+    pub fn prepare_expression_for_form(&self, expression: Atom) -> Result<String, VakintError> {
+        let processed = expression.clone();
+        let processed = Pattern::parse("ep").unwrap().replace_all(
+            processed.as_view(),
+            &Pattern::parse(&self.settings.epsilon_symbol).unwrap(),
+            None,
+            None,
+        );
+        Ok(AtomPrinter::new_with_options(processed.as_view(), PrintOptions::file()).to_string())
+    }
+
+    pub fn process_form_output(&self, form_output: String) -> Result<Atom, VakintError> {
+        match Atom::parse(form_output.as_str()) {
+            Ok(mut processed) => {
+                processed = Pattern::parse("rat(x_,y_)").unwrap().replace_all(
+                    processed.as_view(),
+                    &Pattern::parse("(x_/y_)").unwrap(),
+                    None,
+                    None,
+                );
+                processed = Pattern::parse("ep").unwrap().replace_all(
+                    processed.as_view(),
+                    &Pattern::parse(&self.settings.epsilon_symbol).unwrap(),
+                    None,
+                    None,
+                );
+                Ok(processed)
+            }
+            Err(err) => Err(VakintError::FormOutputParsingError(form_output, err)),
+        }
+    }
+
+    pub fn run_form(
+        &self,
+        resources: &[String],
+        input: (String, String),
+    ) -> Result<String, VakintError> {
+        let tmp_dir = &env::temp_dir().join("vakint_temp");
+        if tmp_dir.exists() {
+            fs::remove_dir_all(tmp_dir)?;
+        }
+        fs::create_dir(tmp_dir)?;
+
+        for resource in resources.iter() {
+            fs::write(tmp_dir.join(resource), FORM_SRC.get(resource).unwrap())?;
+        }
+        fs::write(tmp_dir.join(&input.0).to_str().unwrap(), &input.1)?;
+        let mut cmd = Command::new(self.settings.form_exe_path.as_str());
+        cmd.arg(input.0);
+
+        let output = cmd
+            .current_dir(tmp_dir)
+            .stderr(Stdio::inherit())
+            .stdout(Stdio::null())
+            .output()?;
+        if !ExitStatus::success(&output.status) {
+            return Err(VakintError::FormError(
+                String::from_utf8_lossy(&output.stderr).into(),
+                format!("{:?}", cmd),
+                tmp_dir.to_str().unwrap().into(),
+            ));
+        }
+        if !tmp_dir.join("out.txt").exists() {
+            return Err(VakintError::MissingFormOutput(
+                String::from_utf8_lossy(&output.stderr).into(),
+                format!("{:?}", cmd),
+                tmp_dir.to_str().unwrap().into(),
+            ));
+        }
+        let result = fs::read_to_string(tmp_dir.join("out.txt"))?;
+        fs::remove_dir_all(tmp_dir)?;
+        Ok(result)
     }
 
     pub fn evaluate(&self, input: AtomView) -> Result<Atom, VakintError> {
@@ -1397,6 +1872,16 @@ impl Vakint {
     pub fn to_canonical(&self, input: AtomView, short_form: bool) -> Result<Atom, VakintError> {
         let mut vakint_expr = VakintExpression::try_from(input)?;
         vakint_expr.canonicalize(self, &self.topologies, short_form)?;
+        Ok(vakint_expr.into())
+    }
+
+    pub fn tensor_reduce(
+        &self,
+        input: AtomView,
+        keep_dot_product_notation: bool,
+    ) -> Result<Atom, VakintError> {
+        let mut vakint_expr = VakintExpression::try_from(input)?;
+        vakint_expr.tensor_reduce(self, keep_dot_product_notation)?;
         Ok(vakint_expr.into())
     }
 }
