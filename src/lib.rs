@@ -11,8 +11,9 @@ use std::{
 };
 use string_template_plus::{Render, RenderOptions, Template};
 use symbolica::{
-    atom::{representation::InlineNum, AsAtomView, Atom, AtomView, SliceType, Symbol},
-    coefficient::CoefficientView,
+    atom::{
+        representation::InlineNum, AsAtomView, Atom, AtomView, FunctionBuilder, SliceType, Symbol,
+    },
     fun,
     id::{Condition, Match, MatchSettings, Pattern, PatternRestriction, WildcardAndRestriction},
     printer::{AtomPrinter, PrintOptions},
@@ -91,6 +92,8 @@ pub enum VakintError {
     FormOutputParsingError(String, String),
     #[error(transparent)]
     IoError(#[from] std::io::Error), // Add this variant to convert std::io::Error to VakintError
+    #[error("{0}")]
+    MalformedGraph(String),
     #[error("unknown vakint error")]
     Unknown,
 }
@@ -162,6 +165,7 @@ fn number_condition() -> PatternRestriction {
 
 fn even_condition() -> PatternRestriction {
     PatternRestriction::Filter(Box::new(move |m| {
+        #[allow(warnings)]
         if let Match::Single(AtomView::Num(_)) = m {
             get_integer_from_match(&m).unwrap() % 2 == 0
         } else {
@@ -242,7 +246,7 @@ impl fmt::Display for ReplacementRules {
 impl Default for ReplacementRules {
     fn default() -> Self {
         ReplacementRules {
-            canonical_topology: Topology::Unknown(Integral::new(0, None, None).unwrap()),
+            canonical_topology: Topology::Unknown(Integral::default()),
             edge_ids_canonical_to_input_map: HashMap::new(),
             canonical_expression_substitutions: HashMap::new(),
             numerator_substitutions: HashMap::new(),
@@ -250,6 +254,30 @@ impl Default for ReplacementRules {
     }
 }
 
+impl ReplacementRules {
+    fn apply_replacement_rules(&mut self) {
+        let integral = self.canonical_topology.get_integral_mut();
+        for (source, target) in self.canonical_expression_substitutions.iter() {
+            for expr in [
+                integral.canonical_expression.as_mut(),
+                integral.short_expression.as_mut(),
+                integral.alphaloop_expression.as_mut(),
+                integral.matad_expression.as_mut(),
+                integral.fmft_expression.as_mut(),
+            ]
+            .into_iter()
+            .flatten()
+            {
+                *expr = source.into_pattern().replace_all(
+                    expr.as_view(),
+                    &target.into_pattern(),
+                    None,
+                    None,
+                );
+            }
+        }
+    }
+}
 pub struct Topologies(Vec<Topology>);
 
 impl fmt::Display for Topologies {
@@ -273,12 +301,36 @@ impl Topologies {
         canonical_expression: AtomView,
         short_expression: AtomView,
         contractions: Vec<Vec<usize>>,
+        matad_expression: Option<AtomView>,
+        fmft_expression: Option<AtomView>,
     ) -> Result<Self, VakintError> {
         let mut topologies = vec![];
         for contracted_prop_indices in contractions {
-            let mut contracted_canonical_expression = canonical_expression.to_owned().clone();
-            let mut contracted_short_expression = short_expression.to_owned().clone();
+            let mut contracted_canonical_expression = canonical_expression.to_owned();
+            let mut contracted_short_expression = short_expression.to_owned();
+            let mut contracted_matad_expression = if let Some(av) = matad_expression {
+                av.to_owned()
+            } else {
+                Atom::Zero
+            };
+            let mut contracted_fmft_expression = if let Some(av) = fmft_expression {
+                av.to_owned()
+            } else {
+                Atom::Zero
+            };
+            let mut nodes_to_merge = vec![];
             for prop_id in contracted_prop_indices.iter() {
+                if let Some(m) =
+                    get_prop_with_id(contracted_canonical_expression.as_view(), *prop_id)
+                {
+                    let (left_node_id, right_node_id) = get_node_ids(&m).unwrap();
+                    nodes_to_merge.push((right_node_id, left_node_id));
+                } else {
+                    return Err(VakintError::InvalidIntegralFormat(format!(
+                        "Cannot contract propagatore id {} as it is not found in integral: {}",
+                        prop_id, contracted_canonical_expression
+                    )));
+                }
                 contracted_canonical_expression =
                     Pattern::parse(format!("prop({},args__)", prop_id).as_str())
                         .unwrap()
@@ -288,15 +340,47 @@ impl Topologies {
                             None,
                             None,
                         );
-                contracted_short_expression = Pattern::parse(format!("pow({})", prop_id).as_str())
-                    .unwrap()
-                    .replace_all(
-                        contracted_short_expression.as_view(),
-                        &Pattern::parse("0").unwrap(),
-                        None,
-                        None,
-                    );
+
+                for a in [
+                    &mut contracted_short_expression,
+                    &mut contracted_matad_expression,
+                    &mut contracted_fmft_expression,
+                ] {
+                    if !a.is_zero() {
+                        *a = Pattern::parse(format!("pow({})", prop_id).as_str())
+                            .unwrap()
+                            .replace_all(a.as_view(), &Pattern::parse("0").unwrap(), None, None);
+                    }
+                }
             }
+            let mut old_contracted_canonical_expression = contracted_canonical_expression.clone();
+            'replace_contracted_nodes: loop {
+                for (old_node_id, new_node_id) in nodes_to_merge.iter() {
+                    for (lhs, rhs) in [
+                        (
+                            format!("edge({},nr_)", old_node_id),
+                            format!("edge({},nr_)", new_node_id),
+                        ),
+                        (
+                            format!("edge(nl_,{})", old_node_id),
+                            format!("edge(nl_,{})", new_node_id),
+                        ),
+                    ] {
+                        contracted_canonical_expression =
+                            Pattern::parse(lhs.as_str()).unwrap().replace_all(
+                                contracted_canonical_expression.as_view(),
+                                &Pattern::parse(rhs.as_str()).unwrap(),
+                                None,
+                                None,
+                            );
+                    }
+                }
+                if old_contracted_canonical_expression == contracted_canonical_expression {
+                    break 'replace_contracted_nodes;
+                }
+                old_contracted_canonical_expression = contracted_canonical_expression.clone();
+            }
+
             /*
             if !contracted_prop_indices.is_empty() {
                 let short_integral_symbol = if let Some(m) = Pattern::parse("fn_(args__)")
@@ -352,6 +436,16 @@ impl Topologies {
                     n_tot_props,
                     Some(contracted_canonical_expression),
                     Some(contracted_short_expression),
+                    if contracted_matad_expression.is_zero() {
+                        None
+                    } else {
+                        Some(contracted_matad_expression)
+                    },
+                    if contracted_fmft_expression.is_zero() {
+                        None
+                    } else {
+                        Some(contracted_fmft_expression)
+                    },
                 )?
                 .into(),
             );
@@ -365,6 +459,8 @@ impl Topologies {
             1,
             Some(Atom::parse("topo(prop(1,edge(1,1),k(1),msq(1),pow(1)))").unwrap()),
             Some(Atom::parse("I1LA(msq(1),pow(1))").unwrap()),
+            Some(Atom::parse("1").unwrap()),
+            None,
         )?
         .into()]);
         // Two-loop topologies
@@ -384,6 +480,8 @@ impl Topologies {
                     .unwrap()
                     .as_view(),
                 vec![vec![], vec![3]],
+                Some(Atom::parse("1").unwrap().as_view()),
+                None,
             )?
             .0,
         );
@@ -391,7 +489,7 @@ impl Topologies {
         if settings.allow_unknown_integrals {
             topologies
                 .0
-                .push(Topology::Unknown(Integral::new(0, None, None)?));
+                .push(Topology::Unknown(Integral::new(0, None, None, None, None)?));
         }
         Ok(topologies)
     }
@@ -409,9 +507,124 @@ impl Topologies {
     }
 }
 
+#[derive(Debug, Clone)]
+struct Edge {
+    id: usize,
+    left_node_id: usize,
+    right_node_id: usize,
+    momentum: Atom,
+}
+
+impl fmt::Display for Edge {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "(#{}|{}->{}|{})",
+            self.id, self.left_node_id, self.right_node_id, self.momentum
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Node {
+    id: usize,
+    edges: Vec<(usize, EdgeDirection)>,
+}
+
+impl fmt::Display for Node {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "(#{}|[{}])",
+            self.id,
+            self.edges
+                .iter()
+                .map(|(e_id, dir)| format!("{}@{}", dir, e_id))
+                .collect::<Vec<_>>()
+                .join(",")
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+enum EdgeDirection {
+    Incoming,
+    Outgoing,
+}
+
+impl EdgeDirection {
+    fn is_incoming(&self) -> bool {
+        match self {
+            EdgeDirection::Incoming => true,
+            EdgeDirection::Outgoing => false,
+        }
+    }
+    #[allow(unused)]
+    fn is_outgoing(&self) -> bool {
+        match self {
+            EdgeDirection::Incoming => false,
+            EdgeDirection::Outgoing => true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Graph {
+    edges: HashMap<usize, Edge>,
+    nodes: HashMap<usize, Node>,
+}
+
+impl fmt::Display for Graph {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut sorted_edges = self.edges.iter().collect::<Vec<_>>();
+        sorted_edges.sort_by(|(e1_id, _), (e2_id, _)| e1_id.partial_cmp(e2_id).unwrap());
+        let mut sorted_nodes = self.nodes.iter().collect::<Vec<_>>();
+        sorted_nodes.sort_by(|(n1_id, _), (n2_id, _)| n1_id.partial_cmp(n2_id).unwrap());
+        write!(
+            f,
+            "Edges: {}\nNodes: {}",
+            sorted_edges
+                .iter()
+                .map(|(_e_id, e)| format!("{}", e))
+                .collect::<Vec<_>>()
+                .join(" "),
+            sorted_nodes
+                .iter()
+                .map(|(_n_id, n)| format!("{}", n))
+                .collect::<Vec<_>>()
+                .join(" ")
+        )
+    }
+}
+
+impl fmt::Display for EdgeDirection {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            EdgeDirection::Incoming => write!(f, "IN"),
+            EdgeDirection::Outgoing => write!(f, "OUT"),
+        }
+    }
+}
+
+impl Graph {
+    pub fn to_graphviz(&self) -> String {
+        format!(
+            "digraph G {{\n{}\n}}",
+            self.edges
+                .values()
+                .map(|e| format!(
+                    "  {} -> {} [label=\"{}|{}\"]",
+                    e.left_node_id, e.right_node_id, e.id, e.momentum
+                ))
+                .collect::<Vec<_>>()
+                .join("\n")
+        )
+    }
+}
+
 #[allow(unused)]
 #[derive(Debug, Clone)]
-enum Topology {
+pub enum Topology {
     OneLoop(Integral),
     TwoLoop(Integral),
     ThreeLoop(Integral),
@@ -445,6 +658,16 @@ impl From<Integral> for Topology {
 
 impl Topology {
     fn get_integral(&self) -> &Integral {
+        match self {
+            Topology::OneLoop(i)
+            | Topology::TwoLoop(i)
+            | Topology::ThreeLoop(i)
+            | Topology::FourLoop(i)
+            | Topology::Unknown(i) => i,
+        }
+    }
+
+    fn get_integral_mut(&mut self) -> &mut Integral {
         match self {
             Topology::OneLoop(i)
             | Topology::TwoLoop(i)
@@ -523,7 +746,7 @@ impl Topology {
 }
 
 #[derive(Debug, Clone)]
-struct Integral {
+pub struct Integral {
     n_loops: usize,
     n_props: usize,
     name: String,
@@ -531,6 +754,11 @@ struct Integral {
     canonical_expression: Option<Atom>,
     short_expression: Option<Atom>,
     short_expression_pattern: Option<Pattern>,
+    alphaloop_expression: Option<Atom>,
+    fmft_expression: Option<Atom>,
+    matad_expression: Option<Atom>,
+    #[allow(unused)]
+    graph: Graph,
 }
 
 impl fmt::Display for Integral {
@@ -555,6 +783,13 @@ impl fmt::Display for Integral {
 }
 
 fn get_integer_from_match(m: &Match<'_>) -> Option<i64> {
+    let mut n = Atom::new();
+    m.to_atom(&mut n);
+    match n.try_into() {
+        Ok(res) => Some(res),
+        Err(_) => None,
+    }
+    /*
     if let Match::Single(AtomView::Num(a)) = m {
         match a.get_coeff_view() {
             CoefficientView::Natural(n, 1) => Some(n),
@@ -563,6 +798,7 @@ fn get_integer_from_match(m: &Match<'_>) -> Option<i64> {
     } else {
         None
     }
+    */
 }
 
 fn get_node_ids(
@@ -688,13 +924,84 @@ fn get_prop_with_id(
     }
 }
 
+impl Default for Integral {
+    fn default() -> Self {
+        Integral::new(0, None, None, None, None).unwrap()
+    }
+}
+
 impl Integral {
-    fn new(
+    pub fn get_graph_from_expression(
+        integral_expression: AtomView,
+        tot_n_props: usize,
+    ) -> Result<Graph, VakintError> {
+        let mut graph = Graph::default();
+        for i_prop in 1..=tot_n_props {
+            if let Some(m) = get_prop_with_id(integral_expression, i_prop) {
+                // Format check for the momenta
+                let mut momentum = Atom::new();
+                m.get(&State::get_symbol("q_"))
+                    .unwrap()
+                    .to_atom(&mut momentum);
+
+                let (left_node_id, right_node_id) = get_node_ids(&m)?;
+
+                graph.edges.insert(
+                    i_prop,
+                    Edge {
+                        id: i_prop,
+                        momentum,
+                        left_node_id,
+                        right_node_id,
+                    },
+                );
+            }
+        }
+
+        for (&e_id, edge) in graph.edges.iter() {
+            if let Some(node) = graph.nodes.get_mut(&edge.left_node_id) {
+                node.edges.push((e_id, EdgeDirection::Outgoing));
+            } else {
+                graph.nodes.insert(
+                    edge.left_node_id,
+                    Node {
+                        id: edge.left_node_id,
+                        edges: vec![(e_id, EdgeDirection::Outgoing)],
+                    },
+                );
+            }
+            if let Some(node) = graph.nodes.get_mut(&edge.right_node_id) {
+                node.edges.push((e_id, EdgeDirection::Incoming));
+            } else {
+                graph.nodes.insert(
+                    edge.right_node_id,
+                    Node {
+                        id: edge.right_node_id,
+                        edges: vec![(e_id, EdgeDirection::Incoming)],
+                    },
+                );
+            }
+        }
+
+        for (n_id, nodes) in graph.nodes.iter() {
+            if nodes.edges.len() <= 1 {
+                return Err(VakintError::MalformedGraph(format!("Node {} is connected to only {} edges, this cannot be for a vaccuum graph. Graph:\n{}",
+                    n_id, nodes.edges.len(), integral_expression
+                )));
+            }
+        }
+
+        Ok(graph)
+    }
+
+    pub fn new(
         // This refers to the *total* number of propagators in the top-level topology,
         // i.e. the number of entries in the corresponding short_expression
         tot_n_props: usize,
         canonical_expression: Option<Atom>,
         short_expression: Option<Atom>,
+        matad_expression: Option<Atom>,
+        fmft_expression: Option<Atom>,
     ) -> Result<Integral, VakintError> {
         if canonical_expression.is_none() {
             // This is an unknown topology
@@ -709,12 +1016,18 @@ impl Integral {
                 n_loops: 0,
                 n_props: 0,
                 generic_pattern: all_accepting_pattern,
-                canonical_expression,
+                canonical_expression: None,
                 short_expression,
                 short_expression_pattern,
+                alphaloop_expression: None,
+                fmft_expression: None,
+                matad_expression: None,
+                graph: Graph::default(),
             });
         }
         let e = canonical_expression.clone().unwrap();
+
+        let graph = Integral::get_graph_from_expression(e.as_view(), tot_n_props)?;
 
         let mut loop_mom_indices = HashSet::<i64>::default();
         let mut next_atom = e.clone();
@@ -903,6 +1216,27 @@ impl Integral {
                 );
         }
 
+        let mut alphaloop_expression = Atom::new_num(1);
+
+        for (_n_id, node) in graph.nodes.iter() {
+            let mut fb = FunctionBuilder::new(State::get_symbol("vxs"));
+            for (e_id, dir) in &node.edges {
+                fb = fb.add_arg(
+                    &(graph.edges.get(e_id).unwrap().momentum.clone()
+                        * if dir.is_incoming() { 1 } else { -1 }),
+                );
+            }
+            alphaloop_expression = alphaloop_expression * fb.finish();
+        }
+        for (&e_id, edge) in graph.edges.iter() {
+            alphaloop_expression = alphaloop_expression
+                * fun!(
+                    State::get_symbol("uvprop"),
+                    &edge.momentum,
+                    fun!(State::get_symbol("pow"), Atom::new_num(e_id as i64))
+                );
+        }
+
         Ok(Integral {
             name,
             n_loops: loop_mom_indices.len(),
@@ -911,6 +1245,10 @@ impl Integral {
             canonical_expression,
             short_expression,
             short_expression_pattern: Some(short_expression_pattern.into_pattern()),
+            alphaloop_expression: Some(alphaloop_expression),
+            fmft_expression,
+            matad_expression,
+            graph,
         })
     }
 
@@ -1200,6 +1538,61 @@ impl Integral {
     }
 }
 
+pub enum EvaluationApproach {
+    AlphaLoop,
+    MATAD,
+    FMFT,
+    PySecDec,
+}
+
+impl fmt::Display for EvaluationApproach {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            EvaluationApproach::AlphaLoop => write!(f, "AlphaLoop"),
+            EvaluationApproach::MATAD => write!(f, "MATTAD"),
+            EvaluationApproach::FMFT => write!(f, "FMFT"),
+            EvaluationApproach::PySecDec => write!(f, "PySecDec"),
+        }
+    }
+}
+
+impl EvaluationApproach {
+    pub fn supports(&self, vakint: &Vakint, topology: &Topology) -> bool {
+        match self {
+            EvaluationApproach::AlphaLoop => {
+                topology.get_integral().alphaloop_expression.is_some()
+                    && vakint.settings.number_of_terms_in_epsilon_expansion <= 3
+                    && topology.get_integral().n_loops <= 3
+            }
+            EvaluationApproach::MATAD => {
+                topology.get_integral().matad_expression.is_some()
+                    && topology.get_integral().n_loops <= 3
+            }
+            EvaluationApproach::FMFT => {
+                topology.get_integral().fmft_expression.is_some()
+                    && topology.get_integral().n_loops == 4
+            }
+            EvaluationApproach::PySecDec => true,
+        }
+    }
+
+    pub fn evaluate_integral(
+        &self,
+        vakint: &Vakint,
+        numerator: AtomView,
+        integral_specs: &ReplacementRules,
+    ) -> Result<Atom, VakintError> {
+        match self {
+            EvaluationApproach::AlphaLoop => vakint.alpha_loop_evaluate(numerator, integral_specs),
+            EvaluationApproach::MATAD => unimplemented!("MATAD evaluations not yet implemented"),
+            EvaluationApproach::FMFT => unimplemented!("FMFT evaluations not yet implemented"),
+            EvaluationApproach::PySecDec => {
+                unimplemented!("PySecDec evaluations not yet implemented")
+            }
+        }
+    }
+}
+
 pub struct VakintSettings {
     #[allow(unused)]
     pub use_pysecdec: bool,
@@ -1207,6 +1600,12 @@ pub struct VakintSettings {
     pub form_exe_path: String,
     pub verify_numerator_identification: bool,
     pub allow_unknown_integrals: bool,
+    pub evaluation_order: Vec<EvaluationApproach>,
+    // This quantity is typically set equal to *one plus the maximum loop count* of the UV regularisation problem considered.
+    // For example when considering a 2-loop problem, then:
+    //   a) for the nested one-loop integrals appearing, the single pole, finite term *and* order-epsilon term will need to be considered.
+    //   b) for the two-loop integrals, the double pole, single pole and finite terms will be needed, so again three terms
+    pub number_of_terms_in_epsilon_expansion: usize,
 }
 
 #[allow(clippy::derivable_impls)]
@@ -1215,9 +1614,17 @@ impl Default for VakintSettings {
         VakintSettings {
             use_pysecdec: false,
             epsilon_symbol: "ε".into(),
-            form_exe_path: "form".into(),
+            form_exe_path: env::var("FORM_PATH").unwrap_or("form".into()),
             verify_numerator_identification: true,
             allow_unknown_integrals: true,
+            evaluation_order: vec![
+                EvaluationApproach::AlphaLoop,
+                EvaluationApproach::MATAD,
+                EvaluationApproach::FMFT,
+                EvaluationApproach::PySecDec,
+            ],
+            // Default to a three-loop UV subtraction problem, for which alphaLoop implementation can be used.
+            number_of_terms_in_epsilon_expansion: 3,
         }
     }
 }
@@ -1270,6 +1677,34 @@ impl fmt::Display for VakintTerm {
 }
 
 impl VakintTerm {
+    pub fn evaluate_integral(&mut self, vakint: &Vakint) -> Result<(), VakintError> {
+        let mut integral_specs = if let Some(replacement_rules) = vakint
+            .topologies
+            .match_topologies_to_user_input(self.integral.as_view())?
+        {
+            replacement_rules
+        } else {
+            return Err(VakintError::UnreckognizedIntegral(
+                self.integral.to_string(),
+            ));
+        };
+
+        integral_specs.apply_replacement_rules();
+
+        'eval: for evaluation_approach in vakint.settings.evaluation_order.iter() {
+            if evaluation_approach.supports(vakint, &integral_specs.canonical_topology) {
+                self.numerator = evaluation_approach.evaluate_integral(
+                    vakint,
+                    self.numerator.as_atom_view(),
+                    &integral_specs,
+                )?;
+                self.integral = Atom::new_num(1);
+                break 'eval;
+            }
+        }
+        Ok(())
+    }
+
     pub fn canonicalize(
         &mut self,
         vakint: &Vakint,
@@ -1515,6 +1950,13 @@ impl VakintExpression {
         Ok(())
     }
 
+    pub fn evaluate_integral(&mut self, vakint: &Vakint) -> Result<(), VakintError> {
+        for term in self.0.iter_mut() {
+            term.evaluate_integral(vakint)?;
+        }
+        Ok(())
+    }
+
     #[allow(dead_code)]
     pub fn map<F>(&mut self, f: F) -> VakintExpression
     where
@@ -1597,10 +2039,29 @@ impl Vakint {
         _ = State::get_symbol_with_attributes("g", &[FunctionAttribute::Symmetric]);
     }
 
+    fn alpha_loop_evaluate(
+        &self,
+        numerator: AtomView,
+        integral_specs: &ReplacementRules,
+    ) -> Result<Atom, VakintError> {
+        let integral = integral_specs.canonical_topology.get_integral();
+        let alphaloop_expression = integral.alphaloop_expression.as_ref().unwrap().as_view();
+        let vectors = VakintTerm::identify_vectors_in_numerator(numerator)?;
+        println!("Numerator : {}", numerator);
+        println!("vectors : {:?}", vectors);
+        println!("Evaluating AlphaLoop : {}", alphaloop_expression);
+        println!("Graph:\n{}", integral.graph.to_graphviz());
+        Ok(Atom::new_num(1))
+    }
+
     fn get_form_version(&self) -> Result<String, VakintError> {
         let mut cmd = Command::new(self.settings.form_exe_path.as_str());
         cmd.arg("-version");
-        let output = cmd.output()?;
+        let output = if let Ok(o) = cmd.output() {
+            o
+        } else {
+            return Err(VakintError::FormUnavailable);
+        };
 
         if !ExitStatus::success(&output.status) {
             return Err(VakintError::FormUnavailable);
@@ -1623,6 +2084,7 @@ impl Vakint {
     pub fn convert_from_dot_notation(atom: AtomView) -> Atom {
         let mut expr = atom.to_owned();
         let mut running_dummy_index = 1;
+
         while let Some(m) = Pattern::parse("dot(v1_(id1_),v2_(id2_))")
             .unwrap()
             .pattern_match(
@@ -1648,21 +2110,20 @@ impl Vakint {
                 (Some(Match::FunctionName(s1)), Some(Match::FunctionName(s2))) => (s1, s2),
                 _ => unreachable!("Vectors have to be symbols"),
             };
-            expr = Pattern::parse(format!("dot({}({}),{}({}))", v1, id1, v2, id2).as_str())
-                .unwrap()
-                .replace_all(
-                    expr.as_view(),
-                    &Pattern::parse(
-                        format!(
-                            "{}({},{})*{}({},{})",
-                            v1, id1, running_dummy_index, v2, id2, running_dummy_index
-                        )
-                        .as_str(),
+
+            expr = m.target.into_pattern().replace_all(
+                expr.as_view(),
+                &Pattern::parse(
+                    format!(
+                        "{}({},{})*{}({},{})",
+                        v1, id1, running_dummy_index, v2, id2, running_dummy_index
                     )
-                    .unwrap(),
-                    None,
-                    None,
-                );
+                    .as_str(),
+                )
+                .unwrap(),
+                None,
+                None,
+            );
             running_dummy_index += 1;
         }
         expr
@@ -1670,89 +2131,51 @@ impl Vakint {
 
     pub fn convert_to_dot_notation(atom: AtomView) -> Atom {
         let mut expr = atom.to_owned();
-        // Norm of vectors
-        while let Some(m) = Pattern::parse("v_(id_,idx_)^n_")
-            .unwrap()
-            .pattern_match(
-                expr.as_view(),
+        expr = Pattern::parse("v_(id_,idx_)^n_").unwrap().replace_all(
+            expr.as_view(),
+            &Pattern::parse("dot(id_,id_)^(n_/2)").unwrap(),
+            Some(
                 &(Condition::from((State::get_symbol("v_"), symbol_condition()))
                     & Condition::from((State::get_symbol("id_"), number_condition()))
                     & Condition::from((State::get_symbol("idx_"), number_condition()))
                     & Condition::from((State::get_symbol("n_"), even_condition()))),
-                &MatchSettings::default(),
-            )
-            .next()
-        {
-            let (id1, id2, idx, n) = (
-                get_integer_from_match(m.match_stack.get(State::get_symbol("id1_")).unwrap())
-                    .unwrap(),
-                get_integer_from_match(m.match_stack.get(State::get_symbol("id2_")).unwrap())
-                    .unwrap(),
-                get_integer_from_match(m.match_stack.get(State::get_symbol("idx_")).unwrap())
-                    .unwrap(),
-                get_integer_from_match(m.match_stack.get(State::get_symbol("n_")).unwrap())
-                    .unwrap(),
-            );
-            let (v1, v2) = match (
-                m.match_stack.get(State::get_symbol("v1_")),
-                m.match_stack.get(State::get_symbol("v2_")),
-            ) {
-                (Some(Match::FunctionName(s1)), Some(Match::FunctionName(s2))) => (s1, s2),
-                _ => unreachable!("Vectors have to be symbols"),
-            };
-            expr = Pattern::parse(
-                format!("{}({},{})*{}({},{})^{}", v1, id1, idx, v2, id2, idx, n).as_str(),
-            )
+            ),
+            None,
+        );
+
+        // dot products
+        expr = Pattern::parse("v1_(id1_,idx_)*v2_(id2_,idx_)")
             .unwrap()
             .replace_all(
                 expr.as_view(),
-                &Pattern::parse(format!("dot({}({}),{}({}))^{}", v1, id1, v2, id2, n / 2).as_str())
-                    .unwrap(),
-                None,
+                &Pattern::parse("dot(v1_(id1_),v2_(id2_))").unwrap(),
+                Some(
+                    &(Condition::from((State::get_symbol("v1_"), symbol_condition()))
+                        & Condition::from((State::get_symbol("v2_"), symbol_condition()))
+                        & Condition::from((State::get_symbol("id1_"), number_condition()))
+                        & Condition::from((State::get_symbol("id2_"), number_condition()))
+                        & Condition::from((State::get_symbol("idx_"), number_condition()))),
+                ),
                 None,
             );
-        }
 
-        // dot products
-        while let Some(m) = Pattern::parse("v1_(id1_,idx_)*v2_(id2_,idx_)")
+        // metric contraction
+        expr = Pattern::parse("g(idx1_,idx2_)*v1_(id1_,idx1_)*v2_(id2_,idx2_)")
             .unwrap()
-            .pattern_match(
+            .replace_all(
                 expr.as_view(),
-                &(Condition::from((State::get_symbol("v1_"), symbol_condition()))
-                    & Condition::from((State::get_symbol("v2_"), symbol_condition()))
-                    & Condition::from((State::get_symbol("id1_"), number_condition()))
-                    & Condition::from((State::get_symbol("id2_"), number_condition()))
-                    & Condition::from((State::get_symbol("idx_"), number_condition()))),
-                &MatchSettings::default(),
-            )
-            .next()
-        {
-            let (id1, id2, idx) = (
-                get_integer_from_match(m.match_stack.get(State::get_symbol("id1_")).unwrap())
-                    .unwrap(),
-                get_integer_from_match(m.match_stack.get(State::get_symbol("id2_")).unwrap())
-                    .unwrap(),
-                get_integer_from_match(m.match_stack.get(State::get_symbol("idx_")).unwrap())
-                    .unwrap(),
+                &Pattern::parse("dot(v1_(id1_),v2_(id2_))").unwrap(),
+                Some(
+                    &(Condition::from((State::get_symbol("v1_"), symbol_condition()))
+                        & Condition::from((State::get_symbol("v2_"), symbol_condition()))
+                        & Condition::from((State::get_symbol("id1_"), number_condition()))
+                        & Condition::from((State::get_symbol("id2_"), number_condition()))
+                        & Condition::from((State::get_symbol("idx1_"), number_condition()))
+                        & Condition::from((State::get_symbol("idx2_"), number_condition()))),
+                ),
+                None,
             );
-            let (v1, v2) = match (
-                m.match_stack.get(State::get_symbol("v1_")),
-                m.match_stack.get(State::get_symbol("v2_")),
-            ) {
-                (Some(Match::FunctionName(s1)), Some(Match::FunctionName(s2))) => (s1, s2),
-                _ => unreachable!("Vectors have to be symbols"),
-            };
-            expr =
-                Pattern::parse(format!("{}({},{})*{}({},{})", v1, id1, idx, v2, id2, idx).as_str())
-                    .unwrap()
-                    .replace_all(
-                        expr.as_view(),
-                        &Pattern::parse(format!("dot({}({}),{}({}))", v1, id1, v2, id2).as_str())
-                            .unwrap(),
-                        None,
-                        None,
-                    );
-        }
+
         expr
     }
 
@@ -1882,6 +2305,12 @@ impl Vakint {
     ) -> Result<Atom, VakintError> {
         let mut vakint_expr = VakintExpression::try_from(input)?;
         vakint_expr.tensor_reduce(self, keep_dot_product_notation)?;
+        Ok(vakint_expr.into())
+    }
+
+    pub fn evaluate_integral(&self, input: AtomView) -> Result<Atom, VakintError> {
+        let mut vakint_expr = VakintExpression::try_from(input)?;
+        vakint_expr.evaluate_integral(self)?;
         Ok(vakint_expr.into())
     }
 }
