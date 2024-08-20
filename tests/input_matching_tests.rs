@@ -11,7 +11,7 @@ fn test_1l_matching() {
         ..VakintSettings::default()
     });
 
-    //println!("Topologies:\n{}", vakint.topologies);
+    debug!("Topologies:\n{}", vakint.topologies);
 
     compare_output(
         vakint
@@ -142,7 +142,6 @@ fn test_2l_matching_pinched() {
         ..VakintSettings::default()
     });
 
-    debug!("Topologies:\n{}", vakint.topologies);
     /*
     let mut a = vakint
         .to_canonical(
@@ -228,28 +227,9 @@ fn test_2l_matching_pinched() {
             .as_ref()
             .map(|a| a.as_view()),
         Atom::parse(
-            "(k(2,2)^2-k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(\
+            "(k(2,2)^2+k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(\
                         prop(1,edge(2,2),k(1),mUVsq,2)*\
                         prop(2,edge(2,2),k(2),mUVsq,1)\
-                )",
-        )
-        .unwrap(),
-    );
-
-    compare_output(
-        vakint
-            .to_canonical(
-                Atom::parse("(k(2,2)^2+k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(I2LA(mUVsq,2,0,1))")
-                    .unwrap()
-                    .as_view(),
-                false,
-            )
-            .as_ref()
-            .map(|a| a.as_view()),
-        Atom::parse(
-            "(k(2,2)^2-k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(\
-                        prop(1,edge(2,2),k(1),mUVsq,2)*\
-                        prop(3,edge(2,2),k(1)+k(2),mUVsq,1)\
                 )",
         )
         .unwrap(),

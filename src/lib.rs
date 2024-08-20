@@ -1294,6 +1294,11 @@ impl Integral {
                         .match_stack
                         .get(State::get_symbol(format!("pow{}_", i_prop).as_str()))
                     {
+                        // We do not want to match propagators with zero powers in the short form,
+                        // as these should be matched to the pinched version with a hardcoded zero power
+                        if a.is_zero() {
+                            return Ok(None);
+                        }
                         replacement_rules.canonical_expression_substitutions.insert(
                             Atom::parse(format!("pow({})", i_prop).as_str()).unwrap(),
                             a.to_owned(),
