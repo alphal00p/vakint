@@ -25,15 +25,15 @@ pub fn compare_output(output: Result<AtomView, &VakintError>, expected_output: A
             )
             .unwrap();
             let r_processed_view = r_processed.as_view();
-            if r_processed_view != expected_output.as_view() {
+            if r != expected_output.as_view() {
                 println!(
                     "Output does not match expected output:\n{}\n!=\n{}",
                     format!("{}", r_processed_view).red(),
                     format!("{}", expected_output).green()
                 );
             }
-            assert_eq!(r_processed_view, expected_output.as_view());
-            r_processed_view.to_owned()
+            assert_eq!(r, expected_output.as_view());
+            r.to_owned()
         }
         Err(err) => panic!("Error: {}", err),
     }

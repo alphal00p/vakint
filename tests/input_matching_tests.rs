@@ -142,45 +142,13 @@ fn test_2l_matching_pinched() {
         ..VakintSettings::default()
     });
 
-    /*
-    let mut a = vakint
-        .to_canonical(
-            Atom::parse(
-                "(k(11,2)*k(11,2)+k(11,77)*k(22,77)+k(22,33)*p(42,33))*topo(\
-            prop(33,edge(7,10),k(22),mUVsq,2)*\
-            prop(55,edge(7,10),k(11),mUVsq,1)\
-        )",
-            )
-            .unwrap()
-            .as_view(),
-            false,
-        )
-        .unwrap();
-    a = Atom::parse(
-        AtomPrinter::new_with_options(a.as_view(), PrintOptions::file())
-            .to_string()
-            .as_str(),
-    )
-    .unwrap();
-    let b = Atom::parse(
-        "(-1*k(1,33)*p(42,33)+k(1,77)*k(2,77)+k(2,2)^2)*topo(prop(1,edge(2,2),k(1),mUVsq,2)*prop(2,edge(2,2),k(2),mUVsq,1))",
-    )
-    .unwrap();
-    println!("BB\n{}", b.to_canonical_string());
-    println!(
-        "str(a)=str(b) -> {}",
-        a.to_canonical_string() == b.to_canonical_string()
-    );
-    println!("a=b -> {}", a.as_view() == b.as_view());
-    */
-
     compare_output(
         vakint
             .to_canonical(
                 Atom::parse(
                     "(k(11,2)*k(11,2)+k(11,77)*k(22,77)+k(22,33)*p(42,33))*topo(\
-                            prop(33,edge(7,10),k(22),mUVsq,2)*\
-                            prop(55,edge(7,10),k(11),mUVsq,1)\
+                            prop(33,edge(10,10),k(22),mUVsq,2)*\
+                            prop(55,edge(10,10),k(11),mUVsq,1)\
                         )",
                 )
                 .unwrap()
@@ -190,7 +158,7 @@ fn test_2l_matching_pinched() {
             .as_ref()
             .map(|a| a.as_view()),
         Atom::parse(
-            "(k(2,2)^2-k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(\
+            "(k(2,2)^2+k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(\
                         prop(1,edge(2,2),k(1),mUVsq,2)*\
                         prop(2,edge(2,2),k(2),mUVsq,1)\
                     )",
@@ -203,8 +171,8 @@ fn test_2l_matching_pinched() {
             .to_canonical(
                 Atom::parse(
                     "(k(11,2)*k(11,2)+k(11,77)*k(22,77)+k(22,33)*p(42,33))*topo(\
-                            prop(33,edge(7,10),k(22),mUVsq,2)*\
-                            prop(55,edge(7,10),k(11),mUVsq,1)\
+                            prop(33,edge(10,10),k(22),mUVsq,2)*\
+                            prop(55,edge(10,10),k(11),mUVsq,1)\
                         )",
                 )
                 .unwrap()
@@ -213,7 +181,7 @@ fn test_2l_matching_pinched() {
             )
             .as_ref()
             .map(|a| a.as_view()),
-        Atom::parse("(k(2,2)^2-k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(I2LA(mUVsq,2,1,0))").unwrap(),
+        Atom::parse("(k(2,2)^2+k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(I2LA(mUVsq,2,1,0))").unwrap(),
     );
 
     compare_output(

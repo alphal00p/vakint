@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-symbolica = "0.9.0"
+#symbolica = "0.9.0"
+symbolica = { git = "https://github.com/benruijl/symbolica.git", branch = "main" }
 #symbolica = { git = "https://github.com/benruijl/symbolica.git", branch = "nested_evaluate" }
 #symbolica = { path = "../gammaloop_main/python/gammaloop/dependencies/symbolica" }
 anyhow = "1.0.86"

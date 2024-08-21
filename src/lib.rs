@@ -109,6 +109,8 @@ pub enum VakintError {
     MalformedGraph(String),
     #[error("Symbolica error: {0}")]
     SymbolicaError(String),
+    #[error("Numerical evaluation error: {0}")]
+    EvaluationError(String),
     #[error("unknown vakint error")]
     Unknown,
 }
@@ -2206,21 +2208,26 @@ impl Vakint {
         let map_view = map.iter().map(|(k, v)| (k.as_view(), v.clone())).collect();
         let binary_prec: u32 =
             ((self.settings.n_digits_at_evaluation_time as f64) * LOG2_10).floor() as u32;
-        let mut epsilon_coeffs_vec_floats = epsilon_coeffs_vec
-            .iter()
-            .map(|(i64, coeff)| {
-                // TODO add ? when API will change
-                (
-                    *i64,
-                    coeff.evaluate(
-                        &Vakint::get_coeff_map(binary_prec),
-                        &map_view,
-                        &HashMap::default(),
-                        &mut HashMap::default(),
-                    ),
-                )
-            })
-            .collect::<Vec<_>>();
+        let mut epsilon_coeffs_vec_floats = vec![];
+        for (i64, coeff) in epsilon_coeffs_vec.iter() {
+            epsilon_coeffs_vec_floats.push((
+                *i64,
+                match coeff.evaluate(
+                    &Vakint::get_coeff_map(binary_prec),
+                    &map_view,
+                    &HashMap::default(),
+                    &mut HashMap::default(),
+                ) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        return Err(VakintError::EvaluationError(format!(
+                            "Is some tensor structure left?: {}",
+                            e
+                        )));
+                    }
+                },
+            ));
+        }
 
         epsilon_coeffs_vec_floats.sort_by(|(i1, _), (i2, _)| i1.cmp(i2));
         Ok(NumericalEvaluationResult(epsilon_coeffs_vec_floats))
