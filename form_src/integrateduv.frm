@@ -428,15 +428,15 @@ CF uvid;
     Keep brackets;
 
 * Normalize with alphaLoop convention
-#ifndef `PYSECDECCOMPARE'
-    id uvid(n?,?a) = uvid(n,?a) * (-i_*16*pi^2)^-n;
-#else
-    id uvid(n?,?a) = uvid(n,?a) * (1 - eulergamma*rat(ep,1) + 1/2*eulergamma^2*rat(ep^2,1) - 1/6*eulergamma^3*rat(ep^3,1) + 1/24*eulergamma^4*rat(ep^4,1)-1/120*eulergamma^5*rat(ep^5,1))^n;
-    id eulergamma = 4509740178/7812920633;
-#endif
+*#ifndef `PYSECDECCOMPARE'
+*    id uvid(n?,?a) = uvid(n,?a) * (-i_*16*pi^2)^-n;
+*#else
+*    id uvid(n?,?a) = uvid(n,?a) * (1 - eulergamma*rat(ep,1) + 1/2*eulergamma^2*rat(ep^2,1) - 1/6*eulergamma^3*rat(ep^3,1) + 1/24*eulergamma^4*rat(ep^4,1)-1/120*eulergamma^5*rat(ep^5,1))^n;
+*    id eulergamma = 4509740178/7812920633;
+*#endif
 
 * add log(mUV^2/mu^2)-dependence
-    id uvid(n?,?a) = uvid(n,?a) * (1 - logmUVmu * rat(ep, 1) + 1/2 * logmUVmu^2 * rat(ep^2, 1) - 1/6 * logmUVmu^3 * rat(ep^3, 1))^n;
+*    id uvid(n?,?a) = uvid(n,?a) * (1 - logmUVmu * rat(ep, 1) + 1/2 * logmUVmu^2 * rat(ep^2, 1) - 1/6 * logmUVmu^3 * rat(ep^3, 1))^n;
 
     .sort
     #call TruncateExpansion(`SPURIOUSPOLE')

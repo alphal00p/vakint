@@ -6,7 +6,7 @@ fn main() {
     let vakint = Vakint::new(Some(VakintSettings {
         allow_unknown_integrals: false,
         use_dot_product_notation: true,
-        integral_normalization: "1".into(),
+        integral_normalization_factor: vakint::LoopNormalizationFactor::MSbar,
         n_digits_at_evaluation_time: 16,
         ..VakintSettings::default()
     }))
@@ -42,13 +42,13 @@ fn main() {
     params.insert("MUVsq".into(), 1.0);
     params.insert("mursq".into(), 1.0);
 
-    let numerical_partial_eval = vakint.partial_numerical_evaluation(integral.as_view(), &params);
+    let numerical_partial_eval =
+        Vakint::partial_numerical_evaluation(&vakint.settings, integral.as_view(), &params);
     println!("Partial eval:\n{}\n", numerical_partial_eval);
 
     params.insert("g(11,22)".into(), 1.0);
-    let numerical_full_eval = vakint
-        .full_numerical_evaluation(integral.as_view(), &params)
-        .unwrap();
+    let numerical_full_eval =
+        Vakint::full_numerical_evaluation(&vakint.settings, integral.as_view(), &params).unwrap();
     println!(
         "Full eval (metric substituted with 1):\n{}\n",
         numerical_full_eval

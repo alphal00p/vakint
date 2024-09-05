@@ -1,12 +1,17 @@
 use std::f64::consts::LOG2_10;
 
 use colored::Colorize;
+use log::debug;
+use std::vec;
 use symbolica::{
     atom::{Atom, AtomView},
     domains::float::{Complex, Float},
     printer::{AtomPrinter, PrintOptions},
 };
-use vakint::{NumericalEvaluationResult, Vakint, VakintError, VakintSettings};
+
+use std::collections::HashMap;
+use vakint::{EvaluationMethod, LoopNormalizationFactor, PySecDecOptions, VakintSettings};
+use vakint::{NumericalEvaluationResult, Vakint, VakintError};
 
 pub fn get_vakint(vakint_settings: VakintSettings) -> Vakint {
     match Vakint::new(Some(vakint_settings)) {
@@ -15,6 +20,7 @@ pub fn get_vakint(vakint_settings: VakintSettings) -> Vakint {
     }
 }
 
+#[allow(unused)]
 pub fn compare_output(output: Result<AtomView, &VakintError>, expected_output: Atom) -> Atom {
     match output {
         Ok(r) => {
@@ -87,4 +93,104 @@ pub fn compare_numerical_output(
         }
         Err(err) => panic!("Error: {}", err),
     }
+}
+
+#[allow(unused)]
+pub fn compare_analytical_vs_pysecdec(
+    integra_view: AtomView,
+    numerical_masses: HashMap<String, f64, ahash::RandomState>,
+    numerical_external_momenta: HashMap<String, (f64, f64, f64, f64), ahash::RandomState>,
+    rel_threshold: f64,
+    max_pull: f64,
+    quiet: bool,
+) {
+    // First perform the analytic evaluation
+
+    let mut vakint_analytic_settings = VakintSettings {
+        allow_unknown_integrals: false,
+        use_dot_product_notation: true,
+        mu_r_sq_symbol: "mursq".into(),
+        integral_normalization_factor: LoopNormalizationFactor::MSbar,
+        n_digits_at_evaluation_time: 16,
+        ..VakintSettings::default()
+    };
+    vakint_analytic_settings.evaluation_order = vakint_analytic_settings
+        .evaluation_order
+        .iter()
+        .filter(|&method| !matches!(method, EvaluationMethod::PySecDec(_)))
+        .cloned()
+        .collect::<Vec<_>>();
+    let mut vakint = get_vakint(vakint_analytic_settings);
+
+    let mut eval_params = HashMap::default();
+    eval_params.insert(
+        "muvsq".into(),
+        *numerical_masses
+            .get("muvsq")
+            .unwrap_or_else(|| panic!("muvsq not found in numerical_masses")),
+    );
+    eval_params.insert(
+        "mursq".into(),
+        *numerical_masses
+            .get("mursq")
+            .unwrap_or_else(|| panic!("mursq not found in numerical_masses")),
+    );
+
+    let integral = vakint.to_canonical(integra_view, true).unwrap();
+
+    let integral_reduced = vakint.tensor_reduce(integral.as_view()).unwrap();
+    let benchmark_evaluated_integral = vakint
+        .evaluate_integral(integral_reduced.as_view())
+        .unwrap();
+
+    let benchmark = Vakint::full_numerical_evaluation(
+        &vakint.settings,
+        benchmark_evaluated_integral.as_view(),
+        &eval_params,
+    )
+    .unwrap();
+
+    // Now perform the pySecDec evaluation
+    vakint.settings.evaluation_order = vec![EvaluationMethod::PySecDec(PySecDecOptions {
+        quiet,
+        relative_precision: rel_threshold * 1.0e-2,
+        numerical_masses,
+        numerical_external_momenta,
+    })];
+
+    let pysec_dec_eval = match vakint.evaluate_integral(integral.as_view()) {
+        Ok(eval) => eval,
+        Err(e) => {
+            panic!("Error during pySecDec evaluation: {}", e);
+        }
+    };
+    let (pysecdec_central, pysecdec_error) = match Vakint::full_numerical_evaluation_with_error(
+        &vakint.settings,
+        pysec_dec_eval.as_view(),
+        &eval_params,
+    ) {
+        Ok(eval) => eval,
+        Err(e) => {
+            panic!("Error during parsing of numerical pySecDec result: {}", e);
+        }
+    };
+
+    let (matches, msg) = benchmark.does_approx_match(
+        &pysecdec_central,
+        Some(&pysecdec_error),
+        rel_threshold,
+        max_pull,
+    );
+    if !matches || !quiet {
+        println!("Benchmark        :\n{}", benchmark);
+        println!("PySecDec central :\n{}", pysecdec_central);
+        println!("PySecDec error   :\n{}", pysecdec_error);
+        println!("{}", msg)
+    } else {
+        debug!("Benchmark        :\n{}", benchmark);
+        debug!("PySecDec central :\n{}", pysecdec_central);
+        debug!("PySecDec error   :\n{}", pysecdec_error);
+        debug!("{}", msg)
+    }
+    assert!(matches, "Benchmark and numerical result do not match");
 }

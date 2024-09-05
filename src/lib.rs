@@ -1,3 +1,5 @@
+mod symbols;
+
 use anyhow::Result;
 use colored::Colorize;
 #[allow(unused)]
@@ -10,7 +12,9 @@ use std::{
     env,
     f64::consts::LOG2_10,
     fmt, fs,
+    ops::Div,
     process::{Command, ExitStatus, Stdio},
+    sync::{Arc, LazyLock, Mutex},
 };
 use string_template_plus::{Render, RenderOptions, Template};
 use symbolica::{
@@ -19,17 +23,22 @@ use symbolica::{
         Var,
     },
     domains::{
-        float::{Complex, Float},
+        atom::AtomField,
+        float::{Complex, Float, NumericalFloatLike, Real, SingleFloat},
         integer::IntegerRing,
         rational::{Fraction, Rational},
     },
     fun,
     id::{Condition, Match, MatchSettings, Pattern, PatternRestriction, WildcardAndRestriction},
+    poly::series::Series,
     printer::{AtomPrinter, PrintOptions},
-    state::{FunctionAttribute, State},
+    state::State,
+    transformer::Transformer,
 };
 use thiserror::Error;
 use version_compare::{compare_to, Cmp};
+
+use symbols::S;
 
 use phf::phf_map;
 
@@ -67,6 +76,10 @@ static TEMPLATES: phf::Map<&'static str, &'static str> = phf_map! {
     "run_alphaloop_integral_evaluation.txt" => include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/templates/run_alphaloop_integral_evaluation.txt"
+    )),
+    "run_pySecDec_template.txt" => include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/templates/run_pySecDec_template.txt"
     ))
 };
 
@@ -101,12 +114,16 @@ pub enum VakintError {
     FormUnavailable,
     #[error("Could not find FORM output file 'out.txt':\nstderr: {0}\nYou can rerun the script using:\n{1}")]
     MissingFormOutput(String, String, String),
+    #[error("Symbolica could not parse PySecDec output:\n{0}\nError:{1}")]
+    PySecDecOutputParsingError(String, String),
     #[error("Symbolica could not parse FORM output:\n{0}\nError:{1}")]
     FormOutputParsingError(String, String),
     #[error(transparent)]
     IoError(#[from] std::io::Error), // Add this variant to convert std::io::Error to VakintError
     #[error("{0}")]
     MalformedGraph(String),
+    #[error("Invalid loop normalization factor specified: {0}.\nError: {1}\nNote that the following symbols are allowed in the expression: {2}")]
+    InvalidLoopNormalization(String, String, String),
     #[error("Symbolica error: {0}")]
     SymbolicaError(String),
     #[error("Numerical evaluation error: {0}")]
@@ -294,7 +311,30 @@ impl ReplacementRules {
             }
         }
     }
+
+    fn get_propagator_property_list(&self, property: &str) -> HashMap<usize, AtomView> {
+        let mut power_list = HashMap::new();
+        for (source, target) in self.canonical_expression_substitutions.iter() {
+            if let Some(m) = Pattern::parse(format!("{}(id_)", property).as_str())
+                .unwrap()
+                .pattern_match(
+                    source.as_view(),
+                    &Condition::from((State::get_symbol("id_"), number_condition())),
+                    &MatchSettings::default(),
+                )
+                .next()
+            {
+                let id =
+                    get_integer_from_match(m.match_stack.get(State::get_symbol("id_")).unwrap())
+                        .unwrap() as usize;
+
+                power_list.insert(id, target.as_view());
+            }
+        }
+        power_list
+    }
 }
+
 pub struct Topologies(Vec<Topology>);
 
 impl fmt::Display for Topologies {
@@ -353,7 +393,7 @@ impl Topologies {
                         .unwrap()
                         .replace_all(
                             contracted_canonical_expression.as_view(),
-                            &Pattern::parse("1").unwrap(),
+                            &S.one.into_pattern(),
                             None,
                             None,
                         );
@@ -366,7 +406,7 @@ impl Topologies {
                     if !a.is_zero() {
                         *a = Pattern::parse(format!("pow({})", prop_id).as_str())
                             .unwrap()
-                            .replace_all(a.as_view(), &Pattern::parse("0").unwrap(), None, None);
+                            .replace_all(a.as_view(), &S.zero.into_pattern(), None, None);
                     }
                 }
             }
@@ -1556,41 +1596,80 @@ impl Integral {
     }
 }
 
-pub enum EvaluationApproach {
-    AlphaLoop,
-    MATAD,
-    FMFT,
-    PySecDec,
+#[derive(Debug, Clone)]
+pub struct PySecDecOptions {
+    pub quiet: bool,
+    pub relative_precision: f64,
+    pub numerical_masses: HashMap<String, f64, ahash::RandomState>,
+    pub numerical_external_momenta: HashMap<String, (f64, f64, f64, f64), ahash::RandomState>,
 }
 
-impl fmt::Display for EvaluationApproach {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            EvaluationApproach::AlphaLoop => write!(f, "AlphaLoop"),
-            EvaluationApproach::MATAD => write!(f, "MATTAD"),
-            EvaluationApproach::FMFT => write!(f, "FMFT"),
-            EvaluationApproach::PySecDec => write!(f, "PySecDec"),
+impl Default for PySecDecOptions {
+    fn default() -> Self {
+        // Give some random values to the external and masses. The user is expected to change these.
+        let mut numerical_masses = HashMap::default();
+        numerical_masses.insert("muvsq".into(), 1.0);
+        let mut numerical_external_momenta = HashMap::default();
+        for i in 1..=10 {
+            numerical_external_momenta.insert(format!("p{}", i), (13.0, 4.0, 3.0, 12.0));
+        }
+        PySecDecOptions {
+            quiet: true,
+            relative_precision: 1.0e-7,
+            numerical_masses,
+            numerical_external_momenta,
         }
     }
 }
 
-impl EvaluationApproach {
+impl fmt::Display for PySecDecOptions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "quiet={}, relative_precision={:.e}",
+            self.quiet, self.relative_precision
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum EvaluationMethod {
+    AlphaLoop,
+    MATAD,
+    FMFT,
+    PySecDec(PySecDecOptions),
+}
+
+impl fmt::Display for EvaluationMethod {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            EvaluationMethod::AlphaLoop => write!(f, "AlphaLoop"),
+            EvaluationMethod::MATAD => write!(f, "MATTAD"),
+            EvaluationMethod::FMFT => write!(f, "FMFT"),
+            EvaluationMethod::PySecDec(opts) => {
+                write!(f, "PySecDec ({})", opts)
+            }
+        }
+    }
+}
+
+impl EvaluationMethod {
     pub fn supports(&self, vakint: &Vakint, topology: &Topology) -> bool {
         match self {
-            EvaluationApproach::AlphaLoop => {
+            EvaluationMethod::AlphaLoop => {
                 topology.get_integral().alphaloop_expression.is_some()
                     && vakint.settings.number_of_terms_in_epsilon_expansion <= 3
                     && topology.get_integral().n_loops <= 3
             }
-            EvaluationApproach::MATAD => {
+            EvaluationMethod::MATAD => {
                 topology.get_integral().matad_expression.is_some()
                     && topology.get_integral().n_loops <= 3
             }
-            EvaluationApproach::FMFT => {
+            EvaluationMethod::FMFT => {
                 topology.get_integral().fmft_expression.is_some()
                     && topology.get_integral().n_loops == 4
             }
-            EvaluationApproach::PySecDec => true,
+            EvaluationMethod::PySecDec(_) => true,
         }
     }
 
@@ -1601,13 +1680,13 @@ impl EvaluationApproach {
         integral_specs: &ReplacementRules,
     ) -> Result<Atom, VakintError> {
         match self {
-            EvaluationApproach::AlphaLoop => {
+            EvaluationMethod::AlphaLoop => {
                 vakint.alpha_loop_evaluate(vakint, numerator, integral_specs)
             }
-            EvaluationApproach::MATAD => unimplemented!("MATAD evaluations not yet implemented"),
-            EvaluationApproach::FMFT => unimplemented!("FMFT evaluations not yet implemented"),
-            EvaluationApproach::PySecDec => {
-                unimplemented!("PySecDec evaluations not yet implemented")
+            EvaluationMethod::MATAD => unimplemented!("MATAD evaluations not yet implemented"),
+            EvaluationMethod::FMFT => unimplemented!("FMFT evaluations not yet implemented"),
+            EvaluationMethod::PySecDec(opts) => {
+                vakint.pysecdec_evaluate(vakint, numerator, integral_specs, opts)
             }
         }
     }
@@ -1619,18 +1698,186 @@ pub struct VakintSettings {
     pub epsilon_symbol: String,
     pub mu_r_sq_symbol: String,
     pub form_exe_path: String,
+    pub python_exe_path: String,
     pub verify_numerator_identification: bool,
-    pub integral_normalization: String,
+    pub integral_normalization_factor: LoopNormalizationFactor,
     // TODO optimize for 16 digits -> f64
     pub n_digits_at_evaluation_time: u32,
     pub allow_unknown_integrals: bool,
-    pub evaluation_order: Vec<EvaluationApproach>,
+    pub clean_tmp_dir: bool,
+    pub evaluation_order: Vec<EvaluationMethod>,
     // This quantity is typically set equal to *one plus the maximum loop count* of the UV regularisation problem considered.
     // For example when considering a 2-loop problem, then:
     //   a) for the nested one-loop integrals appearing, the single pole, finite term *and* order-epsilon term will need to be considered.
     //   b) for the two-loop integrals, the double pole, single pole and finite terms will be needed, so again three terms
     pub number_of_terms_in_epsilon_expansion: usize,
     pub use_dot_product_notation: bool,
+}
+
+impl VakintSettings {
+    pub fn get_integral_normalization_factor_atom(&self) -> Result<Atom, VakintError> {
+        self.integral_normalization_factor.to_atom(self)
+    }
+}
+pub enum LoopNormalizationFactor {
+    #[allow(non_camel_case_types)]
+    pySecDec,
+    MSbar,
+    Custom(String),
+}
+
+impl LoopNormalizationFactor {
+    pub fn to_expression(&self) -> String {
+        match self {
+            LoopNormalizationFactor::pySecDec => "(𝑖*(𝜋^((4-2*eps)/2)))^(-n_loops)".into(),
+            LoopNormalizationFactor::MSbar => {
+                "(exp(log_mu_sq)/(4*𝜋*exp(-EulerGamma)))^(eps*n_loops)".into()
+            }
+            LoopNormalizationFactor::Custom(s) => s.clone(),
+        }
+    }
+
+    pub fn static_allowed_symbols() -> Vec<String> {
+        vec![
+            "eps".into(),
+            "log_mu_sq".into(),
+            "EulerGamma".into(),
+            "𝑖".into(),
+            "I".into(),
+            "𝜋".into(),
+            "pi".into(),
+        ]
+    }
+
+    pub fn allowed_symbols(settings: &VakintSettings) -> Vec<String> {
+        let mut allowed_symbols = LoopNormalizationFactor::static_allowed_symbols();
+        allowed_symbols.push(settings.epsilon_symbol.clone());
+        allowed_symbols
+    }
+
+    pub fn to_atom(&self, settings: &VakintSettings) -> Result<Atom, VakintError> {
+        let mut a = Atom::try_from(self)?;
+        a = Pattern::parse("eps").unwrap().replace_all(
+            a.as_view(),
+            &Pattern::parse(&settings.epsilon_symbol).unwrap(),
+            None,
+            None,
+        );
+        Ok(a)
+    }
+
+    pub fn validate(
+        &self,
+        settings: &VakintSettings,
+    ) -> Result<(Atom, Series<AtomField>, NumericalEvaluationResult), VakintError> {
+        let expr: Atom = self.to_atom(settings)?;
+        let expanded_expr = Pattern::parse("n_loops").unwrap().replace_all(
+            expr.as_view(),
+            &Atom::new_num(1).into_pattern(),
+            None,
+            None,
+        );
+
+        let expanded_expr = match expanded_expr.series(
+            State::get_symbol(settings.epsilon_symbol.as_str()),
+            Atom::Zero.as_atom_view(),
+            Rational::from(settings.number_of_terms_in_epsilon_expansion),
+            true,
+        ) {
+            Ok(a) => a,
+            Err(e) => return Err(VakintError::SymbolicaError(e.to_string())),
+        };
+
+        let mut expanded_expr_atom = expanded_expr.to_atom();
+        let log_mu_sq = fun!(
+            State::LOG,
+            Atom::new_var(State::get_symbol(settings.mu_r_sq_symbol.as_str()))
+        );
+        expanded_expr_atom = Pattern::parse("log_mu_sq").unwrap().replace_all(
+            expanded_expr_atom.as_view(),
+            &(log_mu_sq).into_pattern(),
+            None,
+            None,
+        );
+
+        let mut params = HashMap::default();
+        params.insert("mursq".into(), 1.0);
+        let num_res = match Vakint::full_numerical_evaluation(
+            settings,
+            expanded_expr_atom.as_view(),
+            &params,
+        ) {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(VakintError::InvalidLoopNormalization(
+                    format!("{}", expr),
+                    e.to_string(),
+                    LoopNormalizationFactor::allowed_symbols(settings).join(","),
+                ))
+            }
+        };
+
+        Ok((expr, expanded_expr, num_res))
+    }
+}
+
+impl fmt::Display for LoopNormalizationFactor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LoopNormalizationFactor::pySecDec => {
+                write!(
+                    f,
+                    "{} convention [ {} ]",
+                    String::from("PySecDec").green(),
+                    self.to_expression()
+                )
+            }
+            LoopNormalizationFactor::MSbar => {
+                write!(
+                    f,
+                    "{} convention [ {} ]",
+                    String::from("MSbar").green(),
+                    self.to_expression()
+                )
+            }
+            LoopNormalizationFactor::Custom(_) => {
+                write!(
+                    f,
+                    "{} convention [ {} ]",
+                    String::from("Custom").green(),
+                    self.to_expression()
+                )
+            }
+        }
+    }
+}
+
+impl TryFrom<&LoopNormalizationFactor> for Atom {
+    type Error = VakintError;
+    fn try_from(expr: &LoopNormalizationFactor) -> Result<Self, VakintError> {
+        match Atom::parse(&expr.to_expression()) {
+            Ok(a) => {
+                let mut processed_a = Pattern::parse("I").unwrap().replace_all(
+                    a.as_view(),
+                    &Pattern::parse("𝑖").unwrap(),
+                    None,
+                    None,
+                );
+                processed_a = Pattern::parse("pi").unwrap().replace_all(
+                    processed_a.as_view(),
+                    &Pattern::parse("𝜋").unwrap(),
+                    None,
+                    None,
+                );
+                Ok(processed_a)
+            }
+            Err(e) => Err(VakintError::InvalidLoopNormalization(
+                format!("{}", expr),
+                e.to_string(),
+                LoopNormalizationFactor::static_allowed_symbols().join(","),
+            )),
+        }
+    }
 }
 
 #[allow(clippy::derivable_impls)]
@@ -1641,15 +1888,17 @@ impl Default for VakintSettings {
             epsilon_symbol: "ε".into(),
             mu_r_sq_symbol: "mursq".into(),
             form_exe_path: env::var("FORM_PATH").unwrap_or("form".into()),
+            python_exe_path: env::var("PYTHON_BIN_PATH").unwrap_or("python3".into()),
             verify_numerator_identification: true,
             n_digits_at_evaluation_time: 16,
-            integral_normalization: "1".into(),
+            integral_normalization_factor: LoopNormalizationFactor::pySecDec,
             allow_unknown_integrals: true,
+            clean_tmp_dir: env::var("VAKINT_NO_CLEAN_TMP_DIR").is_err(),
             evaluation_order: vec![
-                EvaluationApproach::AlphaLoop,
-                EvaluationApproach::MATAD,
-                EvaluationApproach::FMFT,
-                EvaluationApproach::PySecDec,
+                EvaluationMethod::AlphaLoop,
+                EvaluationMethod::MATAD,
+                EvaluationMethod::FMFT,
+                EvaluationMethod::PySecDec(PySecDecOptions::default()),
             ],
             // Default to a three-loop UV subtraction problem, for which alphaLoop implementation can be used.
             number_of_terms_in_epsilon_expansion: 3,
@@ -1840,7 +2089,7 @@ impl VakintTerm {
 
         // Make sure to undo the dot product notation.
         // If it was not used, the command below will do nothing.
-        form_numerator = Vakint::convert_from_dot_notation(form_numerator.as_view());
+        form_numerator = Vakint::convert_from_dot_notation(form_numerator.as_view(), false);
         for (vec, id) in self.vectors.iter() {
             form_numerator = Pattern::parse(format!("{}({},idx_)", vec, id).as_str())
                 .unwrap()
@@ -1885,6 +2134,7 @@ impl VakintTerm {
             &["tensorreduce.frm".into(), "pvtab10.h".into()],
             ("run_tensor_reduction.frm".into(), rendered),
             vec![],
+            vakint.settings.clean_tmp_dir,
         )?;
         let mut reduced_numerator = vakint.process_form_output(form_result)?;
         for (vec, id) in self.vectors.iter() {
@@ -1899,7 +2149,8 @@ impl VakintTerm {
         }
 
         if !vakint.settings.use_dot_product_notation {
-            reduced_numerator = Vakint::convert_from_dot_notation(reduced_numerator.as_view());
+            reduced_numerator =
+                Vakint::convert_from_dot_notation(reduced_numerator.as_view(), false);
         }
 
         self.numerator = reduced_numerator;
@@ -2051,6 +2302,7 @@ impl From<VakintExpression> for Atom {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct NumericalEvaluationResult(Vec<(i64, Complex<Float>)>);
 
 impl fmt::Display for NumericalEvaluationResult {
@@ -2085,35 +2337,116 @@ impl NumericalEvaluationResult {
     pub fn get_epsilon_coefficients(&self) -> Vec<(i64, Complex<Float>)> {
         self.0.clone()
     }
+    pub fn get_epsilon_coefficient(&self, power: i64) -> Complex<Float> {
+        match self.0.iter().find(|(i, _f)| *i == power) {
+            Some((_, f)) => f.clone(),
+            None => Complex::new(self.0[0].1.re.zero(), self.0[0].1.re.zero()),
+        }
+    }
+
+    pub fn does_approx_match(
+        &self,
+        other: &NumericalEvaluationResult,
+        error: Option<&NumericalEvaluationResult>,
+        threshold: f64,
+        max_pull: f64,
+    ) -> (bool, String) {
+        let mut powers = HashSet::new();
+        for (power, _) in self.0.iter() {
+            powers.insert(*power);
+        }
+        for (power, _) in other.0.iter() {
+            powers.insert(*power);
+        }
+        let mut power_vec = powers.iter().cloned().collect::<Vec<_>>();
+        power_vec.sort();
+
+        for power in power_vec {
+            let (self_val, other_val) = (
+                self.get_epsilon_coefficient(power),
+                other.get_epsilon_coefficient(power),
+            );
+            let comparisons = vec![
+                (
+                    "real",
+                    self_val.re.clone(),
+                    other_val.re.clone(),
+                    error.map(|e| e.get_epsilon_coefficient(power).re.clone()),
+                ),
+                (
+                    "imaginary",
+                    self_val.im.clone(),
+                    other_val.im.clone(),
+                    error.map(|e| e.get_epsilon_coefficient(power).im.clone()),
+                ),
+            ];
+            for (part, r, o, e) in comparisons.iter() {
+                let f_max_pull = Float::with_val(r.prec(), max_pull);
+                let f_threshold = Float::with_val(r.prec(), threshold);
+                let delta = (r.clone() - o).norm();
+                if let Some(err) = e {
+                    if delta > f_max_pull * err.norm() {
+                        return (
+                            false,
+                            format!(
+                                "{} part of ε^{} coefficient does not match within max pull: {} != {}",
+                                part, power, r, o
+                            ),
+                        );
+                    }
+                }
+                let scale = (r.norm() + o.norm()) / Float::with_val(r.prec(), 2.0);
+                if scale.is_zero() {
+                    if delta > f_threshold {
+                        return (
+                            false,
+                            format!(
+                                "{} part of ε^{} coefficient does not match within relative error required: {} != {}",
+                                part, power, r, o
+                            ),
+                        );
+                    }
+                } else if delta.div(scale) > f_threshold {
+                    return (
+                            false,
+                            format!(
+                                "{} part of ε^{} coefficient does not match within relative error required: {} != {}",
+                                part, power, r, o
+                            ),
+                        );
+                }
+            }
+        }
+        (true, "matches".into())
+    }
 }
 
 impl Vakint {
-    fn initialize_symbolica_symbols() {
-        // unoriented edge
-        _ = State::get_symbol_with_attributes("uedge", &[FunctionAttribute::Symmetric]);
-        // dot product
-        _ = State::get_symbol_with_attributes("dot", &[FunctionAttribute::Symmetric]);
-        // metric tensor
-        _ = State::get_symbol_with_attributes("g", &[FunctionAttribute::Symmetric]);
-    }
-
     pub fn get_coeff_map(prec: u32) -> impl Fn(&Fraction<IntegerRing>) -> Complex<Float> {
         move |x| Complex::new(x.to_multi_prec_float(prec), Float::with_val(prec, 0.))
     }
 
     pub fn get_constants_map(
-        &self,
+        settings: &VakintSettings,
         params: &HashMap<String, f64, ahash::RandomState>,
     ) -> Result<HashMap<Atom, Complex<Float>, ahash::random_state::RandomState>, VakintError> {
         let mut const_map: HashMap<Atom, Complex<Float>, ahash::random_state::RandomState> =
             HashMap::default();
 
         let binary_prec: u32 =
-            ((self.settings.n_digits_at_evaluation_time as f64) * LOG2_10).floor() as u32;
+            ((settings.n_digits_at_evaluation_time as f64) * LOG2_10).floor() as u32;
         const_map.insert(
             Atom::from(Var::new(State::get_symbol("𝜋"))),
             Complex::new(
                 Float::with_val(binary_prec, Constant::Pi),
+                Float::with_val(binary_prec, 0),
+            ),
+        );
+
+        const_map.insert(
+            Atom::from(Var::new(State::get_symbol("EulerGamma"))),
+            Complex::new(
+                Float::with_val(binary_prec, Constant::Euler),
                 Float::with_val(binary_prec, 0),
             ),
         );
@@ -2148,11 +2481,11 @@ impl Vakint {
     }
 
     pub fn partial_numerical_evaluation(
-        &self,
+        settings: &VakintSettings,
         integral: AtomView,
         params: &HashMap<String, f64, ahash::RandomState>,
     ) -> Atom {
-        let const_map = self.get_constants_map(params).unwrap();
+        let const_map = Vakint::get_constants_map(settings, params).unwrap();
 
         let mut res = integral.to_owned();
         for (src, trgt) in const_map.iter() {
@@ -2168,9 +2501,37 @@ impl Vakint {
 
         res
     }
+    pub fn full_numerical_evaluation_with_error(
+        settings: &VakintSettings,
+        integral: AtomView,
+        params: &HashMap<String, f64, ahash::RandomState>,
+    ) -> Result<(NumericalEvaluationResult, NumericalEvaluationResult), VakintError> {
+        let (error_atom, integral_atom) = integral.coefficient_list(S.error_flag_symbol);
+        assert!(error_atom.len() == 1);
+        let mut central =
+            Vakint::full_numerical_evaluation(settings, integral_atom.as_view(), params)?;
+        let mut error =
+            Vakint::full_numerical_evaluation(settings, error_atom[0].1.as_view(), params)?;
+
+        for (i, eval) in central.0.iter() {
+            if !error.0.iter().any(|(j, _)| i == j) {
+                error
+                    .0
+                    .push((*i, Complex::new(eval.re.zero(), eval.re.zero())));
+            }
+        }
+        for (i, eval) in error.0.iter() {
+            if !central.0.iter().any(|(j, _)| i == j) {
+                central
+                    .0
+                    .push((*i, Complex::new(eval.re.zero(), eval.re.zero())));
+            }
+        }
+        Ok((central, error))
+    }
 
     pub fn full_numerical_evaluation(
-        &self,
+        settings: &VakintSettings,
         integral: AtomView,
         params: &HashMap<String, f64, ahash::RandomState>,
     ) -> Result<NumericalEvaluationResult, VakintError> {
@@ -2204,10 +2565,10 @@ impl Vakint {
 
         epsilon_coeffs_vec.push((0, &epsilon_coeffs.1));
 
-        let map = self.get_constants_map(params).unwrap();
+        let map = Vakint::get_constants_map(settings, params).unwrap();
         let map_view = map.iter().map(|(k, v)| (k.as_view(), v.clone())).collect();
         let binary_prec: u32 =
-            ((self.settings.n_digits_at_evaluation_time as f64) * LOG2_10).floor() as u32;
+            ((settings.n_digits_at_evaluation_time as f64) * LOG2_10).floor() as u32;
         let mut epsilon_coeffs_vec_floats = vec![];
         for (i64, coeff) in epsilon_coeffs_vec.iter() {
             epsilon_coeffs_vec_floats.push((
@@ -2231,6 +2592,443 @@ impl Vakint {
 
         epsilon_coeffs_vec_floats.sort_by(|(i1, _), (i2, _)| i1.cmp(i2));
         Ok(NumericalEvaluationResult(epsilon_coeffs_vec_floats))
+    }
+
+    fn pysecdec_evaluate(
+        &self,
+        vakint: &Vakint,
+        numerator: AtomView,
+        integral_specs: &ReplacementRules,
+        options: &PySecDecOptions,
+    ) -> Result<Atom, VakintError> {
+        let integral = integral_specs.canonical_topology.get_integral();
+
+        let vectors = VakintTerm::identify_vectors_in_numerator(numerator)?;
+        let mut processed_numerator = Vakint::convert_to_dot_notation(numerator);
+
+        // Make sure there is no open index left
+        if Pattern::parse("s_(id_,idx_)")
+            .unwrap()
+            .pattern_match(
+                processed_numerator.as_view(),
+                &(Condition::from((State::get_symbol("id_"), number_condition()))
+                    & Condition::from((State::get_symbol("idx_"), number_condition()))
+                    & Condition::from((State::get_symbol("s_"), symbol_condition()))),
+                &MatchSettings::default(),
+            )
+            .next()
+            .is_some()
+        {
+            return Err(VakintError::InvalidNumerator(
+                format!("PySecDec can only handle scalar numerator. If you have open indices, make sure they are contracted with external momenta: {}",processed_numerator),
+            ));
+        }
+        // Convert back from dot notation
+        processed_numerator =
+            Vakint::convert_from_dot_notation(processed_numerator.as_view(), true);
+
+        let dot_product_matcher = Pattern::parse("v1_(id1_,idx_)*v2_(id2_,idx_)").unwrap();
+        let arc_mutex_lorentz_indices = Arc::new(Mutex::new(HashSet::new()));
+        let arc_mutex_lorentz_indices_sent = arc_mutex_lorentz_indices.clone();
+        let dot_product_transformer =
+            Transformer::Map(Box::new(move |a_in: AtomView, a_out: &mut Atom| {
+                if let AtomView::Fun(s) = a_in {
+                    let a_in = s.to_slice();
+                    arc_mutex_lorentz_indices_sent
+                        .lock()
+                        .unwrap()
+                        .insert(format!("mu{}", a_in.get(4).to_canonical_string()));
+                    *a_out = Atom::parse(
+                        format!(
+                            "{}{}(mu{})*{}{}(mu{})",
+                            a_in.get(0).to_canonical_string(),
+                            a_in.get(1).to_canonical_string(),
+                            a_in.get(4).to_canonical_string(),
+                            a_in.get(2).to_canonical_string(),
+                            a_in.get(3).to_canonical_string(),
+                            a_in.get(4).to_canonical_string(),
+                        )
+                        .as_str(),
+                    )
+                    .unwrap();
+                };
+
+                Ok(())
+            }));
+        processed_numerator = dot_product_matcher.replace_all(
+            processed_numerator.as_view(),
+            &Pattern::Transformer(Box::new((
+                Some(Pattern::parse("arg(v1_,id1_,v2_,id2_,idx_)").unwrap()),
+                vec![dot_product_transformer.clone()],
+            ))),
+            None,
+            None,
+        );
+
+        // Powers higher than two cannot occur as different dummy indices would have been used in
+        // the call 'processed_numerator = Vakint::convert_from_dot_notation(processed_numerator.as_view(), true)'
+        let square_matcher = Pattern::parse("v1_(id1_,idx_)^2").unwrap();
+        processed_numerator = square_matcher.replace_all(
+            processed_numerator.as_view(),
+            &Pattern::Transformer(Box::new((
+                Some(Pattern::parse("arg(v1_,id1_,v1_,id1_,idx_)").unwrap()),
+                vec![dot_product_transformer],
+            ))),
+            None,
+            None,
+        );
+        let lorentz_indices = arc_mutex_lorentz_indices.lock().unwrap().clone();
+
+        let mut m = Atom::new();
+        let power_list_map = integral_specs.get_propagator_property_list("pow");
+        let mass_list_map = integral_specs.get_propagator_property_list("msq");
+        let mut masses = HashSet::new();
+        let mut power_list: Vec<i64> = vec![];
+
+        let mut loop_momenta_ids_found = HashSet::new();
+        let pysecdec_propagators = format!(
+            "[{}]",
+            integral
+                .graph
+                .edges
+                .iter()
+                .map(|(e_id, e)| format!(
+                    "'({})**2{}'",
+                    {
+                        m = e.momentum.clone();
+                        power_list.push(
+                            power_list_map
+                                .get(e_id)
+                                .unwrap()
+                                .to_owned()
+                                .try_into()
+                                .unwrap(),
+                        );
+                        for i_loop in 1..=integral.n_loops {
+                            let p = Pattern::parse(format!("k({})", i_loop).as_str()).unwrap();
+                            if p.could_match(m.as_view()) {
+                                loop_momenta_ids_found.insert(i_loop);
+                            }
+                            m = p.replace_all(
+                                m.as_view(),
+                                &Pattern::parse(format!("k{}", i_loop).as_str()).unwrap(),
+                                None,
+                                None,
+                            );
+                        }
+                        AtomPrinter::new_with_options(m.as_view(), PrintOptions::file())
+                    },
+                    {
+                        let m = mass_list_map.get(e_id).unwrap().to_owned();
+                        if m.is_zero() {
+                            "".into()
+                        } else {
+                            masses.insert(m.get_symbol().unwrap().to_string());
+                            format!("-{}", m.get_symbol().unwrap())
+                        }
+                    }
+                ))
+                .collect::<Vec<_>>()
+                .join(", "),
+        );
+        let n_loops_in_topology = loop_momenta_ids_found.len();
+        // This should always hold, because pinched higher loops that reduce the loop counts must be captured by lower loop count topologies.
+        // It is important that this hold otherwise MSbar normalization factor would be off.
+        assert!(n_loops_in_topology == integral.n_loops);
+
+        let mut vars: HashMap<String, String> = HashMap::new();
+
+        vars.insert("graph_name".into(), "pySecDecRun".into());
+
+        vars.insert("propagators".into(), pysecdec_propagators);
+        let mut sorted_lorentz_indices = lorentz_indices.iter().cloned().collect::<Vec<_>>();
+        sorted_lorentz_indices.sort();
+        vars.insert(
+            "lorentz_indices".into(),
+            format!(
+                "[{}]",
+                sorted_lorentz_indices
+                    .iter()
+                    .map(|li| format!("'{}'", li))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ),
+        );
+        vars.insert(
+            "loop_momenta".into(),
+            format!(
+                "[{}]",
+                (1..=integral.n_loops)
+                    .map(|i| format!("'k{}'", i))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ),
+        );
+        let mut external_momenta = vectors
+            .iter()
+            .filter_map(|(v, id)| {
+                if v == EXTERNAL_MOMENTUM_SYMBOL {
+                    Some(format!("{}{}", v, id))
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        external_momenta.sort();
+        vars.insert(
+            "external_momenta".into(),
+            format!(
+                "[{}]",
+                external_momenta
+                    .iter()
+                    .map(|em| format!("'{}'", em))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ),
+        );
+        vars.insert(
+            "power_list".into(),
+            format!(
+                "tuple([{}])",
+                power_list
+                    .iter()
+                    .map(|p| format!("{}", p))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ),
+        );
+        let numerator_path = "numerator.txt";
+        vars.insert("numerator_path".into(), numerator_path.into());
+        let numerator_string = processed_numerator.to_canonical_string();
+        // Powers higher than two cannot occur as different dummy indices would have been used in
+        // the call 'processed_numerator = Vakint::convert_from_dot_notation(processed_numerator.as_view(), true)'
+        let remove_squares_re = Regex::new(r"(?<vec>[\w|-|\d]+)\((?<idx>mu-?\d+)\)\^2").unwrap();
+        let numerator_string = remove_squares_re
+            .replace_all(numerator_string.as_str(), "$vec$id($idx)*$vec$id($idx)")
+            .to_string();
+
+        let description_path = "description.txt";
+        let description_string = format!(
+            "Integral:\n{}\nNumerator:\n{}",
+            integral_specs,
+            numerator.to_owned()
+        );
+
+        vars.insert("n_loops".into(), format!("{}", n_loops_in_topology));
+        vars.insert("loop_additional_prefactor".into(), "1".into());
+        vars.insert("additional_overall_factor".into(), "1.0".into());
+
+        let mut masses_vec = masses.iter().cloned().collect::<Vec<_>>();
+        masses_vec.sort();
+        let mut real_parameters = vec![];
+        let mut replacement_rules = vec![];
+        for m in masses_vec.iter() {
+            real_parameters.push(format!("'{}'", m.clone()));
+        }
+        for iv1 in 0..external_momenta.len() {
+            for iv2 in iv1..external_momenta.len() {
+                let v1 = external_momenta[iv1].clone();
+                let v2 = external_momenta[iv2].clone();
+                replacement_rules.push((format!("'{}*{}'", v1, v2), format!("'{}{}'", v1, v2)));
+                real_parameters.push(format!("'{}{}'", v1, v2));
+            }
+        }
+
+        vars.insert(
+            "replacement_rules".into(),
+            format!(
+                "[{}]",
+                replacement_rules
+                    .iter()
+                    .map(|(k, v)| format!("({},{})", k, v))
+                    .collect::<Vec<_>>()
+                    .join(",\n")
+            ),
+        );
+
+        vars.insert(
+            "real_parameters".into(),
+            format!("[{}]", real_parameters.join(",")),
+        );
+
+        vars.insert("complex_parameters_input".into(), "[]".into());
+        vars.insert("real_parameters_input".into(), "[]".into());
+        let mut default_external_momenta = vec![];
+        for p in external_momenta {
+            if let Some(f) = options.numerical_external_momenta.get(&p) {
+                default_external_momenta.push((p, f));
+            } else {
+                return Err(VakintError::EvaluationError(format!("Missing specification of numerical value for external momentum '{}'. Specify it in the PySecDecOptions of Vakint.", p)));
+            }
+        }
+        vars.insert(
+            "default_externals".into(),
+            format!(
+                r"[{}\n]",
+                default_external_momenta
+                    .iter()
+                    .map(|(pi, f)| format!("({:.e},{:.e},{:.e},{:.e}) #{}", f.0, f.1, f.2, f.3, pi))
+                    .collect::<Vec<_>>()
+                    .join(r"\n,")
+            ),
+        );
+        let mut default_masses = vec![];
+        for m in masses_vec {
+            if let Some(num_m) = options.numerical_masses.get(&m) {
+                default_masses.push((m, num_m));
+            } else {
+                return Err(VakintError::EvaluationError(format!("Missing specification of numerical value for mass '{}'. Specify it in the PySecDecOptions of Vakint.", m)));
+            }
+        }
+        vars.insert(
+            "default_masses".into(),
+            format!(
+                r"[{}\n]",
+                default_masses
+                    .iter()
+                    .map(|(m, num_m)| format!("{:.e} #{}", num_m, m))
+                    .collect::<Vec<_>>()
+                    .join(r"\n,")
+            ),
+        );
+
+        vars.insert(
+            "max_epsilon_order".into(),
+            format!(
+                "{}",
+                vakint.settings.number_of_terms_in_epsilon_expansion - integral.n_loops
+            ),
+        );
+        vars.insert("contour_deformation".into(), "False".into());
+
+        vars.insert(
+            "drawing_input_power_list".into(),
+            vars.get("power_list").unwrap().clone(),
+        );
+        vars.insert("drawing_input_external_lines".into(), "[]".into());
+        let internal_lines_str = format!(
+            "[{}]",
+            integral
+                .graph
+                .edges
+                .iter()
+                .map(|(e_id, e)| {
+                    format!("['e{}',[{},{}]]", e_id, e.left_node_id, e.right_node_id)
+                })
+                .collect::<Vec<_>>()
+                .join(",")
+        );
+        vars.insert("drawing_input_internal_lines".into(), internal_lines_str);
+
+        vars.insert("couplings_prefactor".into(), "'1'".into());
+        vars.insert("couplings_values".into(), "{}".into());
+
+        let template =
+            Template::parse_template(TEMPLATES.get("run_pySecDec_template.txt").unwrap()).unwrap();
+
+        let rendered = template
+            .render(&RenderOptions {
+                variables: vars,
+                ..Default::default()
+            })
+            .unwrap_or_else(|e| {
+                panic!("Error while rendering template: {}", e);
+            });
+
+        let mut pysecdec_options = vec!["-c".into(), "-i".into(), "qmc".into()];
+        pysecdec_options.push("--eps_rel".into());
+        pysecdec_options.push(format!("{:.e}", options.relative_precision));
+        if options.quiet {
+            pysecdec_options.push("-q".into());
+        }
+        let pysecdec_output = vakint.run_pysecdec(
+            &[
+                ("run_pySecDec.py".into(), rendered),
+                (numerator_path.into(), numerator_string),
+                (description_path.into(), description_string),
+            ],
+            pysecdec_options,
+            vakint.settings.clean_tmp_dir,
+        )?;
+        if !options.quiet {
+            info!(
+                "PySecDec raw output:\ncentral: {}\nerror : {}",
+                pysecdec_output[0], pysecdec_output[1]
+            );
+        }
+        /*
+        let pysecdec_output = [
+            String::from("ep^(-1)*(2.0000000000000000e+00+(0.0000000000000000e+00)*I)+ep^(0)*(-5.4072569092295630e-01+(0.0000000000000000e+00)*I)+ep^(1)*(2.7180301350542537e+00+(0.0000000000000000e+00)*I)+ep^(2)*(-8.5638398947489147e-01+(0.0000000000000000e+00)*I)"),
+            String::from("ep^(-1)*(7.9539672483176226e-17+(0.0000000000000000e+00)*I)+ep^(0)*(5.9466474629934134e-17+(0.0000000000000000e+00)*I)+ep^(1)*(1.1644579020645423e-16+(0.0000000000000000e+00)*I)+ep^(2)*(8.0813279157421749e-17+(0.0000000000000000e+00)*I)")
+        ];
+        */
+
+        let log_mu_sq = fun!(
+            State::LOG,
+            Atom::new_var(State::get_symbol(vakint.settings.mu_r_sq_symbol.as_str()))
+        );
+
+        let pysecdec_normalization_correction = Atom::parse(
+            format!(
+                "(  𝑖*(𝜋^((4-2*{eps})/2))\
+                )^{n_loops}",
+                eps = self.settings.epsilon_symbol,
+                n_loops = n_loops_in_topology
+            )
+            .as_str(),
+        )
+        .unwrap();
+
+        let evaluated_integral = pysecdec_output
+            .iter()
+            .map(|out| match Atom::parse(out.replace("I", "𝑖").as_str()) {
+                Ok(mut processed) => {
+                    processed = Pattern::parse("ep").unwrap().replace_all(
+                        processed.as_view(),
+                        &Pattern::parse(&self.settings.epsilon_symbol).unwrap(),
+                        None,
+                        None,
+                    );
+                    processed = processed
+                        * pysecdec_normalization_correction.to_owned()
+                        * S.n_loops.into_pattern().replace_all(
+                            vakint
+                                .settings
+                                .get_integral_normalization_factor_atom()?
+                                .as_view(),
+                            &Atom::new_num(integral.n_loops as i64).into_pattern(),
+                            None,
+                            None,
+                        );
+
+                    let expanded_evaluation = match processed.series(
+                        State::get_symbol(vakint.settings.epsilon_symbol.as_str()),
+                        Atom::Zero.as_atom_view(),
+                        Rational::from(
+                            vakint.settings.number_of_terms_in_epsilon_expansion - integral.n_loops,
+                        ),
+                        true,
+                    ) {
+                        Ok(a) => a,
+                        Err(e) => return Err(VakintError::SymbolicaError(e.to_string())),
+                    };
+
+                    let mut evaluated_i = expanded_evaluation.to_atom();
+                    evaluated_i = Pattern::parse("log_mu_sq").unwrap().replace_all(
+                        evaluated_i.as_view(),
+                        &(log_mu_sq).into_pattern(),
+                        None,
+                        None,
+                    );
+
+                    Ok(evaluated_i)
+                }
+                Err(err) => Err(VakintError::PySecDecOutputParsingError(out.clone(), err)),
+            })
+            .collect::<Result<Vec<_>, VakintError>>()?;
+
+        Ok(evaluated_integral[0].to_owned()
+            + evaluated_integral[1].to_owned() * S.error_flag.to_owned())
     }
 
     fn alpha_loop_evaluate(
@@ -2302,12 +3100,14 @@ impl Vakint {
                     vakint.settings.number_of_terms_in_epsilon_expansion - integral.n_loops
                 ),
             ],
+            vakint.settings.clean_tmp_dir,
         )?;
 
         let mut evaluated_integral = vakint.process_form_output(form_result)?;
 
         if vakint.settings.use_dot_product_notation {
-            evaluated_integral = Vakint::convert_from_dot_notation(evaluated_integral.as_view());
+            evaluated_integral =
+                Vakint::convert_from_dot_notation(evaluated_integral.as_view(), false);
         }
 
         let muv_sq_symbol = if let Some(m) = Pattern::parse("prop(args__,m_,pow_)")
@@ -2319,10 +3119,20 @@ impl Vakint {
             )
             .next()
         {
-            m.match_stack
+            match m
+                .match_stack
                 .get(State::get_symbol("m_"))
                 .unwrap()
                 .to_atom()
+            {
+                Atom::Var(s) => s.get_symbol(),
+                _ => {
+                    return Err(VakintError::MalformedGraph(format!(
+                        "Could not find muV in graph:\n{}",
+                        integral.canonical_expression.as_ref().unwrap()
+                    )))
+                }
+            }
         } else {
             return Err(VakintError::MalformedGraph(format!(
                 "Could not find muV in graph:\n{}",
@@ -2332,28 +3142,58 @@ impl Vakint {
 
         evaluated_integral = Pattern::parse("mUV").unwrap().replace_all(
             evaluated_integral.as_view(),
-            &muv_sq_symbol
+            &Atom::new_var(muv_sq_symbol)
                 .pow((Atom::new_num(1) / Atom::new_num(2)).as_atom_view())
                 .into_pattern(),
             None,
             None,
         );
 
-        evaluated_integral = Pattern::parse("logmUVmu").unwrap().replace_all(
-            evaluated_integral.as_view(),
-            &((Atom::new_num(1) / Atom::new_num(2))
-                * fun!(
-                    State::LOG,
-                    muv_sq_symbol
-                        / Atom::new_var(State::get_symbol(vakint.settings.mu_r_sq_symbol.as_str()))
-                ))
-            .into_pattern(),
-            None,
-            None,
+        let log_muv_mu_sq = fun!(
+            State::LOG,
+            Atom::new_var(muv_sq_symbol)
+                / Atom::new_var(State::get_symbol(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
+        let log_mu_sq = fun!(
+            State::LOG,
+            Atom::new_var(State::get_symbol(vakint.settings.mu_r_sq_symbol.as_str()))
+        );
+
+        //*((2*𝜋)^(2*{eps}))\
+        //*((4*𝜋*exp(EulerGamma)))^{eps}
+        //*((2*𝜋)^(4-2*{eps}))
+        //*𝑖*(𝜋^((4-2*{eps})/2))
+        // Make sure to split off the logarithmic terms with one term showing explicitely a ratio of scales and the other
+        // having just a logarithm of the renormalization scale so that cancellations are symbolic when using `log_mu_sq`
+        // in the normalization choice.
+        // We must keep the name logmUVmu as it is reserved in the alphaloop implementation and corresponds to log(mUV^2/mu^2)
+        // This is also the reason we do not simplify the expression exp(-logmUVmu+log_mu_sq)
+        let alphaloop_normalization_correction = Atom::parse(
+            format!(
+                "(\
+                    𝑖*(𝜋^((4-2*{eps})/2))\
+                 *(exp(-EulerGamma))^({eps})\
+                 *(exp(-logmUVmu-log_mu_sq))^({eps})\
+                 )^{n_loops}",
+                eps = self.settings.epsilon_symbol,
+                n_loops = integral.n_loops
+            )
+            .as_str(),
+        )
+        .unwrap();
+
         evaluated_integral = evaluated_integral
-            * Atom::parse(vakint.settings.integral_normalization.as_str()).unwrap();
+            * alphaloop_normalization_correction
+            * S.n_loops.into_pattern().replace_all(
+                vakint
+                    .settings
+                    .get_integral_normalization_factor_atom()?
+                    .as_view(),
+                &Atom::new_num(integral.n_loops as i64).into_pattern(),
+                None,
+                None,
+            );
 
         let expanded_evaluation = match evaluated_integral.series(
             State::get_symbol(vakint.settings.epsilon_symbol.as_str()),
@@ -2364,6 +3204,20 @@ impl Vakint {
             Ok(a) => a,
             Err(e) => return Err(VakintError::SymbolicaError(e.to_string())),
         };
+        evaluated_integral = expanded_evaluation.to_atom();
+
+        evaluated_integral = Pattern::parse("logmUVmu").unwrap().replace_all(
+            evaluated_integral.as_view(),
+            &(log_muv_mu_sq).into_pattern(),
+            None,
+            None,
+        );
+        evaluated_integral = Pattern::parse("log_mu_sq").unwrap().replace_all(
+            evaluated_integral.as_view(),
+            &(log_mu_sq).into_pattern(),
+            None,
+            None,
+        );
 
         /*
         println!("exp res: {}", expanded_evaluation);
@@ -2377,7 +3231,7 @@ impl Vakint {
         }
         */
 
-        Ok(expanded_evaluation.to_atom())
+        Ok(evaluated_integral)
     }
 
     fn get_form_version(&self) -> Result<String, VakintError> {
@@ -2395,7 +3249,7 @@ impl Vakint {
         let output_str = String::from_utf8_lossy(&output.stdout).into_owned();
         let re = Regex::new(r"FORM\s([\.|\d]+)").unwrap();
         let mut versions = vec![];
-        for (_, [version]) in re.captures_iter(output_str.as_str()).map(|c| c.extract()) {
+        for (_, [version]) in re.captures_iter(output_str.as_str()).map(|ci| ci.extract()) {
             versions.push(version);
         }
         if versions.is_empty() {
@@ -2407,9 +3261,60 @@ impl Vakint {
         Ok(versions[0].into())
     }
 
-    pub fn convert_from_dot_notation(atom: AtomView) -> Atom {
+    pub fn convert_from_dot_notation(atom: AtomView, no_power: bool) -> Atom {
         let mut expr = atom.to_owned();
         let mut running_dummy_index = 1;
+
+        if no_power {
+            while let Some(m) = Pattern::parse("dot(v1_(id1_),v2_(id2_))^n_")
+                .unwrap()
+                .pattern_match(
+                    expr.as_view(),
+                    &(Condition::from((State::get_symbol("v1_"), symbol_condition()))
+                        & Condition::from((State::get_symbol("v2_"), symbol_condition()))
+                        & Condition::from((State::get_symbol("id1_"), number_condition()))
+                        & Condition::from((State::get_symbol("id2_"), number_condition()))
+                        & Condition::from((State::get_symbol("n_"), number_condition()))),
+                    &MatchSettings::default(),
+                )
+                .next()
+            {
+                let (id1, id2) = (
+                    get_integer_from_match(m.match_stack.get(State::get_symbol("id1_")).unwrap())
+                        .unwrap(),
+                    get_integer_from_match(m.match_stack.get(State::get_symbol("id2_")).unwrap())
+                        .unwrap(),
+                );
+                let (v1, v2) = match (
+                    m.match_stack.get(State::get_symbol("v1_")),
+                    m.match_stack.get(State::get_symbol("v2_")),
+                ) {
+                    (Some(Match::FunctionName(s1)), Some(Match::FunctionName(s2))) => (s1, s2),
+                    _ => unreachable!("Vectors have to be symbols"),
+                };
+                let pow =
+                    get_integer_from_match(m.match_stack.get(State::get_symbol("n_")).unwrap())
+                        .unwrap() as usize;
+                let new_expression = (0..pow)
+                    .map(|_i| {
+                        let r = format!(
+                            "{}({},{})*{}({},{})",
+                            v1, id1, running_dummy_index, v2, id2, running_dummy_index
+                        );
+                        running_dummy_index += 1;
+                        r
+                    })
+                    .collect::<Vec<_>>()
+                    .join("*");
+
+                expr = m.target.into_pattern().replace_all(
+                    expr.as_view(),
+                    &Pattern::parse(new_expression.as_str()).unwrap(),
+                    None,
+                    None,
+                );
+            }
+        }
 
         while let Some(m) = Pattern::parse("dot(v1_(id1_),v2_(id2_))")
             .unwrap()
@@ -2452,6 +3357,7 @@ impl Vakint {
             );
             running_dummy_index += 1;
         }
+
         expr
     }
 
@@ -2459,7 +3365,7 @@ impl Vakint {
         let mut expr = atom.to_owned();
         expr = Pattern::parse("v_(id_,idx_)^n_").unwrap().replace_all(
             expr.as_view(),
-            &Pattern::parse("dot(id_,id_)^(n_/2)").unwrap(),
+            &Pattern::parse("dot(v_(id_),v_(id_))^(n_/2)").unwrap(),
             Some(
                 &(Condition::from((State::get_symbol("v_"), symbol_condition()))
                     & Condition::from((State::get_symbol("id_"), number_condition()))
@@ -2506,8 +3412,20 @@ impl Vakint {
     }
 
     pub fn new(settings: Option<VakintSettings>) -> Result<Self, VakintError> {
-        Vakint::initialize_symbolica_symbols();
+        // Force initialization of symbolica symbols with proper attributes
+        LazyLock::force(&S);
         let vakint_settings = settings.unwrap_or_default();
+
+        // Verify that the chosen normalisation only contains the expected symbols
+        let (_full_atom, expanded, evaluated) = vakint_settings
+            .integral_normalization_factor
+            .validate(&vakint_settings)?;
+
+        debug!(
+            "Loop normalisation factor considered:\nFull                  : {}\nExpanded (n_loops=1)  : {}\nEvaluated (n_loops=1) :\n{}",
+            vakint_settings.integral_normalization_factor, expanded, evaluated
+        );
+
         let topologies = Topologies::generate_topologies(&vakint_settings)?;
         let vakint = Vakint {
             settings: vakint_settings,
@@ -2613,29 +3531,36 @@ impl Vakint {
         }
     }
 
-    pub fn run_form(
+    pub fn run_pysecdec(
         &self,
-        resources: &[String],
-        input: (String, String),
+        input: &[(String, String)],
         options: Vec<String>,
-    ) -> Result<String, VakintError> {
-        let tmp_dir = &env::temp_dir().join("vakint_temp");
+        clean: bool,
+    ) -> Result<Vec<String>, VakintError> {
+        let tmp_dir = &env::temp_dir().join("vakint_temp_pysecdec");
         if tmp_dir.exists() {
             fs::remove_dir_all(tmp_dir)?;
         }
         fs::create_dir(tmp_dir)?;
 
-        for resource in resources.iter() {
-            fs::write(tmp_dir.join(resource), FORM_SRC.get(resource).unwrap())?;
+        for input in input.iter() {
+            fs::write(tmp_dir.join(&input.0).to_str().unwrap(), &input.1)?;
         }
-        fs::write(tmp_dir.join(&input.0).to_str().unwrap(), &input.1)?;
-        let mut cmd = Command::new(self.settings.form_exe_path.as_str());
+
+        let mut cmd = Command::new(self.settings.python_exe_path.as_str());
+        cmd.arg(input[0].clone().0);
         for opt in options {
             cmd.arg(opt);
         }
-        cmd.arg(input.0);
+        cmd.current_dir(tmp_dir);
+
+        if !clean {
+            info!("Running pySecDec with command: {:?}", cmd);
+        } else {
+            debug!("Running pySecDec with command: {:?}", cmd);
+        }
+
         let output = cmd
-            .current_dir(tmp_dir)
             .stderr(Stdio::inherit())
             .stdout(Stdio::null())
             .output()?;
@@ -2654,7 +3579,62 @@ impl Vakint {
             ));
         }
         let result = fs::read_to_string(tmp_dir.join("out.txt"))?;
-        fs::remove_dir_all(tmp_dir)?;
+        if clean {
+            fs::remove_dir_all(tmp_dir)?;
+        }
+        Ok(result.split('\n').map(|s| s.into()).collect::<Vec<_>>())
+    }
+
+    pub fn run_form(
+        &self,
+        resources: &[String],
+        input: (String, String),
+        options: Vec<String>,
+        clean: bool,
+    ) -> Result<String, VakintError> {
+        let tmp_dir = &env::temp_dir().join("vakint_temp");
+        if tmp_dir.exists() {
+            fs::remove_dir_all(tmp_dir)?;
+        }
+        fs::create_dir(tmp_dir)?;
+
+        for resource in resources.iter() {
+            fs::write(tmp_dir.join(resource), FORM_SRC.get(resource).unwrap())?;
+        }
+        fs::write(tmp_dir.join(&input.0).to_str().unwrap(), &input.1)?;
+        let mut cmd = Command::new(self.settings.form_exe_path.as_str());
+        for opt in options {
+            cmd.arg(opt);
+        }
+        cmd.arg(input.0);
+        cmd.current_dir(tmp_dir);
+        if !clean {
+            info!("Running FORM with command: {:?}", cmd);
+        } else {
+            debug!("Running FORM with command: {:?}", cmd);
+        }
+        let output = cmd
+            .stderr(Stdio::inherit())
+            .stdout(Stdio::null())
+            .output()?;
+        if !ExitStatus::success(&output.status) {
+            return Err(VakintError::FormError(
+                String::from_utf8_lossy(&output.stderr).into(),
+                format!("{:?}", cmd),
+                tmp_dir.to_str().unwrap().into(),
+            ));
+        }
+        if !tmp_dir.join("out.txt").exists() {
+            return Err(VakintError::MissingFormOutput(
+                String::from_utf8_lossy(&output.stderr).into(),
+                format!("{:?}", cmd),
+                tmp_dir.to_str().unwrap().into(),
+            ));
+        }
+        let result = fs::read_to_string(tmp_dir.join("out.txt"))?;
+        if clean {
+            fs::remove_dir_all(tmp_dir)?;
+        }
         Ok(result)
     }
 
