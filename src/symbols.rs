@@ -5,6 +5,10 @@ use symbolica::{
     state::{FunctionAttribute, State},
 };
 
+pub static METRIC_SYMBOL: &str = "g";
+pub static LOOP_MOMENTUM_SYMBOL: &str = "k";
+pub static EXTERNAL_MOMENTUM_SYMBOL: &str = "p";
+
 #[allow(dead_code)]
 pub struct VakintSymbols {
     pub uedge: Symbol,
@@ -19,6 +23,8 @@ pub struct VakintSymbols {
     pub error_flag_symbol: Symbol,
     pub error_flag: Atom,
     pub n_loops: Atom,
+    pub p: Symbol,
+    pub k: Symbol,
 }
 
 #[allow(dead_code)]
@@ -29,7 +35,7 @@ pub static S: LazyLock<VakintSymbols> = LazyLock::new(|| VakintSymbols {
         &[FunctionAttribute::Symmetric, FunctionAttribute::Linear],
     )
     .unwrap(),
-    g: State::get_symbol_with_attributes("g", &[FunctionAttribute::Symmetric]).unwrap(),
+    g: State::get_symbol_with_attributes("METRIC_SYMBOL", &[FunctionAttribute::Symmetric]).unwrap(),
     x: State::get_symbol("x"),
     y: State::get_symbol("y"),
     xa: Atom::new_var(State::get_symbol("xa")),
@@ -39,4 +45,6 @@ pub static S: LazyLock<VakintSymbols> = LazyLock::new(|| VakintSymbols {
     error_flag_symbol: State::get_symbol("ERROR"),
     error_flag: Atom::new_var(State::get_symbol("ERROR")),
     n_loops: Atom::new_var(State::get_symbol("n_loops")),
+    p: State::get_symbol(EXTERNAL_MOMENTUM_SYMBOL),
+    k: State::get_symbol(LOOP_MOMENTUM_SYMBOL),
 });

@@ -39,16 +39,17 @@ fn main() {
     println!("Evaluated integral:\n{}\n", integral);
 
     let mut params = HashMap::default();
-    params.insert("MUVsq".into(), 1.0);
-    params.insert("mursq".into(), 1.0);
+    params.insert("MUVsq".into(), vakint.settings.real_to_prec("1.0"));
+    params.insert("mursq".into(), vakint.settings.real_to_prec("1.0"));
 
     let numerical_partial_eval =
-        Vakint::partial_numerical_evaluation(&vakint.settings, integral.as_view(), &params);
+        Vakint::partial_numerical_evaluation(&vakint.settings, integral.as_view(), &params, None);
     println!("Partial eval:\n{}\n", numerical_partial_eval);
 
-    params.insert("g(11,22)".into(), 1.0);
+    params.insert("g(11,22)".into(), vakint.settings.real_to_prec("1.0"));
     let numerical_full_eval =
-        Vakint::full_numerical_evaluation(&vakint.settings, integral.as_view(), &params).unwrap();
+        Vakint::full_numerical_evaluation(&vakint.settings, integral.as_view(), &params, None)
+            .unwrap();
     println!(
         "Full eval (metric substituted with 1):\n{}\n",
         numerical_full_eval

@@ -217,10 +217,12 @@ def run(graph_name, p_externals, masses, quiet=True, eps_rel = 0.01, max_eval=10
 
     n_loops = {n_loops}
     additional_overall_factor = {additional_overall_factor}
-    ptot = [sum(p[i] for p in p_externals) for i in range(4)]
-    Ecm = math.sqrt(dot(ptot,ptot))
-    if len(p_externals)>1:
-        couplings_prefactor_eval *= (1j)*(2 / Ecm)**len(p_externals)
+    # ptot = [sum(p[i] for p in p_externals) for i in range(4)]
+    # if dot(ptot,ptot) < 0.:
+    #     raise Exception('External momenta are not on-shell.')
+    # Ecm = math.sqrt(dot(ptot,ptot))
+    # if len(p_externals)>1:
+    #     couplings_prefactor_eval *= (1j)*(2 / Ecm)**len(p_externals)
 
     str_res = []
     complex_res = dict([])
@@ -245,7 +247,7 @@ def run(graph_name, p_externals, masses, quiet=True, eps_rel = 0.01, max_eval=10
     
 
     with open('out.txt','w') as f:
-        logger.info('%s: PySecDec result written to file result.txt'%graph_name)
+        logger.info('%s: PySecDec result written to file out.txt'%graph_name)
         f.write('+'.join('%s*(%.16e+(%.16e)*I)'%(
                 'ep^(%d)'%pole,
                 complex_res[pole][0].real,

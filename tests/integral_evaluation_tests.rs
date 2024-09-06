@@ -8,8 +8,12 @@ use symbolica::{
     atom::Atom,
     domains::{float::NumericalFloatLike, rational::Fraction},
 };
-use test_utils::{compare_numerical_output, compare_output, get_vakint};
+use test_utils::{compare_numerical_output, compare_output, convert_test_params, get_vakint};
 use vakint::{Vakint, VakintSettings};
+
+use crate::test_utils::{compare_analytical_evaluated_vs_reference, convert_test_externals};
+
+const N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS: u32 = 32;
 
 #[test_log::test]
 fn test_integrate_1l_a() {
@@ -62,13 +66,14 @@ fn test_integrate_1l_a() {
     debug!("Evaluated integral: {}", evaluated_integral);
 
     let mut params = HashMap::default();
-    params.insert("muvsq".into(), 1.0);
-    params.insert("mursq".into(), 1.0);
+    params.insert("muvsq".into(), vakint.settings.real_to_prec("1"));
+    params.insert("mursq".into(), vakint.settings.real_to_prec("1"));
 
     let numerical_partial_eval = Vakint::partial_numerical_evaluation(
         &vakint.settings,
         evaluated_integral.as_view(),
         &params,
+        None,
     );
     debug!(
         "Partial eval: {}",
@@ -103,9 +108,13 @@ fn test_integrate_1l_a() {
         .rationalize_coefficients(&prec),
     );
 
-    params.insert("g(1,2)".into(), 1.0);
-    let numerical_full_eval =
-        Vakint::full_numerical_evaluation(&vakint.settings, evaluated_integral.as_view(), &params);
+    params.insert("g(1,2)".into(), vakint.settings.real_to_prec("1"));
+    let numerical_full_eval = Vakint::full_numerical_evaluation(
+        &vakint.settings,
+        evaluated_integral.as_view(),
+        &params,
+        None,
+    );
     let numerical_full_eval_ref = numerical_full_eval.as_ref();
     debug!(
         "Full eval (metric substituted with 1):\n{}",
@@ -120,5 +129,63 @@ fn test_integrate_1l_a() {
             (2, ("0.0".into(), "-12.0696723514860".into())),
         ],
         vakint.settings.n_digits_at_evaluation_time,
+    );
+}
+
+#[test_log::test]
+fn test_integrate_1l_dot_product_external() {
+    #[rustfmt::skip]
+    compare_analytical_evaluated_vs_reference(
+        Atom::parse(
+            "(k(1,1)*p(1,1)*k(1,2)*p(2,2))*topo(\
+                prop(1,edge(1,1),k(1),muvsq,1)\
+            )",
+        )
+        .unwrap()
+        .as_view(),
+        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        convert_test_externals(
+        &(1..=2)
+            .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            (-1, ("-146.1136365510036558546604990331".into(), "0.0".into()),),
+            (0,  ("635.8146971740286947808753047759".into(),  "0.0".into()),),
+            (1,  ("-1646.531034471454483109201793220".into(), "0.0".into()),),
+            (2,  ("2240.516116133454318298096346441".into(),  "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS,
+    );
+}
+
+#[test_log::test]
+fn test_integrate_2l() {
+    #[rustfmt::skip]
+    compare_analytical_evaluated_vs_reference(
+        Atom::parse(
+            "(1)*topo(\
+                prop(1,edge(1,2),k(1),muvsq,1)\
+                *prop(2,edge(1,2),k(2),muvsq,1)\
+                *prop(3,edge(2,1),k(1)+k(2),muvsq,1)\
+            )",
+        )
+        .unwrap()
+        .as_view(),
+        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        convert_test_externals(
+        &(1..=1)
+            .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            (-2, ("-146.1136365510036558546604990331".into(), "0.0".into()),),
+            (-1, ("635.8146971740286947808753047759".into(),  "0.0".into()),),
+            (0,  ("-1646.531034471454483109201793220".into(), "0.0".into()),),
+            (1,  ("2240.516116133454318298096346441".into(),  "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS,
     );
 }

@@ -1,5 +1,7 @@
 mod symbols;
+mod topologies;
 
+use ahash::RandomState;
 use anyhow::Result;
 use colored::Colorize;
 #[allow(unused)]
@@ -17,6 +19,8 @@ use std::{
     sync::{Arc, LazyLock, Mutex},
 };
 use string_template_plus::{Render, RenderOptions, Template};
+#[allow(unused)]
+use symbolica::id::PatternOrMap;
 use symbolica::{
     atom::{
         representation::InlineNum, AsAtomView, Atom, AtomView, FunctionBuilder, SliceType, Symbol,
@@ -35,20 +39,24 @@ use symbolica::{
     state::State,
     transformer::Transformer,
 };
+
 use thiserror::Error;
+use topologies::{Topologies, Topology};
 use version_compare::{compare_to, Cmp};
 
-use symbols::S;
+use symbols::{EXTERNAL_MOMENTUM_SYMBOL, LOOP_MOMENTUM_SYMBOL, METRIC_SYMBOL, S};
 
 use phf::phf_map;
 
+pub type Momentum = (
+    Complex<Float>,
+    Complex<Float>,
+    Complex<Float>,
+    Complex<Float>,
+);
+
 static MINIMAL_FORM_VERSION: &str = "4.2.1";
 static MINIMAL_PYSECDEC_VERSION: &str = "1.6.4";
-
-#[allow(unused)]
-static METRIC_SYMBOL: &str = "g";
-static LOOP_MOMENTUM_SYMBOL: &str = "k";
-static EXTERNAL_MOMENTUM_SYMBOL: &str = "p";
 
 static FORM_SRC: phf::Map<&'static str, &'static str> = phf_map! {
     "integrateduv.frm" =>  include_str!(concat!(
@@ -107,8 +115,8 @@ pub enum VakintError {
         \nLeft-over: {1}"
     )]
     NumeratorNotReplaced(String, String),
-    #[error("FORM run crashed with the following error:\nstderr: {0}\nYou can rerun the script using:\n{1}")]
-    FormError(String, String, String),
+    #[error("FORM run crashed with the following error:\nstderr: {0}\nstdout: {1}\nYou can rerun the script using:\n{2}")]
+    FormError(String, String, String, String),
     #[error("{0}")]
     FormVersion(String),
     #[error("FORM is not installed in your system and required for vakint to work.")]
@@ -309,7 +317,7 @@ impl ReplacementRules {
             {
                 *expr = source.into_pattern().replace_all(
                     expr.as_view(),
-                    &target.into_pattern(),
+                    &target.into_pattern().into(),
                     None,
                     None,
                 );
@@ -317,255 +325,23 @@ impl ReplacementRules {
         }
     }
 
-    fn get_propagator_property_list(&self, property: &str) -> HashMap<usize, AtomView> {
-        let mut power_list = HashMap::new();
-        for (source, target) in self.canonical_expression_substitutions.iter() {
-            if let Some(m) = Pattern::parse(format!("{}(id_)", property).as_str())
-                .unwrap()
-                .pattern_match(
-                    source.as_view(),
-                    &Condition::from((State::get_symbol("id_"), number_condition())),
-                    &MatchSettings::default(),
-                )
-                .next()
-            {
-                let id =
-                    get_integer_from_match(m.match_stack.get(State::get_symbol("id_")).unwrap())
-                        .unwrap() as usize;
-
-                power_list.insert(id, target.as_view());
+    fn get_propagator_property_list(&self, property: &str) -> HashMap<usize, Atom> {
+        let mut property_list = HashMap::new();
+        let integral = self.canonical_topology.get_integral();
+        let canonical_expression_view = integral.canonical_expression.as_ref().unwrap().as_view();
+        for prop_id in 1..=integral.n_props {
+            if let Some(m) = get_prop_with_id(canonical_expression_view, prop_id) {
+                // println!("property {}", property);
+                // println!(
+                //     "key {}",
+                //     &m.get(&State::get_symbol(property)).unwrap().to_atom()
+                // );
+                // println!("self.canonical_expression_substitution {}", self);
+                let v_a = m.get(&State::get_symbol(property)).unwrap().to_atom();
+                property_list.insert(prop_id, v_a);
             }
         }
-        power_list
-    }
-}
-
-pub struct Topologies(Vec<Topology>);
-
-impl fmt::Display for Topologies {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.0
-                .iter()
-                .enumerate()
-                .map(|(i, t)| format!("{}) {}", i + 1, t))
-                .collect::<Vec<_>>()
-                .join("\n")
-        )
-    }
-}
-
-impl Topologies {
-    pub fn generate_topologies_with_contractions(
-        n_tot_props: usize,
-        canonical_expression: AtomView,
-        short_expression: AtomView,
-        contractions: Vec<Vec<usize>>,
-        matad_expression: Option<AtomView>,
-        fmft_expression: Option<AtomView>,
-    ) -> Result<Self, VakintError> {
-        let mut topologies = vec![];
-        for contracted_prop_indices in contractions {
-            let mut contracted_canonical_expression = canonical_expression.to_owned();
-            let mut contracted_short_expression = short_expression.to_owned();
-            let mut contracted_matad_expression = if let Some(av) = matad_expression {
-                av.to_owned()
-            } else {
-                Atom::Zero
-            };
-            let mut contracted_fmft_expression = if let Some(av) = fmft_expression {
-                av.to_owned()
-            } else {
-                Atom::Zero
-            };
-            let mut nodes_to_merge = vec![];
-            for prop_id in contracted_prop_indices.iter() {
-                if let Some(m) =
-                    get_prop_with_id(contracted_canonical_expression.as_view(), *prop_id)
-                {
-                    let (left_node_id, right_node_id) = get_node_ids(&m).unwrap();
-                    nodes_to_merge.push((right_node_id, left_node_id));
-                } else {
-                    return Err(VakintError::InvalidIntegralFormat(format!(
-                        "Cannot contract propagatore id {} as it is not found in integral: {}",
-                        prop_id, contracted_canonical_expression
-                    )));
-                }
-                contracted_canonical_expression =
-                    Pattern::parse(format!("prop({},args__)", prop_id).as_str())
-                        .unwrap()
-                        .replace_all(
-                            contracted_canonical_expression.as_view(),
-                            &S.one.into_pattern(),
-                            None,
-                            None,
-                        );
-
-                for a in [
-                    &mut contracted_short_expression,
-                    &mut contracted_matad_expression,
-                    &mut contracted_fmft_expression,
-                ] {
-                    if !a.is_zero() {
-                        *a = Pattern::parse(format!("pow({})", prop_id).as_str())
-                            .unwrap()
-                            .replace_all(a.as_view(), &S.zero.into_pattern(), None, None);
-                    }
-                }
-            }
-            let mut old_contracted_canonical_expression = contracted_canonical_expression.clone();
-            'replace_contracted_nodes: loop {
-                for (old_node_id, new_node_id) in nodes_to_merge.iter() {
-                    for (lhs, rhs) in [
-                        (
-                            format!("edge({},nr_)", old_node_id),
-                            format!("edge({},nr_)", new_node_id),
-                        ),
-                        (
-                            format!("edge(nl_,{})", old_node_id),
-                            format!("edge(nl_,{})", new_node_id),
-                        ),
-                    ] {
-                        contracted_canonical_expression =
-                            Pattern::parse(lhs.as_str()).unwrap().replace_all(
-                                contracted_canonical_expression.as_view(),
-                                &Pattern::parse(rhs.as_str()).unwrap(),
-                                None,
-                                None,
-                            );
-                    }
-                }
-                if old_contracted_canonical_expression == contracted_canonical_expression {
-                    break 'replace_contracted_nodes;
-                }
-                old_contracted_canonical_expression = contracted_canonical_expression.clone();
-            }
-
-            /*
-            if !contracted_prop_indices.is_empty() {
-                let short_integral_symbol = if let Some(m) = Pattern::parse("fn_(args__)")
-                    .unwrap()
-                    .pattern_match(
-                        contracted_short_expression.as_view(),
-                        &Condition::default(),
-                        &MatchSettings::default(),
-                    )
-                    .next()
-                {
-                    if let Match::FunctionName(s) =
-                        m.match_stack.get(State::get_symbol("fn_")).unwrap()
-                    {
-                        s.to_string()
-                    } else {
-                        return Err(VakintError::InvalidShortExpression(format!(
-                            "{}",
-                            short_expression
-                        )));
-                    }
-                } else {
-                    return Err(VakintError::InvalidShortExpression(format!(
-                        "{}",
-                        short_expression
-                    )));
-                };
-                contracted_short_expression =
-                    Pattern::parse(format!("{}(args__)", short_integral_symbol).as_str())
-                        .unwrap()
-                        .replace_all(
-                            contracted_short_expression.as_view(),
-                            &Pattern::parse(
-                                format!(
-                                    "{}_{}(args__)",
-                                    short_integral_symbol,
-                                    contracted_prop_indices
-                                        .iter()
-                                        .map(|c| format!("{}", c))
-                                        .collect::<Vec<_>>()
-                                        .join("_")
-                                )
-                                .as_str(),
-                            )
-                            .unwrap(),
-                            None,
-                            None,
-                        );
-            }
-            */
-            topologies.push(
-                Integral::new(
-                    n_tot_props,
-                    Some(contracted_canonical_expression),
-                    Some(contracted_short_expression),
-                    if contracted_matad_expression.is_zero() {
-                        None
-                    } else {
-                        Some(contracted_matad_expression)
-                    },
-                    if contracted_fmft_expression.is_zero() {
-                        None
-                    } else {
-                        Some(contracted_fmft_expression)
-                    },
-                )?
-                .into(),
-            );
-        }
-        Ok(Topologies(topologies))
-    }
-
-    pub fn generate_topologies(settings: &VakintSettings) -> Result<Self, VakintError> {
-        // One-loop topology
-        let mut topologies = Topologies(vec![Integral::new(
-            1,
-            Some(Atom::parse("topo(prop(1,edge(1,1),k(1),msq(1),pow(1)))").unwrap()),
-            Some(Atom::parse("I1LA(msq(1),pow(1))").unwrap()),
-            Some(Atom::parse("1").unwrap()),
-            None,
-        )?
-        .into()]);
-        // Two-loop topologies
-        topologies.0.extend(
-            Topologies::generate_topologies_with_contractions(
-                3,
-                Atom::parse(
-                    "topo(\
-                        prop(1,edge(1,2),k(1),msq(1),pow(1))\
-                        *prop(2,edge(1,2),k(2),msq(1),pow(2))\
-                        *prop(3,edge(2,1),k(1)+k(2),msq(1),pow(3))\
-                    )",
-                )
-                .unwrap()
-                .as_view(),
-                Atom::parse("I2LA(msq(1),pow(1),pow(2),pow(3))")
-                    .unwrap()
-                    .as_view(),
-                vec![vec![], vec![3]],
-                Some(Atom::parse("1").unwrap().as_view()),
-                None,
-            )?
-            .0,
-        );
-
-        if settings.allow_unknown_integrals {
-            topologies
-                .0
-                .push(Topology::Unknown(Integral::new(0, None, None, None, None)?));
-        }
-        Ok(topologies)
-    }
-
-    fn match_topologies_to_user_input(
-        &self,
-        input: AtomView,
-    ) -> Result<Option<ReplacementRules>, VakintError> {
-        for topology in self.0.iter() {
-            if let Some(replacement_rules) = topology.match_topology_to_user_input(input)? {
-                return Ok(Some(replacement_rules));
-            }
-        }
-        Ok(None)
+        property_list
     }
 }
 
@@ -681,129 +457,6 @@ impl Graph {
                 .collect::<Vec<_>>()
                 .join("\n")
         )
-    }
-}
-
-#[allow(unused)]
-#[derive(Debug, Clone)]
-pub enum Topology {
-    OneLoop(Integral),
-    TwoLoop(Integral),
-    ThreeLoop(Integral),
-    FourLoop(Integral),
-    Unknown(Integral),
-}
-
-impl fmt::Display for Topology {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Topology::OneLoop(i) => write!(f, "{}{}{}", "OneLoop(".magenta(), i, ")".magenta()),
-            Topology::TwoLoop(i) => write!(f, "{}{}{}", "TwoLoop(".magenta(), i, ")".magenta()),
-            Topology::ThreeLoop(i) => write!(f, "{}{}{}", "ThreeLoop(".magenta(), i, ")".magenta()),
-            Topology::FourLoop(i) => write!(f, "{}{}{}", "FourLoop(".magenta(), i, ")".magenta()),
-            Topology::Unknown(i) => write!(f, "{}{}{}", "Unknown(".red(), i, ")".red()),
-        }
-    }
-}
-
-impl From<Integral> for Topology {
-    fn from(i: Integral) -> Self {
-        match i.n_loops {
-            1 => Topology::OneLoop(i),
-            2 => Topology::TwoLoop(i),
-            3 => Topology::ThreeLoop(i),
-            4 => Topology::FourLoop(i),
-            _ => Topology::Unknown(i),
-        }
-    }
-}
-
-impl Topology {
-    fn get_integral(&self) -> &Integral {
-        match self {
-            Topology::OneLoop(i)
-            | Topology::TwoLoop(i)
-            | Topology::ThreeLoop(i)
-            | Topology::FourLoop(i)
-            | Topology::Unknown(i) => i,
-        }
-    }
-
-    fn get_integral_mut(&mut self) -> &mut Integral {
-        match self {
-            Topology::OneLoop(i)
-            | Topology::TwoLoop(i)
-            | Topology::ThreeLoop(i)
-            | Topology::FourLoop(i)
-            | Topology::Unknown(i) => i,
-        }
-    }
-
-    fn to_canonical(
-        &self,
-        integral: AtomView,
-        replacement_rules: &ReplacementRules,
-        short_form: bool,
-    ) -> Atom {
-        match self {
-            Topology::Unknown(_) => Pattern::parse("topo(props_)").unwrap().replace_all(
-                integral,
-                &Pattern::parse("topo(UNKNOWN(props_))").unwrap(),
-                None,
-                None,
-            ),
-            t => t.get_integral().to_canonical(replacement_rules, short_form),
-        }
-    }
-
-    fn match_topology_to_user_input(
-        &self,
-        input: AtomView,
-    ) -> Result<Option<ReplacementRules>, VakintError> {
-        match self {
-            Topology::Unknown(_) => {
-                // println!(
-                //     "\n>>>Trying to match with the unknown integral pattern {}\n<<<",
-                //     self
-                // );
-                let undirected_input = Pattern::parse("edge(x_,y_)").unwrap().replace_all(
-                    input,
-                    &Pattern::parse("uedge(x_,y_)").unwrap(),
-                    None,
-                    None,
-                );
-                let unknown_integral = self.get_integral();
-                if unknown_integral
-                    .generic_pattern
-                    .pattern
-                    .pattern_match(
-                        undirected_input.as_view(),
-                        &unknown_integral.generic_pattern.conditions,
-                        &unknown_integral.generic_pattern.match_settings,
-                    )
-                    .next()
-                    .is_some()
-                {
-                    //println!("Found a match!");
-                    Ok(Some(ReplacementRules::default()))
-                } else {
-                    //println!("Does not match!");
-                    Ok(None)
-                }
-            }
-            t => {
-                // println!("\n>>>Trying to match: {}\n<<<", self);
-                if let Some(mut replacement_rule) =
-                    t.get_integral().match_integral_to_user_input(input)?
-                {
-                    replacement_rule.canonical_topology = t.clone();
-                    // println!("Found a match! ->\n{}", replacement_rule);
-                    Ok(Some(replacement_rule))
-                } else {
-                    Ok(None)
-                }
-            }
-        }
     }
 }
 
@@ -945,7 +598,7 @@ fn get_individual_momenta(momentum: &Match) -> Result<Vec<(Symbol, (Atom, i64))>
         );
         test = fun!(mom_symbol, &atom_id).into_pattern().replace_all(
             test.as_view(),
-            &Atom::Zero.into_pattern(),
+            &Atom::Zero.into_pattern().into(),
             None,
             None,
         );
@@ -1206,7 +859,7 @@ impl Integral {
                     .unwrap()
                     .replace_all(
                         old_atom.as_view(),
-                        &Pattern::parse("1").unwrap(),
+                        &Pattern::parse("1").unwrap().into(),
                         None,
                         None,
                     );
@@ -1254,7 +907,9 @@ impl Integral {
                 .unwrap()
                 .replace_all(
                     short_expression_pattern.as_view(),
-                    &Pattern::parse(format!("pow{}_", i_prop).as_str()).unwrap(),
+                    &Pattern::parse(format!("pow{}_", i_prop).as_str())
+                        .unwrap()
+                        .into(),
                     Some(&Condition::default()),
                     Some(&MatchSettings {
                         allow_new_wildcards_on_rhs: true,
@@ -1265,7 +920,9 @@ impl Integral {
                 .unwrap()
                 .replace_all(
                     short_expression_pattern.as_view(),
-                    &Pattern::parse(format!("msq{}_", i_prop).as_str()).unwrap(),
+                    &Pattern::parse(format!("msq{}_", i_prop).as_str())
+                        .unwrap()
+                        .into(),
                     Some(&Condition::default()),
                     Some(&MatchSettings {
                         allow_new_wildcards_on_rhs: true,
@@ -1316,7 +973,7 @@ impl Integral {
     ) -> Result<Option<ReplacementRules>, VakintError> {
         let unwrapped_input = Pattern::parse("topo(integral_)").unwrap().replace_all(
             input,
-            &Pattern::parse("integral_").unwrap(),
+            &Pattern::parse("integral_").unwrap().into(),
             None,
             None,
         );
@@ -1408,7 +1065,7 @@ impl Integral {
 
         let undirected_input = Pattern::parse("edge(x_,y_)").unwrap().replace_all(
             input,
-            &Pattern::parse("uedge(x_,y_)").unwrap(),
+            &Pattern::parse("uedge(x_,y_)").unwrap().into(),
             None,
             None,
         );
@@ -1533,7 +1190,7 @@ impl Integral {
                             {
                                 Pattern::parse("k(ilmb_)").unwrap().replace_all(
                                     *canonical_momenta,
-                                    &Pattern::parse("k(ilmb_,idx_)").unwrap(),
+                                    &Pattern::parse("k(ilmb_,idx_)").unwrap().into(),
                                     Some(&Condition::from((
                                         State::get_symbol("ilmb_"),
                                         number_condition(),
@@ -1581,7 +1238,7 @@ impl Integral {
         for (source, target) in replacement_rules.canonical_expression_substitutions.iter() {
             new_expression = source.into_pattern().replace_all(
                 new_expression.as_view(),
-                &target.into_pattern(),
+                &target.into_pattern().into(),
                 None,
                 None,
             );
@@ -1592,7 +1249,7 @@ impl Integral {
             .unwrap()
             .replace_all(
                 new_expression.as_view(),
-                &Pattern::parse("1").unwrap(),
+                &Pattern::parse("1").unwrap().into(),
                 None,
                 None,
             );
@@ -1723,6 +1380,26 @@ impl VakintSettings {
     pub fn get_integral_normalization_factor_atom(&self) -> Result<Atom, VakintError> {
         self.integral_normalization_factor.to_atom(self)
     }
+
+    pub fn get_binary_precision(&self) -> u32 {
+        ((self.n_digits_at_evaluation_time as f64) * LOG2_10).floor() as u32
+    }
+
+    pub fn real_to_prec(&self, re: &str) -> Complex<Float> {
+        let prec = self.get_binary_precision();
+        Complex::new(
+            Float::parse(re, Some(prec)).unwrap(),
+            Float::parse("0", Some(prec)).unwrap(),
+        )
+    }
+
+    pub fn complex_to_prec(&self, re: &str, im: &str) -> Complex<Float> {
+        let prec = self.get_binary_precision();
+        Complex::new(
+            Float::parse(re, Some(prec)).unwrap(),
+            Float::parse(im, Some(prec)).unwrap(),
+        )
+    }
 }
 pub enum LoopNormalizationFactor {
     #[allow(non_camel_case_types)]
@@ -1764,7 +1441,7 @@ impl LoopNormalizationFactor {
         let mut a = Atom::try_from(self)?;
         a = Pattern::parse("eps").unwrap().replace_all(
             a.as_view(),
-            &Pattern::parse(&settings.epsilon_symbol).unwrap(),
+            &Pattern::parse(&settings.epsilon_symbol).unwrap().into(),
             None,
             None,
         );
@@ -1778,7 +1455,7 @@ impl LoopNormalizationFactor {
         let expr: Atom = self.to_atom(settings)?;
         let expanded_expr = Pattern::parse("n_loops").unwrap().replace_all(
             expr.as_view(),
-            &Atom::new_num(1).into_pattern(),
+            &Atom::new_num(1).into_pattern().into(),
             None,
             None,
         );
@@ -1800,17 +1477,18 @@ impl LoopNormalizationFactor {
         );
         expanded_expr_atom = Pattern::parse("log_mu_sq").unwrap().replace_all(
             expanded_expr_atom.as_view(),
-            &(log_mu_sq).into_pattern(),
+            &(log_mu_sq).into_pattern().into(),
             None,
             None,
         );
 
         let mut params = HashMap::default();
-        params.insert("mursq".into(), 1.0);
+        params.insert("mursq".into(), settings.real_to_prec("1"));
         let num_res = match Vakint::full_numerical_evaluation(
             settings,
             expanded_expr_atom.as_view(),
             &params,
+            None,
         ) {
             Ok(r) => r,
             Err(e) => {
@@ -1864,13 +1542,13 @@ impl TryFrom<&LoopNormalizationFactor> for Atom {
             Ok(a) => {
                 let mut processed_a = Pattern::parse("I").unwrap().replace_all(
                     a.as_view(),
-                    &Pattern::parse("𝑖").unwrap(),
+                    &Pattern::parse("𝑖").unwrap().into(),
                     None,
                     None,
                 );
                 processed_a = Pattern::parse("pi").unwrap().replace_all(
                     processed_a.as_view(),
-                    &Pattern::parse("𝜋").unwrap(),
+                    &Pattern::parse("𝜋").unwrap().into(),
                     None,
                     None,
                 );
@@ -2008,13 +1686,13 @@ impl VakintTerm {
         for (source, target) in replacement_rules.numerator_substitutions.iter() {
             new_numerator = source.into_pattern().replace_all(
                 new_numerator.as_view(),
-                &target.into_pattern(),
+                &target.into_pattern().into(),
                 None,
                 None,
             );
             test = source.into_pattern().replace_all(
                 test.as_view(),
-                &Atom::parse("1").unwrap().into_pattern(),
+                &Atom::parse("1").unwrap().into_pattern().into(),
                 None,
                 None,
             );
@@ -2025,7 +1703,7 @@ impl VakintTerm {
             .unwrap()
             .replace_all(
                 test.as_view(),
-                &Atom::parse("1").unwrap().into_pattern(),
+                &Atom::parse("1").unwrap().into_pattern().into(),
                 None,
                 None,
             );
@@ -2033,7 +1711,7 @@ impl VakintTerm {
         // Substitute metric in as well
         test = Pattern::parse("g(idx1_,idx2_)").unwrap().replace_all(
             test.as_view(),
-            &Atom::parse("1").unwrap().into_pattern(),
+            &Atom::parse("1").unwrap().into_pattern().into(),
             None,
             None,
         );
@@ -2113,7 +1791,8 @@ impl VakintTerm {
                         )
                         .as_str(),
                     )
-                    .unwrap(),
+                    .unwrap()
+                    .into(),
                     Some(&Condition::from((
                         State::get_symbol("idx_"),
                         number_condition(),
@@ -2141,13 +1820,17 @@ impl VakintTerm {
             vec![],
             vakint.settings.clean_tmp_dir,
         )?;
+
         let mut reduced_numerator = vakint.process_form_output(form_result)?;
+
         for (vec, id) in self.vectors.iter() {
             reduced_numerator = Pattern::parse(format!("{}{}", vec, id).as_str())
                 .unwrap()
                 .replace_all(
                     reduced_numerator.as_view(),
-                    &Pattern::parse(format!("{}({})", vec, id).as_str()).unwrap(),
+                    &Pattern::parse(format!("{}({})", vec, id).as_str())
+                        .unwrap()
+                        .into(),
                     None,
                     None,
                 );
@@ -2308,7 +1991,7 @@ impl From<VakintExpression> for Atom {
 }
 
 #[derive(Debug, Clone)]
-pub struct NumericalEvaluationResult(Vec<(i64, Complex<Float>)>);
+pub struct NumericalEvaluationResult(pub Vec<(i64, Complex<Float>)>);
 
 impl fmt::Display for NumericalEvaluationResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -2433,7 +2116,8 @@ impl Vakint {
 
     pub fn get_constants_map(
         settings: &VakintSettings,
-        params: &HashMap<String, f64, ahash::RandomState>,
+        params: &HashMap<String, Complex<Float>, ahash::RandomState>,
+        externals: Option<&HashMap<usize, Momentum, ahash::RandomState>>,
     ) -> Result<HashMap<Atom, Complex<Float>, ahash::random_state::RandomState>, VakintError> {
         let mut const_map: HashMap<Atom, Complex<Float>, ahash::random_state::RandomState> =
             HashMap::default();
@@ -2447,6 +2131,50 @@ impl Vakint {
                 Float::with_val(binary_prec, 0),
             ),
         );
+
+        if let Some(ext_p) = externals.as_ref() {
+            for (&i, val1) in ext_p.iter() {
+                for (&j, val2) in ext_p.iter() {
+                    if i > j {
+                        continue;
+                    }
+                    let dot_product = val1.0.to_owned() * val2.0.to_owned()
+                        - val1.1.to_owned() * val2.1.to_owned()
+                        - val1.2.to_owned() * val2.2.to_owned()
+                        - val1.3.to_owned() * val2.3.to_owned();
+                    const_map.insert(
+                        fun!(
+                            S.dot,
+                            fun!(S.p, Atom::new_num(i as i64)),
+                            fun!(S.p, Atom::new_num(j as i64))
+                        ),
+                        dot_product.to_owned(),
+                    );
+                    // const_map.insert(
+                    //     Atom::parse(
+                    //         format!(
+                    //             "dot_{}{}_{}{}",
+                    //             EXTERNAL_MOMENTUM_SYMBOL, i, EXTERNAL_MOMENTUM_SYMBOL, j,
+                    //         )
+                    //         .as_str(),
+                    //     )
+                    //     .unwrap(),
+                    //     dot_product.to_owned(),
+                    // );
+                    // const_map.insert(
+                    //     Atom::parse(
+                    //         format!(
+                    //             "dot_{}{}_{}{}",
+                    //             EXTERNAL_MOMENTUM_SYMBOL, j, EXTERNAL_MOMENTUM_SYMBOL, i,
+                    //         )
+                    //         .as_str(),
+                    //     )
+                    //     .unwrap(),
+                    //     dot_product,
+                    // );
+                }
+            }
+        }
 
         const_map.insert(
             Atom::from(Var::new(State::get_symbol("EulerGamma"))),
@@ -2473,32 +2201,80 @@ impl Vakint {
         );
 
         for (symb, value) in params.iter() {
-            const_map.insert(
-                Atom::parse(symb.as_str()).unwrap(),
-                Complex::new(
-                    Float::with_val(binary_prec, value),
-                    Float::with_val(binary_prec, 0),
-                ),
-            );
+            const_map.insert(Atom::parse(symb.as_str()).unwrap(), value.clone());
         }
 
         Ok(const_map)
     }
 
+    /*
+    fn replace_external_dot_product_with_shorthand(
+        atom: AtomView,
+        const_map: &HashMap<Atom, Complex<Float>, RandomState>,
+    ) -> Atom {
+        let const_map_keys = const_map.keys().cloned().collect::<Vec<_>>();
+        Pattern::parse(
+            format!(
+                "dot({}(id1_),{}(id2_))",
+                EXTERNAL_MOMENTUM_SYMBOL, EXTERNAL_MOMENTUM_SYMBOL
+            )
+            .as_str(),
+        )
+        .unwrap()
+        .replace_all(
+            atom,
+            &PatternOrMap::Map(Box::new(move |m| {
+                let (id1, id2) = (
+                    get_integer_from_match(m.get(State::get_symbol("id1_")).unwrap()).unwrap(),
+                    get_integer_from_match(m.get(State::get_symbol("id2_")).unwrap()).unwrap(),
+                );
+                println!("AAA {}", format!("dot_p{}_p{}", id1, id2));
+                println!(
+                    "const_map_keys = {}",
+                    const_map_keys
+                        .iter()
+                        .map(|a| a.to_canonical_string())
+                        .collect::<Vec<_>>()
+                        .join(",")
+                );
+                if const_map_keys
+                    .contains(&Atom::parse(format!("dot_p{}_p{}", id1, id2).as_str()).unwrap())
+                {
+                    Atom::parse(format!("dot_p{}_p{}", id1, id2).as_str()).unwrap()
+                } else {
+                    fun!(
+                        S.dot,
+                        fun!(S.p, m.get(State::get_symbol("id1_")).unwrap().to_atom()),
+                        fun!(S.p, m.get(State::get_symbol("id2_")).unwrap().to_atom())
+                    )
+                }
+            })),
+            Some(
+                &(Condition::from((State::get_symbol("id1_"), number_condition()))
+                    & Condition::from((State::get_symbol("id2_"), number_condition()))),
+            ),
+            None,
+        )
+    }
+    */
+
     pub fn partial_numerical_evaluation(
         settings: &VakintSettings,
         integral: AtomView,
-        params: &HashMap<String, f64, ahash::RandomState>,
+        params: &HashMap<String, Complex<Float>, ahash::RandomState>,
+        externals: Option<&HashMap<usize, Momentum, ahash::RandomState>>,
     ) -> Atom {
-        let const_map = Vakint::get_constants_map(settings, params).unwrap();
+        let const_map = Vakint::get_constants_map(settings, params, externals).unwrap();
 
-        let mut res = integral.to_owned();
+        let mut res = Vakint::convert_to_dot_notation(integral);
+        //LEGACY res = Self::replace_external_dot_product_with_shorthand(res.as_view(), &const_map);
         for (src, trgt) in const_map.iter() {
             res = src.into_pattern().replace_all(
                 res.as_view(),
                 &((Atom::new_num(trgt.re.clone())
                     + Atom::new_var(State::get_symbol("𝑖")) * Atom::new_num(trgt.im.clone()))
-                .into_pattern()),
+                .into_pattern())
+                .into(),
                 None,
                 None,
             );
@@ -2506,17 +2282,27 @@ impl Vakint {
 
         res
     }
+
     pub fn full_numerical_evaluation_with_error(
         settings: &VakintSettings,
         integral: AtomView,
-        params: &HashMap<String, f64, ahash::RandomState>,
+        params: &HashMap<String, Complex<Float>, ahash::RandomState>,
+        externals: Option<&HashMap<usize, Momentum, ahash::RandomState>>,
     ) -> Result<(NumericalEvaluationResult, NumericalEvaluationResult), VakintError> {
         let (error_atom, integral_atom) = integral.coefficient_list(S.error_flag_symbol);
         assert!(error_atom.len() == 1);
-        let mut central =
-            Vakint::full_numerical_evaluation(settings, integral_atom.as_view(), params)?;
-        let mut error =
-            Vakint::full_numerical_evaluation(settings, error_atom[0].1.as_view(), params)?;
+        let mut central = Vakint::full_numerical_evaluation(
+            settings,
+            integral_atom.as_view(),
+            params,
+            externals,
+        )?;
+        let mut error = Vakint::full_numerical_evaluation(
+            settings,
+            error_atom[0].1.as_view(),
+            params,
+            externals,
+        )?;
 
         for (i, eval) in central.0.iter() {
             if !error.0.iter().any(|(j, _)| i == j) {
@@ -2538,7 +2324,8 @@ impl Vakint {
     pub fn full_numerical_evaluation(
         settings: &VakintSettings,
         integral: AtomView,
-        params: &HashMap<String, f64, ahash::RandomState>,
+        params: &HashMap<String, Complex<Float>, ahash::RandomState>,
+        externals: Option<&HashMap<usize, Momentum, ahash::RandomState>>,
     ) -> Result<NumericalEvaluationResult, VakintError> {
         let epsilon_coeffs = integral.coefficient_list(State::get_symbol("ε"));
 
@@ -2570,15 +2357,25 @@ impl Vakint {
 
         epsilon_coeffs_vec.push((0, &epsilon_coeffs.1));
 
-        let map = Vakint::get_constants_map(settings, params).unwrap();
-        let map_view = map.iter().map(|(k, v)| (k.as_view(), v.clone())).collect();
+        let map = Vakint::get_constants_map(settings, params, externals).unwrap();
+        let map_view: HashMap<AtomView<'_>, Complex<Float>, RandomState> =
+            map.iter().map(|(k, v)| (k.as_view(), v.clone())).collect();
         let binary_prec: u32 =
             ((settings.n_digits_at_evaluation_time as f64) * LOG2_10).floor() as u32;
         let mut epsilon_coeffs_vec_floats = vec![];
         for (i64, coeff) in epsilon_coeffs_vec.iter() {
+            let coeff_processed = Vakint::convert_to_dot_notation(coeff.as_view());
+
+            //LEGACY coeff_processed = Self::replace_external_dot_product_with_shorthand(coeff_processed.as_view(), &map);
+
+            // for (k, v) in map_view.iter() {
+            //     println!("{} -> {}", k, v);
+            // }
+            // println!("coeff_processed={}", coeff_processed);
+
             epsilon_coeffs_vec_floats.push((
                 *i64,
-                match coeff.evaluate(
+                match coeff_processed.evaluate(
                     &Vakint::get_coeff_map(binary_prec),
                     &map_view,
                     &HashMap::default(),
@@ -2632,61 +2429,74 @@ impl Vakint {
         processed_numerator =
             Vakint::convert_from_dot_notation(processed_numerator.as_view(), true);
 
-        let dot_product_matcher = Pattern::parse("v1_(id1_,idx_)*v2_(id2_,idx_)").unwrap();
+        let mut lorentz_indices = HashSet::<String>::new();
         let arc_mutex_lorentz_indices = Arc::new(Mutex::new(HashSet::new()));
-        let arc_mutex_lorentz_indices_sent = arc_mutex_lorentz_indices.clone();
-        let dot_product_transformer =
-            Transformer::Map(Box::new(move |a_in: AtomView, a_out: &mut Atom| {
-                if let AtomView::Fun(s) = a_in {
-                    let a_in = s.to_slice();
-                    arc_mutex_lorentz_indices_sent
-                        .lock()
-                        .unwrap()
-                        .insert(format!("mu{}", a_in.get(4).to_canonical_string()));
-                    *a_out = Atom::parse(
-                        format!(
-                            "{}{}(mu{})*{}{}(mu{})",
-                            a_in.get(0).to_canonical_string(),
-                            a_in.get(1).to_canonical_string(),
-                            a_in.get(4).to_canonical_string(),
-                            a_in.get(2).to_canonical_string(),
-                            a_in.get(3).to_canonical_string(),
-                            a_in.get(4).to_canonical_string(),
-                        )
-                        .as_str(),
-                    )
-                    .unwrap();
-                };
 
-                Ok(())
-            }));
-        processed_numerator = dot_product_matcher.replace_all(
-            processed_numerator.as_view(),
-            &Pattern::Transformer(Box::new((
-                Some(Pattern::parse("arg(v1_,id1_,v2_,id2_,idx_)").unwrap()),
-                vec![dot_product_transformer.clone()],
-            ))),
-            None,
-            None,
-        );
-
+        let dot_product_matcher = Pattern::parse("v1_(id1_,idx_)*v2_(id2_,idx_)").unwrap();
         // Powers higher than two cannot occur as different dummy indices would have been used in
         // the call 'processed_numerator = Vakint::convert_from_dot_notation(processed_numerator.as_view(), true)'
         let square_matcher = Pattern::parse("v1_(id1_,idx_)^2").unwrap();
-        processed_numerator = square_matcher.replace_all(
-            processed_numerator.as_view(),
-            &Pattern::Transformer(Box::new((
-                Some(Pattern::parse("arg(v1_,id1_,v1_,id1_,idx_)").unwrap()),
-                vec![dot_product_transformer],
-            ))),
-            None,
-            None,
-        );
-        let lorentz_indices = arc_mutex_lorentz_indices.lock().unwrap().clone();
+        let mut old_processed_numerator = processed_numerator.clone();
+        loop {
+            let arc_mutex_lorentz_indices_sent = arc_mutex_lorentz_indices.clone();
+            let dot_product_transformer =
+                Transformer::Map(Box::new(move |a_in: AtomView, a_out: &mut Atom| {
+                    if let AtomView::Fun(s) = a_in {
+                        let a_in = s.to_slice();
+                        arc_mutex_lorentz_indices_sent
+                            .lock()
+                            .unwrap()
+                            .insert(format!("mu{}", a_in.get(4).to_canonical_string()));
+                        *a_out = Atom::parse(
+                            format!(
+                                "{}{}(mu{})*{}{}(mu{})",
+                                a_in.get(0).to_canonical_string(),
+                                a_in.get(1).to_canonical_string(),
+                                a_in.get(4).to_canonical_string(),
+                                a_in.get(2).to_canonical_string(),
+                                a_in.get(3).to_canonical_string(),
+                                a_in.get(4).to_canonical_string(),
+                            )
+                            .as_str(),
+                        )
+                        .unwrap();
+                    };
+
+                    Ok(())
+                }));
+
+            processed_numerator = dot_product_matcher.replace_all(
+                old_processed_numerator.as_view(),
+                &Pattern::Transformer(Box::new((
+                    Some(Pattern::parse("arg(v1_,id1_,v2_,id2_,idx_)").unwrap()),
+                    vec![dot_product_transformer.clone()],
+                )))
+                .into(),
+                None,
+                None,
+            );
+
+            processed_numerator = square_matcher.replace_all(
+                processed_numerator.as_view(),
+                &Pattern::Transformer(Box::new((
+                    Some(Pattern::parse("arg(v1_,id1_,v1_,id1_,idx_)").unwrap()),
+                    vec![dot_product_transformer],
+                )))
+                .into(),
+                None,
+                None,
+            );
+            lorentz_indices.extend(arc_mutex_lorentz_indices.lock().unwrap().clone());
+            if old_processed_numerator == processed_numerator {
+                break;
+            } else {
+                old_processed_numerator = processed_numerator.clone();
+            }
+        }
 
         let mut m = Atom::new();
-        let power_list_map = integral_specs.get_propagator_property_list("pow");
-        let mass_list_map = integral_specs.get_propagator_property_list("msq");
+        let power_list_map = integral_specs.get_propagator_property_list("pow_");
+        let mass_list_map = integral_specs.get_propagator_property_list("mUVsq_");
         let mut masses = HashSet::new();
         let mut power_list: Vec<i64> = vec![];
 
@@ -2716,7 +2526,9 @@ impl Vakint {
                             }
                             m = p.replace_all(
                                 m.as_view(),
-                                &Pattern::parse(format!("k{}", i_loop).as_str()).unwrap(),
+                                &Pattern::parse(format!("k{}", i_loop).as_str())
+                                    .unwrap()
+                                    .into(),
                                 None,
                                 None,
                             );
@@ -2990,7 +2802,9 @@ impl Vakint {
                 Ok(mut processed) => {
                     processed = Pattern::parse("ep").unwrap().replace_all(
                         processed.as_view(),
-                        &Pattern::parse(&self.settings.epsilon_symbol).unwrap(),
+                        &Pattern::parse(&self.settings.epsilon_symbol)
+                            .unwrap()
+                            .into(),
                         None,
                         None,
                     );
@@ -3001,7 +2815,7 @@ impl Vakint {
                                 .settings
                                 .get_integral_normalization_factor_atom()?
                                 .as_view(),
-                            &Atom::new_num(integral.n_loops as i64).into_pattern(),
+                            &Atom::new_num(integral.n_loops as i64).into_pattern().into(),
                             None,
                             None,
                         );
@@ -3021,7 +2835,7 @@ impl Vakint {
                     let mut evaluated_i = expanded_evaluation.to_atom();
                     evaluated_i = Pattern::parse("log_mu_sq").unwrap().replace_all(
                         evaluated_i.as_view(),
-                        &(log_mu_sq).into_pattern(),
+                        &(log_mu_sq).into_pattern().into(),
                         None,
                         None,
                     );
@@ -3045,36 +2859,60 @@ impl Vakint {
         let integral = integral_specs.canonical_topology.get_integral();
         let alphaloop_expression = integral.alphaloop_expression.as_ref().unwrap().as_view();
 
-        /*
-        println!("Numerator : {}", numerator);
-        println!("Evaluating AlphaLoop : {}", alphaloop_expression);
-        println!("Graph:\n{}", integral.graph.to_graphviz());
-        */
+        // println!("Numerator : {}", numerator);
+        // println!("Evaluating AlphaLoop : {}", alphaloop_expression);
+        // println!("Graph:\n{}", integral.graph.to_graphviz());
 
         // Make sure to undo the dot product notation.
         // If it was not used, the command below will do nothing.
         let mut form_expression = numerator.to_owned() * alphaloop_expression.to_owned();
         form_expression = Vakint::convert_to_dot_notation(form_expression.as_view());
-        while let Some(m) = Pattern::parse("k(id_)")
+        // println!("Input expression with dot products : {}", form_expression);
+
+        let mut vector_mapping: HashMap<Atom, Atom> = HashMap::new();
+        while let Some(m) = Pattern::parse("v_(id_)")
             .unwrap()
             .pattern_match(
                 form_expression.as_view(),
-                &Condition::from((State::get_symbol("id_"), number_condition())),
+                &(Condition::from((State::get_symbol("id_"), number_condition()))
+                    & Condition::from((State::get_symbol("v_"), symbol_condition()))),
                 &MatchSettings::default(),
             )
             .next()
         {
-            let k_id = get_integer_from_match(m.match_stack.get(State::get_symbol("id_")).unwrap())
+            let v = match m
+                .match_stack
+                .get(State::get_symbol("v_"))
+                .unwrap()
+                .to_atom()
+            {
+                Atom::Var(s) => s.get_symbol(),
+                _ => {
+                    return Err(VakintError::MalformedGraph(format!(
+                        "Could not find v in graph:\n{}",
+                        integral.canonical_expression.as_ref().unwrap()
+                    )))
+                }
+            };
+            let v_id = get_integer_from_match(m.match_stack.get(State::get_symbol("id_")).unwrap())
                 .unwrap();
-            form_expression = Pattern::parse(format!("k({})", k_id).as_str())
+
+            form_expression = Pattern::parse(format!("{}({})", v, v_id).as_str())
                 .unwrap()
                 .replace_all(
                     form_expression.as_view(),
-                    &Pattern::parse(format!("k{}", k_id).as_str()).unwrap(),
+                    &Pattern::parse(format!("{}{}", v, v_id).as_str())
+                        .unwrap()
+                        .into(),
                     None,
                     None,
                 );
+            vector_mapping.insert(
+                Atom::parse(format!("{}{}", v, v_id).as_str()).unwrap(),
+                Atom::parse(format!("{}({})", v, v_id).as_str()).unwrap(),
+            );
         }
+        // println!("Input expression for FORM : {}", form_expression);
 
         let template = Template::parse_template(
             TEMPLATES
@@ -3110,7 +2948,17 @@ impl Vakint {
 
         let mut evaluated_integral = vakint.process_form_output(form_result)?;
 
-        if vakint.settings.use_dot_product_notation {
+        // Convert vectors back from pi(j) notation to p(i,j) notation
+        for (s, t) in vector_mapping.iter() {
+            evaluated_integral = s.into_pattern().replace_all(
+                evaluated_integral.as_view(),
+                &t.into_pattern().into(),
+                None,
+                None,
+            );
+        }
+
+        if !vakint.settings.use_dot_product_notation {
             evaluated_integral =
                 Vakint::convert_from_dot_notation(evaluated_integral.as_view(), false);
         }
@@ -3149,7 +2997,8 @@ impl Vakint {
             evaluated_integral.as_view(),
             &Atom::new_var(muv_sq_symbol)
                 .pow((Atom::new_num(1) / Atom::new_num(2)).as_atom_view())
-                .into_pattern(),
+                .into_pattern()
+                .into(),
             None,
             None,
         );
@@ -3195,7 +3044,7 @@ impl Vakint {
                     .settings
                     .get_integral_normalization_factor_atom()?
                     .as_view(),
-                &Atom::new_num(integral.n_loops as i64).into_pattern(),
+                &Atom::new_num(integral.n_loops as i64).into_pattern().into(),
                 None,
                 None,
             );
@@ -3213,13 +3062,13 @@ impl Vakint {
 
         evaluated_integral = Pattern::parse("logmUVmu").unwrap().replace_all(
             evaluated_integral.as_view(),
-            &(log_muv_mu_sq).into_pattern(),
+            &(log_muv_mu_sq).into_pattern().into(),
             None,
             None,
         );
         evaluated_integral = Pattern::parse("log_mu_sq").unwrap().replace_all(
             evaluated_integral.as_view(),
-            &(log_mu_sq).into_pattern(),
+            &(log_mu_sq).into_pattern().into(),
             None,
             None,
         );
@@ -3341,7 +3190,7 @@ impl Vakint {
 
                 expr = m.target.into_pattern().replace_all(
                     expr.as_view(),
-                    &Pattern::parse(new_expression.as_str()).unwrap(),
+                    &Pattern::parse(new_expression.as_str()).unwrap().into(),
                     None,
                     None,
                 );
@@ -3383,7 +3232,8 @@ impl Vakint {
                     )
                     .as_str(),
                 )
-                .unwrap(),
+                .unwrap()
+                .into(),
                 None,
                 None,
             );
@@ -3394,53 +3244,61 @@ impl Vakint {
     }
 
     pub fn convert_to_dot_notation(atom: AtomView) -> Atom {
-        let mut expr = atom.to_owned();
-        expr = Pattern::parse("v_(id_,idx_)^n_").unwrap().replace_all(
-            expr.as_view(),
-            &Pattern::parse("dot(v_(id_),v_(id_))^(n_/2)").unwrap(),
-            Some(
-                &(Condition::from((State::get_symbol("v_"), symbol_condition()))
-                    & Condition::from((State::get_symbol("id_"), number_condition()))
-                    & Condition::from((State::get_symbol("idx_"), number_condition()))
-                    & Condition::from((State::get_symbol("n_"), even_condition()))),
-            ),
-            None,
-        );
-
-        // dot products
-        expr = Pattern::parse("v1_(id1_,idx_)*v2_(id2_,idx_)")
-            .unwrap()
-            .replace_all(
-                expr.as_view(),
-                &Pattern::parse("dot(v1_(id1_),v2_(id2_))").unwrap(),
+        let mut old_expr = atom.to_owned();
+        loop {
+            let mut expr = Pattern::parse("v_(id_,idx_)^n_").unwrap().replace_all(
+                old_expr.as_view(),
+                &Pattern::parse("dot(v_(id_),v_(id_))^(n_/2)")
+                    .unwrap()
+                    .into(),
                 Some(
-                    &(Condition::from((State::get_symbol("v1_"), symbol_condition()))
-                        & Condition::from((State::get_symbol("v2_"), symbol_condition()))
-                        & Condition::from((State::get_symbol("id1_"), number_condition()))
-                        & Condition::from((State::get_symbol("id2_"), number_condition()))
-                        & Condition::from((State::get_symbol("idx_"), number_condition()))),
+                    &(Condition::from((State::get_symbol("v_"), symbol_condition()))
+                        & Condition::from((State::get_symbol("id_"), number_condition()))
+                        & Condition::from((State::get_symbol("idx_"), number_condition()))
+                        & Condition::from((State::get_symbol("n_"), even_condition()))),
                 ),
                 None,
             );
 
-        // metric contraction
-        expr = Pattern::parse("g(idx1_,idx2_)*v1_(id1_,idx1_)*v2_(id2_,idx2_)")
-            .unwrap()
-            .replace_all(
-                expr.as_view(),
-                &Pattern::parse("dot(v1_(id1_),v2_(id2_))").unwrap(),
-                Some(
-                    &(Condition::from((State::get_symbol("v1_"), symbol_condition()))
-                        & Condition::from((State::get_symbol("v2_"), symbol_condition()))
-                        & Condition::from((State::get_symbol("id1_"), number_condition()))
-                        & Condition::from((State::get_symbol("id2_"), number_condition()))
-                        & Condition::from((State::get_symbol("idx1_"), number_condition()))
-                        & Condition::from((State::get_symbol("idx2_"), number_condition()))),
-                ),
-                None,
-            );
+            // dot products
+            expr = Pattern::parse("v1_(id1_,idx_)*v2_(id2_,idx_)")
+                .unwrap()
+                .replace_all(
+                    expr.as_view(),
+                    &Pattern::parse("dot(v1_(id1_),v2_(id2_))").unwrap().into(),
+                    Some(
+                        &(Condition::from((State::get_symbol("v1_"), symbol_condition()))
+                            & Condition::from((State::get_symbol("v2_"), symbol_condition()))
+                            & Condition::from((State::get_symbol("id1_"), number_condition()))
+                            & Condition::from((State::get_symbol("id2_"), number_condition()))
+                            & Condition::from((State::get_symbol("idx_"), number_condition()))),
+                    ),
+                    None,
+                );
 
-        expr
+            // metric contraction
+            expr = Pattern::parse("g(idx1_,idx2_)*v1_(id1_,idx1_)*v2_(id2_,idx2_)")
+                .unwrap()
+                .replace_all(
+                    expr.as_view(),
+                    &Pattern::parse("dot(v1_(id1_),v2_(id2_))").unwrap().into(),
+                    Some(
+                        &(Condition::from((State::get_symbol("v1_"), symbol_condition()))
+                            & Condition::from((State::get_symbol("v2_"), symbol_condition()))
+                            & Condition::from((State::get_symbol("id1_"), number_condition()))
+                            & Condition::from((State::get_symbol("id2_"), number_condition()))
+                            & Condition::from((State::get_symbol("idx1_"), number_condition()))
+                            & Condition::from((State::get_symbol("idx2_"), number_condition()))),
+                    ),
+                    None,
+                );
+            if expr == old_expr {
+                break;
+            } else {
+                old_expr = expr.to_owned();
+            }
+        }
+        old_expr
     }
 
     pub fn new(settings: Option<VakintSettings>) -> Result<Self, VakintError> {
@@ -3454,7 +3312,7 @@ impl Vakint {
             .validate(&vakint_settings)?;
 
         debug!(
-            "Loop normalisation factor considered:\nFull                  : {}\nExpanded (n_loops=1)  : {}\nEvaluated (n_loops=1) :\n{}",
+            "Loop normalisation factor considered:\nFull                          : {}\nExpanded (n_loops=1)          : {}\nEvaluated (n_loops=1, mu_r=1) :\n{}",
             vakint_settings.integral_normalization_factor, expanded, evaluated
         );
 
@@ -3530,7 +3388,7 @@ impl Vakint {
             .unwrap()
             .replace_all(
                 processed.as_view(),
-                &Pattern::parse("ep").unwrap(),
+                &Pattern::parse("ep").unwrap().into(),
                 None,
                 None,
             );
@@ -3538,35 +3396,156 @@ impl Vakint {
     }
 
     pub fn process_form_output(&self, form_output: String) -> Result<Atom, VakintError> {
-        match Atom::parse(form_output.replace("i_", "𝑖").as_str()) {
+        let processed_form_str = form_output
+            .replace("i_", "𝑖")
+            .replace("\\\n", "\n")
+            .split("\n")
+            .map(|s| s.trim())
+            .collect::<Vec<_>>()
+            .join("");
+        match Atom::parse(processed_form_str.as_str()) {
             Ok(mut processed) => {
                 processed = Pattern::parse("rat(x_,y_)").unwrap().replace_all(
                     processed.as_view(),
-                    &Pattern::parse("(x_/y_)").unwrap(),
+                    &Pattern::parse("(x_/y_)").unwrap().into(),
                     None,
                     None,
                 );
                 processed = Pattern::parse("rat(x_)").unwrap().replace_all(
                     processed.as_view(),
-                    &Pattern::parse("x_").unwrap(),
+                    &Pattern::parse("x_").unwrap().into(),
                     None,
                     None,
                 );
                 processed = Pattern::parse("ep").unwrap().replace_all(
                     processed.as_view(),
-                    &Pattern::parse(&self.settings.epsilon_symbol).unwrap(),
+                    &Pattern::parse(&self.settings.epsilon_symbol)
+                        .unwrap()
+                        .into(),
                     None,
                     None,
                 );
                 processed = Pattern::parse("pi").unwrap().replace_all(
                     processed.as_view(),
-                    &Pattern::parse("𝜋").unwrap(),
+                    &Pattern::parse("𝜋").unwrap().into(),
                     None,
                     None,
                 );
+                /*
+                // This crashes in Symbolica v0.10.0
+                processed = Pattern::parse("vec1(v_,idx_)").unwrap().replace_all(
+                    processed.as_view(),
+                    &Pattern::parse("v_(idx_)").unwrap().into(),
+                    Some(
+                        &(Condition::from((State::get_symbol("idx_"), number_condition()))
+                            & Condition::from((State::get_symbol("v_"), symbol_condition()))),
+                    ),
+                    None,
+                );
+                */
+
+                /*
+                // FORM does not simplify g(1,2) vec1(p1,1) vec1(p2,2) notation for external into pi's
+                processed =
+                    Pattern::parse("g(idx1_,idx2_)*header1_(v1_,idx1_)*header2_(v2_,idx2_)")
+                        .unwrap()
+                        .replace_all(
+                            processed.as_view(),
+                            &PatternOrMap::Map(Box::new(move |m| {
+                                let (header1, header2) = (
+                                    match m.get(State::get_symbol("header1_")).unwrap().to_atom() {
+                                        Atom::Var(s) => s.get_symbol(),
+                                        _ => unreachable!(),
+                                    },
+                                    match m.get(State::get_symbol("header2_")).unwrap().to_atom() {
+                                        Atom::Var(s) => s.get_symbol(),
+                                        _ => unreachable!(),
+                                    },
+                                );
+
+                                let (v1, v2) = (
+                                    m.get(State::get_symbol("v1_")).unwrap().to_atom(),
+                                    m.get(State::get_symbol("v2_")).unwrap().to_atom(),
+                                );
+                                let (idx1, idx2) = (
+                                    m.get(State::get_symbol("idx1_")).unwrap().to_atom(),
+                                    m.get(State::get_symbol("idx2_")).unwrap().to_atom(),
+                                );
+
+                                if (header1 == State::get_symbol("vec")
+                                    || header1 == State::get_symbol("vec1"))
+                                    && (header2 != State::get_symbol("vec")
+                                        || header2 != State::get_symbol("vec1"))
+                                {
+                                    fun!(State::get_symbol("dot"), v1, v2)
+                                } else {
+                                    fun!(State::get_symbol("g"), idx1, idx2)
+                                        * fun!(header1, v1, idx1)
+                                        * fun!(header2, v2, idx2)
+                                }
+                            })),
+                            Some(
+                                &(Condition::from((
+                                    State::get_symbol("idx1_"),
+                                    number_condition(),
+                                )) & Condition::from((
+                                    State::get_symbol("idx2_"),
+                                    number_condition(),
+                                )) & Condition::from((
+                                    State::get_symbol("header1_"),
+                                    symbol_condition(),
+                                )) & Condition::from((
+                                    State::get_symbol("header2_"),
+                                    symbol_condition(),
+                                )) & Condition::from((
+                                    State::get_symbol("v1_"),
+                                    symbol_condition(),
+                                )) & Condition::from((
+                                    State::get_symbol("v2_"),
+                                    symbol_condition(),
+                                ))),
+                            ),
+                            None,
+                        );
+                */
+                /*
+                // Tun FORM's vec1(p1,1) notation for external into p1(1)
+                processed = Pattern::parse("header_(v_,idx_)").unwrap().replace_all(
+                    processed.as_view(),
+                    &PatternOrMap::Map(Box::new(move |m| {
+                        let header = match m.get(State::get_symbol("header1_")).unwrap().to_atom() {
+                            Atom::Var(s) => s.get_symbol(),
+                            _ => unreachable!(),
+                        };
+
+                        let v = m.get(State::get_symbol("v1_")).unwrap().to_atom();
+                        let v_symbol = match v.to_owned() {
+                            Atom::Var(s) => s.get_symbol(),
+                            _ => unreachable!(),
+                        };
+                        let idx = m.get(State::get_symbol("idx1_")).unwrap().to_atom();
+
+                        if header == State::get_symbol("vec") || header == State::get_symbol("vec1")
+                        {
+                            fun!(header, v, idx)
+                        } else {
+                            fun!(v_symbol, idx)
+                        }
+                    })),
+                    Some(
+                        &(Condition::from((State::get_symbol("idx_"), number_condition()))
+                            & Condition::from((State::get_symbol("header_"), symbol_condition()))
+                            & Condition::from((State::get_symbol("v_"), symbol_condition()))),
+                    ),
+                    None,
+                );
+                */
+
                 processed = Pattern::parse("g(idx1_,idx2_)").unwrap().replace_all(
                     processed.as_view(),
-                    &Pattern::parse(format!("{}(idx1_,idx2_)", METRIC_SYMBOL).as_str()).unwrap(),
+                    &Pattern::parse(format!("{}(idx1_,idx2_)", METRIC_SYMBOL).as_str())
+                        .unwrap()
+                        .into(),
                     Some(
                         &(Condition::from((State::get_symbol("idx1_"), number_condition()))
                             & Condition::from((State::get_symbol("idx2_"), number_condition()))),
@@ -3575,7 +3554,7 @@ impl Vakint {
                 );
                 processed = Pattern::parse("g(v1_,v2_)").unwrap().replace_all(
                     processed.as_view(),
-                    &Pattern::parse("dot(v1_,v2_)").unwrap(),
+                    &Pattern::parse("dot(v1_,v2_)").unwrap().into(),
                     Some(
                         &(Condition::from((State::get_symbol("v1_"), symbol_condition()))
                             & Condition::from((State::get_symbol("v2_"), symbol_condition()))),
@@ -3586,7 +3565,9 @@ impl Vakint {
                     .unwrap()
                     .replace_all(
                         processed.as_view(),
-                        &Pattern::parse("dot(v1_(args1_),v2_(args2_))").unwrap(),
+                        &Pattern::parse("dot(v1_(args1_),v2_(args2_))")
+                            .unwrap()
+                            .into(),
                         Some(
                             &(Condition::from((State::get_symbol("v1_"), symbol_condition()))
                                 & Condition::from((State::get_symbol("v2_"), symbol_condition()))),
@@ -3628,13 +3609,11 @@ impl Vakint {
             debug!("Running pySecDec with command: {:?}", cmd);
         }
 
-        let output = cmd
-            .stderr(Stdio::inherit())
-            .stdout(Stdio::null())
-            .output()?;
+        let output = cmd.stderr(Stdio::piped()).stdout(Stdio::piped()).output()?;
         if !ExitStatus::success(&output.status) {
             return Err(VakintError::FormError(
                 String::from_utf8_lossy(&output.stderr).into(),
+                String::from_utf8_lossy(&output.stdout).into(),
                 format!("{:?}", cmd),
                 tmp_dir.to_str().unwrap().into(),
             ));
@@ -3681,13 +3660,11 @@ impl Vakint {
         } else {
             debug!("Running FORM with command: {:?}", cmd);
         }
-        let output = cmd
-            .stderr(Stdio::inherit())
-            .stdout(Stdio::null())
-            .output()?;
+        let output = cmd.stderr(Stdio::piped()).stdout(Stdio::piped()).output()?;
         if !ExitStatus::success(&output.status) {
             return Err(VakintError::FormError(
                 String::from_utf8_lossy(&output.stderr).into(),
+                String::from_utf8_lossy(&output.stdout).into(),
                 format!("{:?}", cmd),
                 tmp_dir.to_str().unwrap().into(),
             ));
