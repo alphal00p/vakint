@@ -43,6 +43,7 @@ use symbols::S;
 use phf::phf_map;
 
 static MINIMAL_FORM_VERSION: &str = "4.2.1";
+static MINIMAL_PYSECDEC_VERSION: &str = "1.6.4";
 
 #[allow(unused)]
 static METRIC_SYMBOL: &str = "g";
@@ -112,6 +113,10 @@ pub enum VakintError {
     FormVersion(String),
     #[error("FORM is not installed in your system and required for vakint to work.")]
     FormUnavailable,
+    #[error("{0}")]
+    PySecDecVersion(String),
+    #[error("PySecDec is not installed in your system and required for vakint to evaluate with PySecDec. Install it with 'pip install pysecdec'")]
+    PySecDecUnavailable,
     #[error("Could not find FORM output file 'out.txt':\nstderr: {0}\nYou can rerun the script using:\n{1}")]
     MissingFormOutput(String, String, String),
     #[error("Symbolica could not parse PySecDec output:\n{0}\nError:{1}")]
@@ -3234,6 +3239,33 @@ impl Vakint {
         Ok(evaluated_integral)
     }
 
+    fn get_pysecdec_version(&self) -> Result<String, VakintError> {
+        let mut cmd = Command::new(self.settings.python_exe_path.as_str());
+        cmd.arg("-c");
+        cmd.arg("import pySecDec; print(pySecDec.__version__)");
+        let output = if let Ok(o) = cmd.output() {
+            o
+        } else {
+            return Err(VakintError::PySecDecUnavailable);
+        };
+        if !ExitStatus::success(&output.status) {
+            return Err(VakintError::PySecDecUnavailable);
+        }
+        let output_str = String::from_utf8_lossy(&output.stdout).into_owned();
+        let re = Regex::new(r"([\.|\d]+)").unwrap();
+        let mut versions = vec![];
+        for (_, [version]) in re.captures_iter(output_str.as_str()).map(|ci| ci.extract()) {
+            versions.push(version);
+        }
+        if versions.is_empty() {
+            return Err(VakintError::PySecDecVersion(format!(
+                "Could not obtain PySecDec version from command:\n{:?}\nOutput was:\n{}",
+                cmd, output_str
+            )));
+        }
+        Ok(versions[0].into())
+    }
+
     fn get_form_version(&self) -> Result<String, VakintError> {
         let mut cmd = Command::new(self.settings.form_exe_path.as_str());
         cmd.arg("-version");
@@ -3436,23 +3468,59 @@ impl Vakint {
             Ok(valid) => {
                 if valid {
                     debug!(
-                        "FORM successfully detected with version '{}'.",
+                        "{} successfully detected with version '{}'.",
+                        "FORM".green(),
                         form_version
                     );
                 } else {
                     return Err(VakintError::FormVersion(format!(
-                        "FORM version installed on your system does not meet minimal requirements: {}<{}.",
+                        "{} version installed on your system does not meet minimal requirements: {}<{}.",
+                        "FORM".red(),
                         form_version, MINIMAL_FORM_VERSION
                     )));
                 }
             }
             Err(_) => {
                 return Err(VakintError::FormVersion(format!(
-                    "Could not parse FORM version '{}'.",
+                    "Could not parse {} version '{}'.",
+                    "FORM".red(),
                     form_version
                 )))
             }
         };
+
+        if vakint
+            .settings
+            .evaluation_order
+            .iter()
+            .any(|method| matches!(method, EvaluationMethod::PySecDec(_)))
+        {
+            let pysecdec_version = vakint.get_pysecdec_version()?;
+            match compare_to(pysecdec_version.clone(), MINIMAL_PYSECDEC_VERSION, Cmp::Ge) {
+                Ok(valid) => {
+                    if valid {
+                        debug!(
+                            "{} successfully detected with version '{}'.",
+                            "PySecDec".green(),
+                            pysecdec_version
+                        );
+                    } else {
+                        return Err(VakintError::FormVersion(format!(
+                            "{} version installed on your system does not meet minimal requirements: {}<{}.",
+                            "PySecDec".red(),
+                            pysecdec_version, MINIMAL_PYSECDEC_VERSION
+                        )));
+                    }
+                }
+                Err(_) => {
+                    return Err(VakintError::FormVersion(format!(
+                        "Could not parse {} version '{}'.",
+                        "PySecDec".red(),
+                        pysecdec_version
+                    )))
+                }
+            };
+        }
         Ok(vakint)
     }
 

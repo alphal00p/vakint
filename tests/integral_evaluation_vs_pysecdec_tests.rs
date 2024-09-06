@@ -49,7 +49,7 @@ fn test_integrate_1l_pysecdec_non_unit_mass() {
             .collect(),
         COMPARISON_WITH_PYSECDEC_REL_THRESHOLD,
         MAX_PULL,
-        false,
+        true,
     );
 }
 
