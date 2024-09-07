@@ -1,5 +1,6 @@
 mod symbols;
-mod topologies;
+pub mod topologies;
+pub mod utils;
 
 use ahash::RandomState;
 use anyhow::Result;
@@ -39,6 +40,7 @@ use symbolica::{
     state::State,
     transformer::Transformer,
 };
+use utils::simplify_real;
 
 use thiserror::Error;
 use topologies::{Topologies, Topology};
@@ -1654,11 +1656,12 @@ impl VakintTerm {
 
         'eval: for evaluation_approach in vakint.settings.evaluation_order.iter() {
             if evaluation_approach.supports(vakint, &integral_specs.canonical_topology) {
-                self.numerator = evaluation_approach.evaluate_integral(
+                let evaluated_integral = evaluation_approach.evaluate_integral(
                     vakint,
                     self.numerator.as_atom_view(),
                     &integral_specs,
                 )?;
+                self.numerator = simplify_real(evaluated_integral.as_view());
                 self.integral = Atom::new_num(1);
                 break 'eval;
             }
@@ -2105,7 +2108,7 @@ impl NumericalEvaluationResult {
                 }
             }
         }
-        (true, "matches".into())
+        (true, "matches!".into())
     }
 }
 

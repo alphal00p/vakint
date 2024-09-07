@@ -1,4 +1,5 @@
 mod test_utils;
+use vakint::utils::simplify_real;
 
 use std::vec;
 
@@ -53,7 +54,7 @@ fn test_integrate_1l_a() {
     // println!("ε^0: {}", coefs.1);
     let evaluated_integral = compare_output(
         evaluated_integral_res_ref.map(|a| a.as_view()),
-        Atom::parse(
+        simplify_real(Atom::parse(
             "(\
         + ε^-1 * (1/4*𝑖*𝜋^2*muvsq^2*g(1,2))\
         + ε^-0 * (1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2)+1/4*𝑖*𝜋^2*muvsq^2*log(muvsq^-1)*g(1,2)+1/4*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))*g(1,2))\
@@ -61,7 +62,7 @@ fn test_integrate_1l_a() {
         + ε^2  * ((7/16*muvsq^2*g(1,2)+1/48*𝜋^2*muvsq^2*g(1,2))*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))+1/2*(1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2))*log(exp(-EulerGamma))^2+(𝑖*𝜋^2*(7/16*muvsq^2*g(1,2)+1/48*𝜋^2*muvsq^2*g(1,2))+3/8*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/4*muvsq^2*(1/2*𝑖*𝜋^2*log(𝜋)^2+1/2*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2-𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2))*log(exp(-EulerGamma))+1/2*(1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2)+1/4*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))*g(1,2))*log(muvsq^-1)^2+((1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2))*log(exp(-EulerGamma))+𝑖*𝜋^2*(7/16*muvsq^2*g(1,2)+1/48*𝜋^2*muvsq^2*g(1,2))+3/8*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/4*muvsq^2*(1/2*𝑖*𝜋^2*log(𝜋)^2+1/2*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2-𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/8*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))^2*g(1,2))*log(muvsq^-1)+𝑖*𝜋^2*(151190863202516241/410199796539607264*muvsq^2*g(1,2)+1/32*𝜋^2*muvsq^2*g(1,2))+3/8*muvsq^2*(1/2*𝑖*𝜋^2*log(𝜋)^2+1/2*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2-𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/4*muvsq^2*(-1/6*𝑖*𝜋^2*log(𝜋)^3+1/6*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^3+1/2*𝑖*𝜋^2*log(𝜋)^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)-1/2*𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2)*g(1,2)+1/24*𝑖*𝜋^2*muvsq^2*log(muvsq^-1)^3*g(1,2)+1/24*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))^3*g(1,2))\
         )",
         )
-        .unwrap(),
+        .unwrap().as_view()),
     );
     debug!("Evaluated integral: {}", evaluated_integral);
 

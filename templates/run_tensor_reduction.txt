@@ -18,6 +18,7 @@ L F = {numerator};
 
 id q1?.q2? = dot(q1,q2);
 id g(xi?,xj?)*vec1(q1?,xi?)*vec1(q2?,xj?) = dot(q1,q2);
+id vec1(q1?,xi?)*vec1(q2?,xi?) = dot(q1,q2);
 .sort
 
 Print +S;
