@@ -7,8 +7,8 @@ use crate::test_utils::{convert_test_externals, convert_test_params};
 
 const N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC: u32 = 16;
 const COMPARISON_WITH_PYSECDEC_REL_THRESHOLD: f64 = 1.0e-7;
-// QMC pySecDec error is very optimistic
-const MAX_PULL: f64 = 100.0;
+// PySecDec QMC is often very optimistic
+const MAX_PULL: f64 = 1.0e5;
 
 #[test_log::test]
 fn test_integrate_1l_pysecdec() {

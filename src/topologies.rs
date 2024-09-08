@@ -1,14 +1,15 @@
-use std::fmt;
+use std::{collections::HashSet, fmt};
 
 use colored::Colorize;
 use symbolica::{
     atom::{Atom, AtomView},
-    id::Pattern,
+    id::{Condition, MatchSettings, Pattern},
+    state::State,
 };
 
 use crate::{
-    get_node_ids, get_prop_with_id, symbols::S, Integral, ReplacementRules, VakintError,
-    VakintSettings,
+    get_individual_momenta, get_node_ids, get_prop_with_id, symbols::S, Integral, ReplacementRules,
+    VakintError, VakintSettings,
 };
 
 pub struct Topologies(Vec<Topology>);
@@ -340,8 +341,102 @@ impl Topology {
                     .next()
                     .is_some()
                 {
+                    // Make sure all propagators have IDs starting at 1 until n_props
+                    let mut test_input = input.to_owned();
+                    let mut prop_id = 1;
+                    let mut prop_pattern =
+                        Pattern::parse(format!("prop({},args__)", prop_id).as_str()).unwrap();
+                    while prop_pattern
+                        .pattern_match(
+                            test_input.as_view(),
+                            &Condition::default(),
+                            &MatchSettings::default(),
+                        )
+                        .next()
+                        .is_some()
+                    {
+                        test_input = prop_pattern.replace_all(
+                            test_input.as_view(),
+                            &Atom::new_num(1).into_pattern().into(),
+                            None,
+                            None,
+                        );
+                        prop_id += 1;
+                        prop_pattern =
+                            Pattern::parse(format!("prop({},args__)", prop_id).as_str()).unwrap();
+                    }
+                    test_input = Pattern::parse("UNKNOWN(args__)").unwrap().replace_all(
+                        test_input.as_view(),
+                        &Pattern::parse("args__").unwrap().into(),
+                        None,
+                        None,
+                    );
+                    if test_input != Atom::parse("topo(1)").unwrap() {
+                        return Err(VakintError::InvalidIntegralFormat(format!(
+                            "UNKNOWN integrals must have propagator ids ranging from 1 to their maximal number of propagators: {}",
+                            test_input
+                        )));
+                    }
+
+                    let mut loop_momenta_ids = HashSet::new();
+                    for i_prop in 1..=prop_id - 1 {
+                        for (mom_symbol, (_, mom_id)) in get_individual_momenta(
+                            get_prop_with_id(input, i_prop)
+                                .unwrap()
+                                .get(&State::get_symbol("q_"))
+                                .unwrap(),
+                        )?
+                        .iter()
+                        {
+                            if *mom_symbol != S.k {
+                                return Err(VakintError::InvalidIntegralFormat(format!(
+                                    "Unknown integrals must have only loop momenta with symbol {}: {}",
+                                    S.k,mom_symbol
+                                )));
+                            }
+                            if *mom_id < 1 {
+                                return Err(VakintError::InvalidIntegralFormat(format!(
+                                    "Unknown integrals must have loop momenta ids starting from 1, not {}",
+                                    mom_id
+                                )));
+                            }
+                            loop_momenta_ids.insert(*mom_id);
+                        }
+                    }
+                    let mut sorted_loop_momenta_ids = loop_momenta_ids
+                        .iter()
+                        .map(|mom_id| *mom_id as usize)
+                        .collect::<Vec<_>>();
+                    sorted_loop_momenta_ids.sort();
+                    if sorted_loop_momenta_ids
+                        != (1..=sorted_loop_momenta_ids.len()).collect::<Vec<_>>()
+                    {
+                        return Err(VakintError::InvalidIntegralFormat(format!(
+                            "Unknown integrals must have loop momenta ids ranging from 1 to their maximal number of loop momenta, not {:?}",
+                            sorted_loop_momenta_ids
+                        )));
+                    }
+                    let n_loops = *sorted_loop_momenta_ids.last().unwrap();
                     //println!("Found a match!");
-                    Ok(Some(ReplacementRules::default()))
+                    let mut replacement_rules = ReplacementRules::default();
+                    replacement_rules.canonical_expression_substitutions.insert(
+                        Atom::parse("integral").unwrap(),
+                        Pattern::parse("UNKNOWN(int_)").unwrap().replace_all(
+                            input,
+                            &Pattern::parse("int_").unwrap().into(),
+                            None,
+                            None,
+                        ),
+                    );
+                    replacement_rules.canonical_expression_substitutions.insert(
+                        Atom::parse("n_props").unwrap(),
+                        Atom::new_num((prop_id - 1) as i64),
+                    );
+                    replacement_rules.canonical_expression_substitutions.insert(
+                        Atom::parse("n_loops").unwrap(),
+                        Atom::new_num(n_loops as i64),
+                    );
+                    Ok(Some(replacement_rules))
                 } else {
                     //println!("Does not match!");
                     Ok(None)

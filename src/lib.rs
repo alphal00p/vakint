@@ -14,7 +14,9 @@ use std::{
     collections::{HashMap, HashSet},
     env,
     f64::consts::LOG2_10,
-    fmt, fs,
+    fmt,
+    fs::{self, File},
+    io::{BufRead, BufReader, Write},
     ops::Div,
     process::{Command, ExitStatus, Stdio},
     sync::{Arc, LazyLock, Mutex},
@@ -304,8 +306,38 @@ impl Default for ReplacementRules {
 }
 
 impl ReplacementRules {
-    fn apply_replacement_rules(&mut self) {
+    fn apply_replacement_rules(&mut self) -> Result<(), VakintError> {
+        if matches!(self.canonical_topology, Topology::Unknown(_)) {
+            let integral = self.canonical_topology.get_integral_mut();
+            integral.canonical_expression = Some(
+                self.canonical_expression_substitutions
+                    .get(&Atom::parse("integral").unwrap())
+                    .unwrap()
+                    .to_owned(),
+            );
+            let n_props: i64 = self
+                .canonical_expression_substitutions
+                .get(&Atom::parse("n_props").unwrap())
+                .unwrap()
+                .try_into()
+                .unwrap();
+            integral.n_props = n_props as usize;
+            let n_loops: i64 = self
+                .canonical_expression_substitutions
+                .get(&Atom::parse("n_loops").unwrap())
+                .unwrap()
+                .try_into()
+                .unwrap();
+            integral.n_loops = n_loops as usize;
+            integral.graph = Integral::get_graph_from_expression(
+                integral.canonical_expression.as_ref().unwrap().as_view(),
+                integral.n_props,
+            )?;
+            return Ok(());
+        }
+
         let integral = self.canonical_topology.get_integral_mut();
+
         for (source, target) in self.canonical_expression_substitutions.iter() {
             for expr in [
                 integral.canonical_expression.as_mut(),
@@ -325,6 +357,7 @@ impl ReplacementRules {
                 );
             }
         }
+        Ok(())
     }
 
     fn get_propagator_property_list(&self, property: &str) -> HashMap<usize, Atom> {
@@ -483,7 +516,7 @@ impl fmt::Display for Integral {
         write!(
             f,
             "name='{}', n_loops={}, n_props_top_topo={}\n   | canonical_expression='{}',\n   | canonical_pattern='{}',\n   | short_expression='{}'",
-            self.name,
+            if self.name=="UNKNOWN" {self.name.red()} else {self.name.green()},
             self.n_loops,
             self.n_props,
             self.canonical_expression
@@ -1296,6 +1329,12 @@ impl fmt::Display for PySecDecOptions {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum VakintDependency {
+    FORM,
+    PySecDec,
+}
+
 #[derive(Debug, Clone)]
 pub enum EvaluationMethod {
     AlphaLoop,
@@ -1337,6 +1376,23 @@ impl EvaluationMethod {
         }
     }
 
+    pub fn dependencies(&self) -> Vec<VakintDependency> {
+        match self {
+            EvaluationMethod::AlphaLoop => {
+                vec![VakintDependency::FORM]
+            }
+            EvaluationMethod::MATAD => {
+                vec![VakintDependency::FORM]
+            }
+            EvaluationMethod::FMFT => {
+                vec![VakintDependency::FORM]
+            }
+            EvaluationMethod::PySecDec(_) => {
+                vec![VakintDependency::FORM, VakintDependency::PySecDec]
+            }
+        }
+    }
+
     pub fn evaluate_integral(
         &self,
         vakint: &Vakint,
@@ -1356,6 +1412,33 @@ impl EvaluationMethod {
     }
 }
 
+pub struct EvaluationOrder(pub Vec<EvaluationMethod>);
+
+impl Default for EvaluationOrder {
+    fn default() -> Self {
+        EvaluationOrder(vec![
+            EvaluationMethod::AlphaLoop,
+            EvaluationMethod::MATAD,
+            EvaluationMethod::FMFT,
+            EvaluationMethod::PySecDec(PySecDecOptions::default()),
+        ])
+    }
+}
+
+impl EvaluationOrder {
+    pub fn numerical_only() -> Self {
+        EvaluationOrder(vec![EvaluationMethod::PySecDec(PySecDecOptions::default())])
+    }
+
+    pub fn analytic_only() -> Self {
+        EvaluationOrder(vec![
+            EvaluationMethod::AlphaLoop,
+            EvaluationMethod::MATAD,
+            EvaluationMethod::FMFT,
+        ])
+    }
+}
+
 pub struct VakintSettings {
     #[allow(unused)]
     pub use_pysecdec: bool,
@@ -1365,11 +1448,10 @@ pub struct VakintSettings {
     pub python_exe_path: String,
     pub verify_numerator_identification: bool,
     pub integral_normalization_factor: LoopNormalizationFactor,
-    // TODO optimize for 16 digits -> f64
     pub n_digits_at_evaluation_time: u32,
     pub allow_unknown_integrals: bool,
     pub clean_tmp_dir: bool,
-    pub evaluation_order: Vec<EvaluationMethod>,
+    pub evaluation_order: EvaluationOrder,
     // This quantity is typically set equal to *one plus the maximum loop count* of the UV regularisation problem considered.
     // For example when considering a 2-loop problem, then:
     //   a) for the nested one-loop integrals appearing, the single pole, finite term *and* order-epsilon term will need to be considered.
@@ -1384,7 +1466,7 @@ impl VakintSettings {
     }
 
     pub fn get_binary_precision(&self) -> u32 {
-        ((self.n_digits_at_evaluation_time as f64) * LOG2_10).floor() as u32
+        ((self.n_digits_at_evaluation_time.max(17) as f64) * LOG2_10).floor() as u32
     }
 
     pub fn real_to_prec(&self, re: &str) -> Complex<Float> {
@@ -1486,7 +1568,7 @@ impl LoopNormalizationFactor {
 
         let mut params = HashMap::default();
         params.insert("mursq".into(), settings.real_to_prec("1"));
-        let num_res = match Vakint::full_numerical_evaluation(
+        let num_res = match Vakint::full_numerical_evaluation_without_error(
             settings,
             expanded_expr_atom.as_view(),
             &params,
@@ -1579,12 +1661,7 @@ impl Default for VakintSettings {
             integral_normalization_factor: LoopNormalizationFactor::pySecDec,
             allow_unknown_integrals: true,
             clean_tmp_dir: env::var("VAKINT_NO_CLEAN_TMP_DIR").is_err(),
-            evaluation_order: vec![
-                EvaluationMethod::AlphaLoop,
-                EvaluationMethod::MATAD,
-                EvaluationMethod::FMFT,
-                EvaluationMethod::PySecDec(PySecDecOptions::default()),
-            ],
+            evaluation_order: EvaluationOrder::default(),
             // Default to a three-loop UV subtraction problem, for which alphaLoop implementation can be used.
             number_of_terms_in_epsilon_expansion: 3,
             use_dot_product_notation: false,
@@ -1652,9 +1729,9 @@ impl VakintTerm {
             ));
         };
 
-        integral_specs.apply_replacement_rules();
+        integral_specs.apply_replacement_rules()?;
 
-        'eval: for evaluation_approach in vakint.settings.evaluation_order.iter() {
+        'eval: for evaluation_approach in vakint.settings.evaluation_order.0.iter() {
             if evaluation_approach.supports(vakint, &integral_specs.canonical_topology) {
                 let evaluated_integral = evaluation_approach.evaluate_integral(
                     vakint,
@@ -2035,6 +2112,10 @@ impl NumericalEvaluationResult {
         }
     }
 
+    pub fn is_zero(&self) -> bool {
+        self.0.iter().all(|(_, f)| f.is_zero())
+    }
+
     pub fn does_approx_match(
         &self,
         other: &NumericalEvaluationResult,
@@ -2080,8 +2161,8 @@ impl NumericalEvaluationResult {
                         return (
                             false,
                             format!(
-                                "{} part of ε^{} coefficient does not match within max pull: {} != {}",
-                                part, power, r, o
+                                "{} part of ε^{} coefficient does not match within max pull: {} != {} (pull = {})",
+                                part, power, r, o, delta/err.norm()
                             ),
                         );
                     }
@@ -2092,19 +2173,22 @@ impl NumericalEvaluationResult {
                         return (
                             false,
                             format!(
-                                "{} part of ε^{} coefficient does not match within relative error required: {} != {}",
-                                part, power, r, o
+                                "{} part of ε^{} coefficient does not match within abs. error required: {} != {} (abs. error = {})",
+                                part, power, r, o, delta
                             ),
                         );
                     }
-                } else if delta.div(scale) > f_threshold {
-                    return (
+                } else {
+                    let rel_error = delta.div(scale);
+                    if rel_error > f_threshold {
+                        return (
                             false,
                             format!(
-                                "{} part of ε^{} coefficient does not match within relative error required: {} != {}",
-                                part, power, r, o
+                                "{} part of ε^{} coefficient does not match within rel. error required: {} != {} (rel. error = {})",
+                                part, power, r, o, rel_error
                             ),
                         );
+                    }
                 }
             }
         }
@@ -2125,8 +2209,7 @@ impl Vakint {
         let mut const_map: HashMap<Atom, Complex<Float>, ahash::random_state::RandomState> =
             HashMap::default();
 
-        let binary_prec: u32 =
-            ((settings.n_digits_at_evaluation_time as f64) * LOG2_10).floor() as u32;
+        let binary_prec = settings.get_binary_precision();
         const_map.insert(
             Atom::from(Var::new(State::get_symbol("𝜋"))),
             Complex::new(
@@ -2153,28 +2236,6 @@ impl Vakint {
                         ),
                         dot_product.to_owned(),
                     );
-                    // const_map.insert(
-                    //     Atom::parse(
-                    //         format!(
-                    //             "dot_{}{}_{}{}",
-                    //             EXTERNAL_MOMENTUM_SYMBOL, i, EXTERNAL_MOMENTUM_SYMBOL, j,
-                    //         )
-                    //         .as_str(),
-                    //     )
-                    //     .unwrap(),
-                    //     dot_product.to_owned(),
-                    // );
-                    // const_map.insert(
-                    //     Atom::parse(
-                    //         format!(
-                    //             "dot_{}{}_{}{}",
-                    //             EXTERNAL_MOMENTUM_SYMBOL, j, EXTERNAL_MOMENTUM_SYMBOL, i,
-                    //         )
-                    //         .as_str(),
-                    //     )
-                    //     .unwrap(),
-                    //     dot_product,
-                    // );
                 }
             }
         }
@@ -2210,57 +2271,6 @@ impl Vakint {
         Ok(const_map)
     }
 
-    /*
-    fn replace_external_dot_product_with_shorthand(
-        atom: AtomView,
-        const_map: &HashMap<Atom, Complex<Float>, RandomState>,
-    ) -> Atom {
-        let const_map_keys = const_map.keys().cloned().collect::<Vec<_>>();
-        Pattern::parse(
-            format!(
-                "dot({}(id1_),{}(id2_))",
-                EXTERNAL_MOMENTUM_SYMBOL, EXTERNAL_MOMENTUM_SYMBOL
-            )
-            .as_str(),
-        )
-        .unwrap()
-        .replace_all(
-            atom,
-            &PatternOrMap::Map(Box::new(move |m| {
-                let (id1, id2) = (
-                    get_integer_from_match(m.get(State::get_symbol("id1_")).unwrap()).unwrap(),
-                    get_integer_from_match(m.get(State::get_symbol("id2_")).unwrap()).unwrap(),
-                );
-                println!("AAA {}", format!("dot_p{}_p{}", id1, id2));
-                println!(
-                    "const_map_keys = {}",
-                    const_map_keys
-                        .iter()
-                        .map(|a| a.to_canonical_string())
-                        .collect::<Vec<_>>()
-                        .join(",")
-                );
-                if const_map_keys
-                    .contains(&Atom::parse(format!("dot_p{}_p{}", id1, id2).as_str()).unwrap())
-                {
-                    Atom::parse(format!("dot_p{}_p{}", id1, id2).as_str()).unwrap()
-                } else {
-                    fun!(
-                        S.dot,
-                        fun!(S.p, m.get(State::get_symbol("id1_")).unwrap().to_atom()),
-                        fun!(S.p, m.get(State::get_symbol("id2_")).unwrap().to_atom())
-                    )
-                }
-            })),
-            Some(
-                &(Condition::from((State::get_symbol("id1_"), number_condition()))
-                    & Condition::from((State::get_symbol("id2_"), number_condition()))),
-            ),
-            None,
-        )
-    }
-    */
-
     pub fn partial_numerical_evaluation(
         settings: &VakintSettings,
         integral: AtomView,
@@ -2270,7 +2280,6 @@ impl Vakint {
         let const_map = Vakint::get_constants_map(settings, params, externals).unwrap();
 
         let mut res = Vakint::convert_to_dot_notation(integral);
-        //LEGACY res = Self::replace_external_dot_product_with_shorthand(res.as_view(), &const_map);
         for (src, trgt) in const_map.iter() {
             res = src.into_pattern().replace_all(
                 res.as_view(),
@@ -2286,21 +2295,34 @@ impl Vakint {
         res
     }
 
-    pub fn full_numerical_evaluation_with_error(
+    pub fn full_numerical_evaluation(
         settings: &VakintSettings,
         integral: AtomView,
         params: &HashMap<String, Complex<Float>, ahash::RandomState>,
         externals: Option<&HashMap<usize, Momentum, ahash::RandomState>>,
-    ) -> Result<(NumericalEvaluationResult, NumericalEvaluationResult), VakintError> {
+    ) -> Result<(NumericalEvaluationResult, Option<NumericalEvaluationResult>), VakintError> {
+        if S.error_flag
+            .into_pattern()
+            .pattern_match(integral, &Condition::default(), &MatchSettings::default())
+            .next()
+            .is_none()
+        {
+            return Ok((
+                Vakint::full_numerical_evaluation_without_error(
+                    settings, integral, params, externals,
+                )?,
+                None,
+            ));
+        }
         let (error_atom, integral_atom) = integral.coefficient_list(S.error_flag_symbol);
         assert!(error_atom.len() == 1);
-        let mut central = Vakint::full_numerical_evaluation(
+        let mut central = Vakint::full_numerical_evaluation_without_error(
             settings,
             integral_atom.as_view(),
             params,
             externals,
         )?;
-        let mut error = Vakint::full_numerical_evaluation(
+        let mut error = Vakint::full_numerical_evaluation_without_error(
             settings,
             error_atom[0].1.as_view(),
             params,
@@ -2321,10 +2343,10 @@ impl Vakint {
                     .push((*i, Complex::new(eval.re.zero(), eval.re.zero())));
             }
         }
-        Ok((central, error))
+        Ok((central, Some(error)))
     }
 
-    pub fn full_numerical_evaluation(
+    pub fn full_numerical_evaluation_without_error(
         settings: &VakintSettings,
         integral: AtomView,
         params: &HashMap<String, Complex<Float>, ahash::RandomState>,
@@ -2363,14 +2385,10 @@ impl Vakint {
         let map = Vakint::get_constants_map(settings, params, externals).unwrap();
         let map_view: HashMap<AtomView<'_>, Complex<Float>, RandomState> =
             map.iter().map(|(k, v)| (k.as_view(), v.clone())).collect();
-        let binary_prec: u32 =
-            ((settings.n_digits_at_evaluation_time as f64) * LOG2_10).floor() as u32;
+        let binary_prec = settings.get_binary_precision();
         let mut epsilon_coeffs_vec_floats = vec![];
         for (i64, coeff) in epsilon_coeffs_vec.iter() {
             let coeff_processed = Vakint::convert_to_dot_notation(coeff.as_view());
-
-            //LEGACY coeff_processed = Self::replace_external_dot_product_with_shorthand(coeff_processed.as_view(), &map);
-
             // for (k, v) in map_view.iter() {
             //     println!("{} -> {}", k, v);
             // }
@@ -2408,6 +2426,11 @@ impl Vakint {
     ) -> Result<Atom, VakintError> {
         let integral = integral_specs.canonical_topology.get_integral();
 
+        debug!(
+            "Processing the following integral with {}:\n{}",
+            "PySecDec".green(),
+            integral
+        );
         let vectors = VakintTerm::identify_vectors_in_numerator(numerator)?;
         let mut processed_numerator = Vakint::convert_to_dot_notation(numerator);
 
@@ -2499,6 +2522,7 @@ impl Vakint {
 
         let mut m = Atom::new();
         let power_list_map = integral_specs.get_propagator_property_list("pow_");
+
         let mass_list_map = integral_specs.get_propagator_property_list("mUVsq_");
         let mut masses = HashSet::new();
         let mut power_list: Vec<i64> = vec![];
@@ -2552,6 +2576,7 @@ impl Vakint {
                 .join(", "),
         );
         let n_loops_in_topology = loop_momenta_ids_found.len();
+
         // This should always hold, because pinched higher loops that reduce the loop counts must be captured by lower loop count topologies.
         // It is important that this hold otherwise MSbar normalization factor would be off.
         assert!(n_loops_in_topology == integral.n_loops);
@@ -3324,37 +3349,47 @@ impl Vakint {
             settings: vakint_settings,
             topologies,
         };
-        let form_version = vakint.get_form_version()?;
-        match compare_to(form_version.clone(), MINIMAL_FORM_VERSION, Cmp::Ge) {
-            Ok(valid) => {
-                if valid {
-                    debug!(
-                        "{} successfully detected with version '{}'.",
-                        "FORM".green(),
-                        form_version
-                    );
-                } else {
-                    return Err(VakintError::FormVersion(format!(
-                        "{} version installed on your system does not meet minimal requirements: {}<{}.",
-                        "FORM".red(),
-                        form_version, MINIMAL_FORM_VERSION
-                    )));
-                }
-            }
-            Err(_) => {
-                return Err(VakintError::FormVersion(format!(
-                    "Could not parse {} version '{}'.",
-                    "FORM".red(),
-                    form_version
-                )))
-            }
-        };
 
         if vakint
             .settings
             .evaluation_order
+            .0
             .iter()
-            .any(|method| matches!(method, EvaluationMethod::PySecDec(_)))
+            .any(|em| em.dependencies().contains(&VakintDependency::FORM))
+        {
+            let form_version = vakint.get_form_version()?;
+            match compare_to(form_version.clone(), MINIMAL_FORM_VERSION, Cmp::Ge) {
+                Ok(valid) => {
+                    if valid {
+                        debug!(
+                            "{} successfully detected with version '{}'",
+                            "FORM".green(),
+                            form_version.green()
+                        );
+                    } else {
+                        return Err(VakintError::FormVersion(format!(
+                        "{} version installed on your system does not meet minimal requirements: {}<{}",
+                        "FORM".red(),
+                        form_version.red(), MINIMAL_FORM_VERSION
+                    )));
+                    }
+                }
+                Err(_) => {
+                    return Err(VakintError::FormVersion(format!(
+                        "Could not parse {} version '{}'.",
+                        "FORM".red(),
+                        form_version.red()
+                    )))
+                }
+            };
+        }
+
+        if vakint
+            .settings
+            .evaluation_order
+            .0
+            .iter()
+            .any(|em| em.dependencies().contains(&VakintDependency::PySecDec))
         {
             let pysecdec_version = vakint.get_pysecdec_version()?;
             match compare_to(pysecdec_version.clone(), MINIMAL_PYSECDEC_VERSION, Cmp::Ge) {
@@ -3363,13 +3398,13 @@ impl Vakint {
                         debug!(
                             "{} successfully detected with version '{}'.",
                             "PySecDec".green(),
-                            pysecdec_version
+                            pysecdec_version.green()
                         );
                     } else {
                         return Err(VakintError::FormVersion(format!(
                             "{} version installed on your system does not meet minimal requirements: {}<{}.",
                             "PySecDec".red(),
-                            pysecdec_version, MINIMAL_PYSECDEC_VERSION
+                            pysecdec_version.red(), MINIMAL_PYSECDEC_VERSION
                         )));
                     }
                 }
@@ -3377,7 +3412,7 @@ impl Vakint {
                     return Err(VakintError::FormVersion(format!(
                         "Could not parse {} version '{}'.",
                         "PySecDec".red(),
-                        pysecdec_version
+                        pysecdec_version.red()
                     )))
                 }
             };
@@ -3434,115 +3469,6 @@ impl Vakint {
                     None,
                     None,
                 );
-                /*
-                // This crashes in Symbolica v0.10.0
-                processed = Pattern::parse("vec1(v_,idx_)").unwrap().replace_all(
-                    processed.as_view(),
-                    &Pattern::parse("v_(idx_)").unwrap().into(),
-                    Some(
-                        &(Condition::from((State::get_symbol("idx_"), number_condition()))
-                            & Condition::from((State::get_symbol("v_"), symbol_condition()))),
-                    ),
-                    None,
-                );
-                */
-
-                /*
-                // FORM does not simplify g(1,2) vec1(p1,1) vec1(p2,2) notation for external into pi's
-                processed =
-                    Pattern::parse("g(idx1_,idx2_)*header1_(v1_,idx1_)*header2_(v2_,idx2_)")
-                        .unwrap()
-                        .replace_all(
-                            processed.as_view(),
-                            &PatternOrMap::Map(Box::new(move |m| {
-                                let (header1, header2) = (
-                                    match m.get(State::get_symbol("header1_")).unwrap().to_atom() {
-                                        Atom::Var(s) => s.get_symbol(),
-                                        _ => unreachable!(),
-                                    },
-                                    match m.get(State::get_symbol("header2_")).unwrap().to_atom() {
-                                        Atom::Var(s) => s.get_symbol(),
-                                        _ => unreachable!(),
-                                    },
-                                );
-
-                                let (v1, v2) = (
-                                    m.get(State::get_symbol("v1_")).unwrap().to_atom(),
-                                    m.get(State::get_symbol("v2_")).unwrap().to_atom(),
-                                );
-                                let (idx1, idx2) = (
-                                    m.get(State::get_symbol("idx1_")).unwrap().to_atom(),
-                                    m.get(State::get_symbol("idx2_")).unwrap().to_atom(),
-                                );
-
-                                if (header1 == State::get_symbol("vec")
-                                    || header1 == State::get_symbol("vec1"))
-                                    && (header2 != State::get_symbol("vec")
-                                        || header2 != State::get_symbol("vec1"))
-                                {
-                                    fun!(State::get_symbol("dot"), v1, v2)
-                                } else {
-                                    fun!(State::get_symbol("g"), idx1, idx2)
-                                        * fun!(header1, v1, idx1)
-                                        * fun!(header2, v2, idx2)
-                                }
-                            })),
-                            Some(
-                                &(Condition::from((
-                                    State::get_symbol("idx1_"),
-                                    number_condition(),
-                                )) & Condition::from((
-                                    State::get_symbol("idx2_"),
-                                    number_condition(),
-                                )) & Condition::from((
-                                    State::get_symbol("header1_"),
-                                    symbol_condition(),
-                                )) & Condition::from((
-                                    State::get_symbol("header2_"),
-                                    symbol_condition(),
-                                )) & Condition::from((
-                                    State::get_symbol("v1_"),
-                                    symbol_condition(),
-                                )) & Condition::from((
-                                    State::get_symbol("v2_"),
-                                    symbol_condition(),
-                                ))),
-                            ),
-                            None,
-                        );
-                */
-                /*
-                // Tun FORM's vec1(p1,1) notation for external into p1(1)
-                processed = Pattern::parse("header_(v_,idx_)").unwrap().replace_all(
-                    processed.as_view(),
-                    &PatternOrMap::Map(Box::new(move |m| {
-                        let header = match m.get(State::get_symbol("header1_")).unwrap().to_atom() {
-                            Atom::Var(s) => s.get_symbol(),
-                            _ => unreachable!(),
-                        };
-
-                        let v = m.get(State::get_symbol("v1_")).unwrap().to_atom();
-                        let v_symbol = match v.to_owned() {
-                            Atom::Var(s) => s.get_symbol(),
-                            _ => unreachable!(),
-                        };
-                        let idx = m.get(State::get_symbol("idx1_")).unwrap().to_atom();
-
-                        if header == State::get_symbol("vec") || header == State::get_symbol("vec1")
-                        {
-                            fun!(header, v, idx)
-                        } else {
-                            fun!(v_symbol, idx)
-                        }
-                    })),
-                    Some(
-                        &(Condition::from((State::get_symbol("idx_"), number_condition()))
-                            & Condition::from((State::get_symbol("header_"), symbol_condition()))
-                            & Condition::from((State::get_symbol("v_"), symbol_condition()))),
-                    ),
-                    None,
-                );
-                */
 
                 processed = Pattern::parse("g(idx1_,idx2_)").unwrap().replace_all(
                     processed.as_view(),
@@ -3607,23 +3533,48 @@ impl Vakint {
         cmd.current_dir(tmp_dir);
 
         if !clean {
-            info!("Running pySecDec with command: {:?}", cmd);
+            info!("Running {} with command: {:?}", "PySecDec".green(), cmd);
+            info!("You can follow the run live with 'tail -f follow_run.txt' in that temporary directory");
         } else {
-            debug!("Running pySecDec with command: {:?}", cmd);
+            debug!("Running {} with command: {:?}", "PySecDec".green(), cmd);
+            debug!("You can follow the run live with 'tail -f follow_run.txt' in that temporary directory");
         }
 
-        let output = cmd.stderr(Stdio::piped()).stdout(Stdio::piped()).output()?;
-        if !ExitStatus::success(&output.status) {
+        let mut child = cmd.stderr(Stdio::piped()).stdout(Stdio::piped()).spawn()?;
+
+        let stdout = child.stdout.take().unwrap();
+
+        let reader = BufReader::new(stdout);
+        let mut follow_file = File::create(tmp_dir.join("follow_run.txt"))?;
+
+        reader.lines().map_while(|line| line.ok()).for_each(|line| {
+            let line_with_new_line = format!("{}\n", line);
+            follow_file
+                .write_all(line_with_new_line.as_bytes())
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "Could not forward PySecDec output to follow_run.txt. Error: {}",
+                        e
+                    )
+                });
+            follow_file
+                .flush()
+                .unwrap_or_else(|e| panic!("Could not flush follow_run.txt. Error: {}", e));
+        });
+
+        let status = child.wait()?;
+
+        if !ExitStatus::success(&status) {
             return Err(VakintError::FormError(
-                String::from_utf8_lossy(&output.stderr).into(),
-                String::from_utf8_lossy(&output.stdout).into(),
+                "N/A".into(),
+                "N/A".into(),
                 format!("{:?}", cmd),
                 tmp_dir.to_str().unwrap().into(),
             ));
         }
         if !tmp_dir.join("out.txt").exists() {
             return Err(VakintError::MissingFormOutput(
-                String::from_utf8_lossy(&output.stderr).into(),
+                "N/A".into(),
                 format!("{:?}", cmd),
                 tmp_dir.to_str().unwrap().into(),
             ));
@@ -3659,9 +3610,9 @@ impl Vakint {
         cmd.arg(input.0);
         cmd.current_dir(tmp_dir);
         if !clean {
-            info!("Running FORM with command: {:?}", cmd);
+            info!("Running {} with command: {:?}", "FORM".green(), cmd);
         } else {
-            debug!("Running FORM with command: {:?}", cmd);
+            debug!("Running {} with command: {:?}", "FORM".green(), cmd);
         }
         let output = cmd.stderr(Stdio::piped()).stdout(Stdio::piped()).output()?;
         if !ExitStatus::success(&output.status) {

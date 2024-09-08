@@ -47,9 +47,13 @@ fn main() {
     println!("Partial eval:\n{}\n", numerical_partial_eval);
 
     params.insert("g(11,22)".into(), vakint.settings.real_to_prec("1.0"));
-    let numerical_full_eval =
-        Vakint::full_numerical_evaluation(&vakint.settings, integral.as_view(), &params, None)
-            .unwrap();
+    let numerical_full_eval = Vakint::full_numerical_evaluation_without_error(
+        &vakint.settings,
+        integral.as_view(),
+        &params,
+        None,
+    )
+    .unwrap();
     println!(
         "Full eval (metric substituted with 1):\n{}\n",
         numerical_full_eval
