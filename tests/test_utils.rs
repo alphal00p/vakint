@@ -1,7 +1,7 @@
 use std::f64::consts::LOG2_10;
 
 use colored::Colorize;
-use log::debug;
+use log::{debug, info};
 use std::vec;
 use symbolica::{
     atom::{Atom, AtomView},
@@ -360,18 +360,19 @@ pub fn compare_vakint_evaluation_vs_reference(
         max_pull,
     );
     if !matches {
-        println!("Result     :\n{}", result);
+        info!("Result     :\n{}", result);
         if error.is_some() {
             println!("Error      :\n{}", error.unwrap());
         }
-        println!("Reference  :\n{}", reference);
-        debug!("{}", msg)
+        info!("Reference  :\n{}", reference);
+        info!("{}", msg)
     } else {
         debug!("Result        :\n{}", result);
         if error.is_some() {
             println!("Error      :\n{}", error.unwrap());
         }
         debug!("Reference     :\n{}", reference);
+        debug!("{}", msg)
     }
     assert!(matches, "Vakint result and reference result do not match");
 }

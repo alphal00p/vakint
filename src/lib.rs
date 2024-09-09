@@ -1,3 +1,4 @@
+pub mod graph;
 mod symbols;
 pub mod topologies;
 pub mod utils;
@@ -5,6 +6,7 @@ pub mod utils;
 use ahash::RandomState;
 use anyhow::Result;
 use colored::Colorize;
+use graph::Graph;
 #[allow(unused)]
 use log::{debug, info, warn};
 
@@ -329,7 +331,7 @@ impl ReplacementRules {
                 .try_into()
                 .unwrap();
             integral.n_loops = n_loops as usize;
-            integral.graph = Integral::get_graph_from_expression(
+            integral.graph = Graph::new_from_atom(
                 integral.canonical_expression.as_ref().unwrap().as_view(),
                 integral.n_props,
             )?;
@@ -377,121 +379,6 @@ impl ReplacementRules {
             }
         }
         property_list
-    }
-}
-
-#[derive(Debug, Clone)]
-struct Edge {
-    id: usize,
-    left_node_id: usize,
-    right_node_id: usize,
-    momentum: Atom,
-}
-
-impl fmt::Display for Edge {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "(#{}|{}->{}|{})",
-            self.id, self.left_node_id, self.right_node_id, self.momentum
-        )
-    }
-}
-
-#[derive(Debug, Clone)]
-struct Node {
-    id: usize,
-    edges: Vec<(usize, EdgeDirection)>,
-}
-
-impl fmt::Display for Node {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "(#{}|[{}])",
-            self.id,
-            self.edges
-                .iter()
-                .map(|(e_id, dir)| format!("{}@{}", dir, e_id))
-                .collect::<Vec<_>>()
-                .join(",")
-        )
-    }
-}
-
-#[derive(Debug, Clone)]
-enum EdgeDirection {
-    Incoming,
-    Outgoing,
-}
-
-impl EdgeDirection {
-    fn is_incoming(&self) -> bool {
-        match self {
-            EdgeDirection::Incoming => true,
-            EdgeDirection::Outgoing => false,
-        }
-    }
-    #[allow(unused)]
-    fn is_outgoing(&self) -> bool {
-        match self {
-            EdgeDirection::Incoming => false,
-            EdgeDirection::Outgoing => true,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct Graph {
-    edges: HashMap<usize, Edge>,
-    nodes: HashMap<usize, Node>,
-}
-
-impl fmt::Display for Graph {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut sorted_edges = self.edges.iter().collect::<Vec<_>>();
-        sorted_edges.sort_by(|(e1_id, _), (e2_id, _)| e1_id.partial_cmp(e2_id).unwrap());
-        let mut sorted_nodes = self.nodes.iter().collect::<Vec<_>>();
-        sorted_nodes.sort_by(|(n1_id, _), (n2_id, _)| n1_id.partial_cmp(n2_id).unwrap());
-        write!(
-            f,
-            "Edges: {}\nNodes: {}",
-            sorted_edges
-                .iter()
-                .map(|(_e_id, e)| format!("{}", e))
-                .collect::<Vec<_>>()
-                .join(" "),
-            sorted_nodes
-                .iter()
-                .map(|(_n_id, n)| format!("{}", n))
-                .collect::<Vec<_>>()
-                .join(" ")
-        )
-    }
-}
-
-impl fmt::Display for EdgeDirection {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            EdgeDirection::Incoming => write!(f, "IN"),
-            EdgeDirection::Outgoing => write!(f, "OUT"),
-        }
-    }
-}
-
-impl Graph {
-    pub fn to_graphviz(&self) -> String {
-        format!(
-            "digraph G {{\n{}\n}}",
-            self.edges
-                .values()
-                .map(|e| format!(
-                    "  {} -> {} [label=\"{}|{}\"]",
-                    e.left_node_id, e.right_node_id, e.id, e.momentum
-                ))
-                .collect::<Vec<_>>()
-                .join("\n")
-        )
     }
 }
 
@@ -575,6 +462,29 @@ fn get_node_ids(
     };
 
     Ok((id_node_left as usize, id_node_right as usize))
+}
+
+#[allow(clippy::type_complexity)]
+fn get_individual_momenta_from_atom(
+    momentum: AtomView,
+) -> Result<Vec<(Symbol, (Atom, i64))>, VakintError> {
+    let wrapped_momentum = fun!(State::get_symbol("mom"), momentum.to_owned());
+    if let Some(m) = Pattern::parse("mom(q_)")
+        .unwrap()
+        .pattern_match(
+            wrapped_momentum.as_view(),
+            &Condition::default(),
+            &MatchSettings::default(),
+        )
+        .next()
+    {
+        get_individual_momenta(m.match_stack.get(State::get_symbol("q_")).unwrap())
+    } else {
+        Err(VakintError::InvalidMomentumExpression(format!(
+            "Edge momentum {} does not contain only 'q_'.",
+            momentum
+        )))
+    }
 }
 
 #[allow(clippy::type_complexity)]
@@ -680,66 +590,6 @@ impl Default for Integral {
 }
 
 impl Integral {
-    pub fn get_graph_from_expression(
-        integral_expression: AtomView,
-        tot_n_props: usize,
-    ) -> Result<Graph, VakintError> {
-        let mut graph = Graph::default();
-        for i_prop in 1..=tot_n_props {
-            if let Some(m) = get_prop_with_id(integral_expression, i_prop) {
-                // Format check for the momenta
-                let momentum = m.get(&State::get_symbol("q_")).unwrap().to_atom();
-
-                let (left_node_id, right_node_id) = get_node_ids(&m)?;
-
-                graph.edges.insert(
-                    i_prop,
-                    Edge {
-                        id: i_prop,
-                        momentum,
-                        left_node_id,
-                        right_node_id,
-                    },
-                );
-            }
-        }
-
-        for (&e_id, edge) in graph.edges.iter() {
-            if let Some(node) = graph.nodes.get_mut(&edge.left_node_id) {
-                node.edges.push((e_id, EdgeDirection::Outgoing));
-            } else {
-                graph.nodes.insert(
-                    edge.left_node_id,
-                    Node {
-                        id: edge.left_node_id,
-                        edges: vec![(e_id, EdgeDirection::Outgoing)],
-                    },
-                );
-            }
-            if let Some(node) = graph.nodes.get_mut(&edge.right_node_id) {
-                node.edges.push((e_id, EdgeDirection::Incoming));
-            } else {
-                graph.nodes.insert(
-                    edge.right_node_id,
-                    Node {
-                        id: edge.right_node_id,
-                        edges: vec![(e_id, EdgeDirection::Incoming)],
-                    },
-                );
-            }
-        }
-
-        for (n_id, nodes) in graph.nodes.iter() {
-            if nodes.edges.len() <= 1 {
-                return Err(VakintError::MalformedGraph(format!("Node {} is connected to only {} edges, this cannot be for a vaccuum graph. Graph:\n{}",
-                    n_id, nodes.edges.len(), integral_expression
-                )));
-            }
-        }
-
-        Ok(graph)
-    }
-
     pub fn new(
         // This refers to the *total* number of propagators in the top-level topology,
         // i.e. the number of entries in the corresponding short_expression
@@ -773,7 +623,7 @@ impl Integral {
         }
         let e = canonical_expression.clone().unwrap();
 
-        let graph = Integral::get_graph_from_expression(e.as_view(), tot_n_props)?;
+        let graph = Graph::new_from_atom(e.as_view(), tot_n_props)?;
 
         let mut loop_mom_indices = HashSet::<i64>::default();
         let mut next_atom = e.clone();
@@ -1583,7 +1433,6 @@ impl LoopNormalizationFactor {
                 ))
             }
         };
-
         Ok((expr, expanded_expr, num_res))
     }
 }
@@ -3417,6 +3266,7 @@ impl Vakint {
                 }
             };
         }
+
         Ok(vakint)
     }
 
@@ -3547,20 +3397,11 @@ impl Vakint {
         let reader = BufReader::new(stdout);
         let mut follow_file = File::create(tmp_dir.join("follow_run.txt"))?;
 
-        reader.lines().map_while(|line| line.ok()).for_each(|line| {
-            let line_with_new_line = format!("{}\n", line);
-            follow_file
-                .write_all(line_with_new_line.as_bytes())
-                .unwrap_or_else(|e| {
-                    panic!(
-                        "Could not forward PySecDec output to follow_run.txt. Error: {}",
-                        e
-                    )
-                });
-            follow_file
-                .flush()
-                .unwrap_or_else(|e| panic!("Could not flush follow_run.txt. Error: {}", e));
-        });
+        for line in reader.lines() {
+            let line_with_new_line = format!("{}\n", line?);
+            follow_file.write_all(line_with_new_line.as_bytes())?;
+            follow_file.flush()?;
+        }
 
         let status = child.wait()?;
 
