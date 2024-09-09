@@ -64,7 +64,7 @@ fn test_integrate_1l_a() {
         )
         .unwrap().as_view()),
     );
-    debug!("Evaluated integral: {}", evaluated_integral);
+    //debug!("Evaluated integral: {}", evaluated_integral);
 
     let mut params = HashMap::default();
     params.insert("muvsq".into(), vakint.settings.real_to_prec("1"));
@@ -80,14 +80,18 @@ fn test_integrate_1l_a() {
         "Partial eval: {}",
         numerical_partial_eval.to_canonical_string()
     );
-    let numerical_partial_eval_canonical_str =
-        numerical_partial_eval.to_canonical_string().replace(
-            "(-12.0696723514860*g(1,2)*𝑖+0)*ε^2",
-            "-12.0696723514860*g(1,2)*ε^2*𝑖",
-        );
+
+    // This test is too unstable as the printout at fixed precision is not accurate enough
+    // let numerical_partial_eval_canonical_str = numerical_partial_eval.to_canonical_string();
+    // assert_eq!(
+    //     numerical_partial_eval_canonical_str,
+    //     "-12.0696723514860*g(1,2)*ε^2*𝑖+-5.36845814123893*g(1,2)*𝑖+2.46740110027234*g(1,2)*ε^-1*𝑖+9.41170424471097*g(1,2)*ε*𝑖"
+    // );
     assert_eq!(
-        numerical_partial_eval_canonical_str,
-        "-12.0696723514860*g(1,2)*ε^2*𝑖+-5.36845814123893*g(1,2)*𝑖+2.46740110027234*g(1,2)*ε^-1*𝑖+9.41170424471097*g(1,2)*ε*𝑖"
+        numerical_partial_eval.rationalize_coefficients(&Fraction::from(
+            0.1_f64.powi((vakint.settings.n_digits_at_evaluation_time - 4) as i32)
+        )),
+        Atom::parse("-2879700/536411*𝑖*g(1,2)+3726809/395976*𝑖*ε*g(1,2)+1075967/436073*𝑖*ε^-1*g(1,2)-4041047/334810*𝑖*ε^2*g(1,2)").unwrap()
     );
 
     let prec = Fraction::from(0.1.pow((vakint.settings.n_digits_at_evaluation_time - 4) as u64));
@@ -137,6 +141,7 @@ fn test_integrate_1l_a() {
 fn test_integrate_1l_dot_product_external() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
+        VakintSettings::default(),
         EvaluationOrder::analytic_only(),
         Atom::parse(
             "(k(1,1)*p(1,1)*k(1,2)*p(2,2))*topo(\
@@ -153,10 +158,10 @@ fn test_integrate_1l_dot_product_external() {
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
-            (-1, ("-146.1136365510036558546604990331".into(), "0.0".into()),),
-            (0,  ("635.8146971740286947808753047759".into(),  "0.0".into()),),
-            (1,  ("-1646.531034471454483109201793220".into(), "0.0".into()),),
-            (2,  ("2240.516116133454318298096346441".into(),  "0.0".into()),),
+            (-1, ("0.0".into(), "-7298.572454605580698628106094408".into()),),
+            (0,  ("0.0".into(),  "15879.89918178474997676561014674".into()),),
+            (1,  ("0.0".into(), "-27839.82115585504758906774113191".into()),),
+            (2,  ("0.0".into(),  "35702.09081569554005452137401203".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -166,6 +171,7 @@ fn test_integrate_1l_dot_product_external() {
 fn test_integrate_2l() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
+        VakintSettings::default(),
         EvaluationOrder::analytic_only(),
         Atom::parse(
             "(1)*topo(\
@@ -188,6 +194,39 @@ fn test_integrate_2l() {
             (-1, ("635.8146971740286947808753047759".into(),  "0.0".into()),),
             (0,  ("-1646.531034471454483109201793220".into(), "0.0".into()),),
             (1,  ("2240.516116133454318298096346441".into(),  "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
+fn test_integrate_3l() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings::default(),
+        EvaluationOrder::alphaloop_only(),
+        Atom::parse(
+            "(1)*topo(\
+                 prop(1,edge(1,2),k(1),muvsq,1)\
+                *prop(2,edge(2,3),k(2),muvsq,1)\
+                *prop(3,edge(3,1),k(3),muvsq,1)\
+                *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
+                *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
+                *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
+            )",
+        )
+        .unwrap()
+        .as_view(),
+        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        convert_test_externals(
+        &(1..=1)
+            .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            (-1, ("0.0".into(), "-2311.289033520460340396770711738".into()),),
+            ( 0, ("0.0".into(),  "35134.99893627257345553503414002".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );

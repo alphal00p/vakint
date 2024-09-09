@@ -63,7 +63,7 @@ impl Topologies {
                 Atom::parse("I2L(msq(1),pow(1),pow(2),pow(3))")
                     .unwrap()
                     .as_view(),
-                TopologyContractions::Custom(vec![vec![3]]),
+                TopologyContractions::Custom(vec![vec![], vec![3]]),
                 Some(Atom::parse("1").unwrap().as_view()),
                 None,
             )?

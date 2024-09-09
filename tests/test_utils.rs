@@ -2,18 +2,14 @@ use std::f64::consts::LOG2_10;
 
 use colored::Colorize;
 use log::{debug, info};
-use std::vec;
 use symbolica::{
     atom::{Atom, AtomView},
-    domains::float::{Complex, Float, Real, RealNumberLike},
+    domains::float::{Complex, Float},
     printer::{AtomPrinter, PrintOptions},
 };
 
 use std::collections::HashMap;
-use vakint::{
-    EvaluationMethod, EvaluationOrder, LoopNormalizationFactor, Momentum, PySecDecOptions,
-    VakintSettings,
-};
+use vakint::{EvaluationOrder, LoopNormalizationFactor, Momentum, VakintSettings};
 use vakint::{NumericalEvaluationResult, Vakint, VakintError};
 
 pub fn get_vakint(vakint_settings: VakintSettings) -> Vakint {
@@ -152,8 +148,12 @@ pub fn compare_numerical_output(
     }
 }
 
-#[allow(unused)]
-pub fn compare_analytical_vs_pysecdec(
+// EvaluationOrder::analytic_only()
+
+#[allow(unused, clippy::too_many_arguments)]
+pub fn compare_two_evaluations(
+    vakint_default_settings: VakintSettings,
+    evaluation_orders: ((&EvaluationOrder, bool), (&EvaluationOrder, bool)),
     integra_view: AtomView,
     numerical_masses: HashMap<String, Complex<Float>, ahash::RandomState>,
     numerical_external_momenta: HashMap<usize, Momentum, ahash::RandomState>,
@@ -161,7 +161,18 @@ pub fn compare_analytical_vs_pysecdec(
     max_pull: f64,
     quiet: bool,
 ) {
-    // First perform the analytic evaluation
+    let mut mod_evaluation_order_a = evaluation_orders.0 .0.clone();
+    let mut mod_evaluation_order_b = evaluation_orders.1 .0.clone();
+    for eval_order in [&mut mod_evaluation_order_a, &mut mod_evaluation_order_b] {
+        eval_order.adjust(
+            Some(quiet),
+            rel_threshold * 1.0e-2,
+            &numerical_masses,
+            &numerical_external_momenta,
+        );
+    }
+
+    // First perform the first evaluation type
 
     let mut vakint_analytic_settings = VakintSettings {
         allow_unknown_integrals: false,
@@ -169,8 +180,8 @@ pub fn compare_analytical_vs_pysecdec(
         mu_r_sq_symbol: "mursq".into(),
         integral_normalization_factor: LoopNormalizationFactor::MSbar,
         n_digits_at_evaluation_time: 16,
-        evaluation_order: EvaluationOrder::analytic_only(),
-        ..VakintSettings::default()
+        evaluation_order: mod_evaluation_order_a.clone(),
+        ..vakint_default_settings
     };
     let mut vakint = get_vakint(vakint_analytic_settings);
 
@@ -192,12 +203,27 @@ pub fn compare_analytical_vs_pysecdec(
 
     let integral = vakint.to_canonical(integra_view, true).unwrap();
 
-    let integral_reduced = vakint.tensor_reduce(integral.as_view()).unwrap();
-    let benchmark_evaluated_integral = vakint
-        .evaluate_integral(integral_reduced.as_view())
-        .unwrap();
+    let integral_reduced = if [evaluation_orders.0, evaluation_orders.1]
+        .iter()
+        .any(|(_a, do_reduction)| *do_reduction)
+    {
+        vakint.tensor_reduce(integral.as_view()).unwrap()
+    } else {
+        integral.clone()
+    };
 
-    let benchmark = Vakint::full_numerical_evaluation_without_error(
+    debug!(
+        "Evaluating integral with evaluation order: {}",
+        format!("{}", mod_evaluation_order_a).green(),
+    );
+    let benchmark_evaluated_integral = vakint
+        .evaluate_integral(if evaluation_orders.0 .1 {
+            integral_reduced.as_view()
+        } else {
+            integral.as_view()
+        })
+        .unwrap();
+    let (benchmark_central, benchmark_error) = Vakint::full_numerical_evaluation(
         &vakint.settings,
         benchmark_evaluated_integral.as_view(),
         &eval_params,
@@ -205,40 +231,23 @@ pub fn compare_analytical_vs_pysecdec(
     )
     .unwrap();
 
-    // Now perform the pySecDec evaluation
-    let f64_numerical_masses = numerical_masses
-        .iter()
-        .map(|(k, v)| (k.clone(), v.norm().re.to_f64()))
-        .collect();
-    let f64_numerical_external_momenta = numerical_external_momenta
-        .iter()
-        .map(|(k, v)| {
-            (
-                format!("p{}", k),
-                (
-                    v.0.norm().re.to_f64(),
-                    v.1.norm().re.to_f64(),
-                    v.2.norm().re.to_f64(),
-                    v.3.norm().re.to_f64(),
-                ),
-            )
-        })
-        .collect();
-    vakint.settings.evaluation_order =
-        EvaluationOrder(vec![EvaluationMethod::PySecDec(PySecDecOptions {
-            quiet,
-            relative_precision: rel_threshold * 1.0e-2,
-            numerical_masses: f64_numerical_masses,
-            numerical_external_momenta: f64_numerical_external_momenta,
-        })]);
-
-    let pysec_dec_eval = match vakint.evaluate_integral(integral.as_view()) {
+    // Now perform the second evaluation
+    vakint.settings.evaluation_order = mod_evaluation_order_b.clone();
+    debug!(
+        "Evaluating integral with evaluation order: {}",
+        format!("{}", mod_evaluation_order_b).green(),
+    );
+    let pysec_dec_eval = match vakint.evaluate_integral(if evaluation_orders.1 .1 {
+        integral_reduced.as_view()
+    } else {
+        integral.as_view()
+    }) {
         Ok(eval) => eval,
         Err(e) => {
-            panic!("Error during pySecDec evaluation: {}", e);
+            panic!("Error during evaluation with: {}", mod_evaluation_order_b);
         }
     };
-    let (pysecdec_central, pysecdec_error) = match Vakint::full_numerical_evaluation(
+    let (tested_central, tested_error) = match Vakint::full_numerical_evaluation(
         &vakint.settings,
         pysec_dec_eval.as_view(),
         &eval_params,
@@ -250,28 +259,77 @@ pub fn compare_analytical_vs_pysecdec(
         }
     };
 
-    let (matches, msg) = benchmark.does_approx_match(
-        &pysecdec_central,
-        pysecdec_error.as_ref(),
+    let mut combined_error = match (&benchmark_error, &tested_error) {
+        (Some(b), Some(t)) => Some(b.aggregate_errors(t)),
+        (Some(b), None) => Some(b.clone()),
+        (None, Some(t)) => Some(t.clone()),
+        (None, None) => None,
+    };
+    let (matches, msg) = benchmark_central.does_approx_match(
+        &tested_central,
+        combined_error.as_ref(),
         rel_threshold,
         max_pull,
     );
     if !matches || !quiet {
-        println!("Analytic         :\n{}", benchmark);
-        println!("PySecDec central :\n{}", pysecdec_central);
-        println!("PySecDec error   :\n{}", pysecdec_error.unwrap());
+        println!(
+            "Benchmark {} :: central :\n{}",
+            format!("{}", mod_evaluation_order_a).green(),
+            benchmark_central
+        );
+        if benchmark_error.is_some() {
+            println!(
+                "Benchmark {} :: error   :\n{}",
+                format!("{}", mod_evaluation_order_a).green(),
+                benchmark_error.unwrap()
+            );
+        }
+        println!(
+            "Tested {} :: central :\n{}",
+            format!("{}", mod_evaluation_order_b).green(),
+            tested_central
+        );
+        if tested_error.is_some() {
+            println!(
+                "Tested {} :: error   :\n{}",
+                format!("{}", mod_evaluation_order_b).green(),
+                tested_error.unwrap()
+            );
+        }
         println!("{}", msg)
     } else {
-        debug!("Analytic         :\n{}", benchmark);
-        debug!("PySecDec central :\n{}", pysecdec_central);
-        debug!("PySecDec error   :\n{}", pysecdec_error.unwrap());
-        debug!("{}", msg)
+        info!(
+            "Benchmark {} :: central :\n{}",
+            format!("{}", mod_evaluation_order_a).green(),
+            benchmark_central
+        );
+        if benchmark_error.is_some() {
+            info!(
+                "Benchmark {} :: error   :\n{}",
+                format!("{}", mod_evaluation_order_a).green(),
+                benchmark_error.unwrap()
+            );
+        }
+        info!(
+            "Tested {} :: central :\n{}",
+            format!("{}", mod_evaluation_order_b).green(),
+            tested_central
+        );
+        if tested_error.is_some() {
+            info!(
+                "Tested {} :: error   :\n{}",
+                format!("{}", mod_evaluation_order_b).green(),
+                tested_error.unwrap()
+            );
+        }
+        info!("{}", msg)
     }
     assert!(matches, "Benchmark and numerical result do not match.");
 }
 
-#[allow(unused)]
+#[allow(unused, clippy::too_many_arguments)]
 pub fn compare_vakint_evaluation_vs_reference(
+    vakint_default_settings: VakintSettings,
     evaluation_order: EvaluationOrder,
     integra_view: AtomView,
     numerical_masses: HashMap<String, Complex<Float>, ahash::RandomState>,
@@ -280,44 +338,25 @@ pub fn compare_vakint_evaluation_vs_reference(
     prec: u32,
     max_pull: f64,
 ) {
-    // First perform Vakint evaluation
+    // Adjust evaluation method options
+    let mut mod_evaluation_order = evaluation_order.clone();
+    mod_evaluation_order.adjust(
+        None,
+        10.0_f64.powi(-(prec as i32)),
+        &numerical_masses,
+        &numerical_external_momenta,
+    );
 
+    // First perform Vakint evaluation
     let mut vakint_settings = VakintSettings {
         allow_unknown_integrals: true,
         use_dot_product_notation: true,
         mu_r_sq_symbol: "mursq".into(),
         integral_normalization_factor: LoopNormalizationFactor::MSbar,
         n_digits_at_evaluation_time: prec,
-        evaluation_order,
-        ..VakintSettings::default()
+        evaluation_order: mod_evaluation_order.clone(),
+        ..vakint_default_settings
     };
-
-    // Insert parameters in pySecDec evaluation too if present
-    for eo in vakint_settings.evaluation_order.0.iter_mut() {
-        if let EvaluationMethod::PySecDec(pysecdec_options) = eo {
-            let f64_numerical_masses = numerical_masses
-                .iter()
-                .map(|(k, v)| (k.clone(), v.norm().re.to_f64()))
-                .collect();
-            let f64_numerical_external_momenta = numerical_external_momenta
-                .iter()
-                .map(|(k, v)| {
-                    (
-                        format!("p{}", k),
-                        (
-                            v.0.norm().re.to_f64(),
-                            v.1.norm().re.to_f64(),
-                            v.2.norm().re.to_f64(),
-                            v.3.norm().re.to_f64(),
-                        ),
-                    )
-                })
-                .collect();
-            pysecdec_options.relative_precision = 10.0_f64.powi(-(prec as i32));
-            pysecdec_options.numerical_masses = f64_numerical_masses;
-            pysecdec_options.numerical_external_momenta = f64_numerical_external_momenta;
-        }
-    }
 
     let mut vakint = get_vakint(vakint_settings);
 
@@ -360,18 +399,26 @@ pub fn compare_vakint_evaluation_vs_reference(
         max_pull,
     );
     if !matches {
-        info!("Result     :\n{}", result);
+        println!(
+            "Result from {}:\n{}",
+            format!("{}", mod_evaluation_order).green(),
+            result
+        );
         if error.is_some() {
-            println!("Error      :\n{}", error.unwrap());
+            println!("Error:\n{}", error.unwrap());
         }
-        info!("Reference  :\n{}", reference);
-        info!("{}", msg)
+        println!("Reference:\n{}", reference);
+        println!("{}", msg)
     } else {
-        debug!("Result        :\n{}", result);
+        debug!(
+            "Result from {}:\n{}",
+            format!("{}", mod_evaluation_order).green(),
+            result
+        );
         if error.is_some() {
-            println!("Error      :\n{}", error.unwrap());
+            println!("Error:\n{}", error.unwrap());
         }
-        debug!("Reference     :\n{}", reference);
+        debug!("Reference:\n{}", reference);
         debug!("{}", msg)
     }
     assert!(matches, "Vakint result and reference result do not match");

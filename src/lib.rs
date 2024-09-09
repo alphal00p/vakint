@@ -33,7 +33,7 @@ use symbolica::{
     },
     domains::{
         atom::AtomField,
-        float::{Complex, Float, NumericalFloatLike, Real, SingleFloat},
+        float::{Complex, Float, NumericalFloatLike, Real, RealNumberLike, SingleFloat},
         integer::IntegerRing,
         rational::{Fraction, Rational},
     },
@@ -110,6 +110,8 @@ pub enum VakintError {
     InvalidShortExpression(String),
     #[error("invalid numerator expression: {0}")]
     InvalidNumerator(String),
+    #[error("Could not find a method suitable for evaluating this integral: {0}")]
+    NoEvaluationMethodFound(String),
     #[error(
         "the following integral could not be identified using any of the supported topologies: {0}"
     )]
@@ -977,23 +979,22 @@ impl Integral {
                     self.canonical_expression.as_ref().unwrap().as_view(),
                     prop_id,
                 ) {
-                    if let Some(Match::Single(a)) = m1
+                    if let Some(mtmp) = m1
                         .match_stack
                         .get(State::get_symbol(format!("pow{}_", prop_id).as_str()))
                     {
                         replacement_rules.canonical_expression_substitutions.insert(
                             Atom::parse(format!("pow({})", prop_id).as_str()).unwrap(),
-                            a.to_owned(),
+                            mtmp.to_atom(),
                         );
                     }
-
-                    if let Some(Match::Single(a)) = m1
+                    if let Some(mtmp) = m1
                         .match_stack
                         .get(State::get_symbol(format!("msq{}_", prop_id)))
                     {
                         replacement_rules.canonical_expression_substitutions.insert(
                             Atom::parse(format!("msq({})", prop_id).as_str()).unwrap(),
-                            a.to_owned(),
+                            mtmp.to_atom(),
                         );
                     }
 
@@ -1070,25 +1071,22 @@ impl Integral {
                         );
 
                         let mut canonical_momenta_atom_for_pattern =
-                            if let Match::Single(canonical_momenta) =
-                                canonical_prop_match.get(&State::get_symbol("q_")).unwrap()
-                            {
-                                Pattern::parse("k(ilmb_)").unwrap().replace_all(
-                                    *canonical_momenta,
-                                    &Pattern::parse("k(ilmb_,idx_)").unwrap().into(),
-                                    Some(&Condition::from((
-                                        State::get_symbol("ilmb_"),
-                                        number_condition(),
-                                    ))),
-                                    Some(&MatchSettings {
-                                        allow_new_wildcards_on_rhs: true,
-                                        ..MatchSettings::default()
-                                    }),
-                                )
-                            } else {
-                                unreachable!()
-                            };
-
+                            Pattern::parse("k(ilmb_)").unwrap().replace_all(
+                                canonical_prop_match
+                                    .get(&State::get_symbol("q_"))
+                                    .unwrap()
+                                    .to_atom()
+                                    .as_view(),
+                                &Pattern::parse("k(ilmb_,idx_)").unwrap().into(),
+                                Some(&Condition::from((
+                                    State::get_symbol("ilmb_"),
+                                    number_condition(),
+                                ))),
+                                Some(&MatchSettings {
+                                    allow_new_wildcards_on_rhs: true,
+                                    ..MatchSettings::default()
+                                }),
+                            );
                         if is_edge_flipped {
                             canonical_momenta_atom_for_pattern =
                                 canonical_momenta_atom_for_pattern * -1
@@ -1149,6 +1147,8 @@ pub struct PySecDecOptions {
     pub relative_precision: f64,
     pub numerical_masses: HashMap<String, f64, ahash::RandomState>,
     pub numerical_external_momenta: HashMap<String, (f64, f64, f64, f64), ahash::RandomState>,
+    pub min_n_evals: u64,
+    pub max_n_evals: u64,
 }
 
 impl Default for PySecDecOptions {
@@ -1165,6 +1165,8 @@ impl Default for PySecDecOptions {
             relative_precision: 1.0e-7,
             numerical_masses,
             numerical_external_momenta,
+            min_n_evals: 10_000,
+            max_n_evals: 1_000_000_000_000,
         }
     }
 }
@@ -1173,8 +1175,8 @@ impl fmt::Display for PySecDecOptions {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "quiet={}, relative_precision={:.e}",
-            self.quiet, self.relative_precision
+            "quiet={}, relative_precision={:.e}, min_n_evals={}, max_n_evals={}",
+            self.quiet, self.relative_precision, self.min_n_evals, self.max_n_evals
         )
     }
 }
@@ -1201,6 +1203,7 @@ impl fmt::Display for EvaluationMethod {
             EvaluationMethod::FMFT => write!(f, "FMFT"),
             EvaluationMethod::PySecDec(opts) => {
                 write!(f, "PySecDec ({})", opts)
+                //write!(f, "PySecDec")
             }
         }
     }
@@ -1243,6 +1246,46 @@ impl EvaluationMethod {
         }
     }
 
+    pub fn adjust(
+        &mut self,
+        quiet: Option<bool>,
+        relative_precision: f64,
+        numerical_masses: &HashMap<String, Complex<Float>, RandomState>,
+        numerical_external_momenta: &HashMap<usize, Momentum, RandomState>,
+    ) {
+        match self {
+            EvaluationMethod::AlphaLoop => {}
+            EvaluationMethod::MATAD => {}
+            EvaluationMethod::FMFT => {}
+            EvaluationMethod::PySecDec(opts) => {
+                let f64_numerical_masses = numerical_masses
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.norm().re.to_f64()))
+                    .collect();
+                let f64_numerical_external_momenta = numerical_external_momenta
+                    .iter()
+                    .map(|(k, v)| {
+                        (
+                            format!("p{}", k),
+                            (
+                                v.0.norm().re.to_f64(),
+                                v.1.norm().re.to_f64(),
+                                v.2.norm().re.to_f64(),
+                                v.3.norm().re.to_f64(),
+                            ),
+                        )
+                    })
+                    .collect();
+                if let Some(is_quiet) = quiet {
+                    opts.quiet = is_quiet;
+                }
+                opts.relative_precision = relative_precision;
+                opts.numerical_masses = f64_numerical_masses;
+                opts.numerical_external_momenta = f64_numerical_external_momenta;
+            }
+        }
+    }
+
     pub fn evaluate_integral(
         &self,
         vakint: &Vakint,
@@ -1262,6 +1305,7 @@ impl EvaluationMethod {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct EvaluationOrder(pub Vec<EvaluationMethod>);
 
 impl Default for EvaluationOrder {
@@ -1275,17 +1319,59 @@ impl Default for EvaluationOrder {
     }
 }
 
+impl fmt::Display for EvaluationOrder {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "[{}]",
+            self.0
+                .iter()
+                .map(|m| format!("{}", m))
+                .collect::<Vec<_>>()
+                .join("|")
+        )
+    }
+}
+
 impl EvaluationOrder {
     pub fn numerical_only() -> Self {
         EvaluationOrder(vec![EvaluationMethod::PySecDec(PySecDecOptions::default())])
     }
-
     pub fn analytic_only() -> Self {
         EvaluationOrder(vec![
             EvaluationMethod::AlphaLoop,
             EvaluationMethod::MATAD,
             EvaluationMethod::FMFT,
         ])
+    }
+    pub fn alphaloop_only() -> Self {
+        EvaluationOrder(vec![EvaluationMethod::AlphaLoop])
+    }
+    pub fn matad_only() -> Self {
+        EvaluationOrder(vec![EvaluationMethod::MATAD])
+    }
+    pub fn fmft_only() -> Self {
+        EvaluationOrder(vec![EvaluationMethod::FMFT])
+    }
+    pub fn pysecdec_only() -> Self {
+        EvaluationOrder(vec![EvaluationMethod::PySecDec(PySecDecOptions::default())])
+    }
+
+    pub fn adjust(
+        &mut self,
+        quiet: Option<bool>,
+        relative_precision: f64,
+        numerical_masses: &HashMap<String, Complex<Float>, RandomState>,
+        numerical_external_momenta: &HashMap<usize, Momentum, RandomState>,
+    ) {
+        for method in self.0.iter_mut() {
+            method.adjust(
+                quiet,
+                relative_precision,
+                numerical_masses,
+                numerical_external_momenta,
+            );
+        }
     }
 }
 
@@ -1306,7 +1392,7 @@ pub struct VakintSettings {
     // For example when considering a 2-loop problem, then:
     //   a) for the nested one-loop integrals appearing, the single pole, finite term *and* order-epsilon term will need to be considered.
     //   b) for the two-loop integrals, the double pole, single pole and finite terms will be needed, so again three terms
-    pub number_of_terms_in_epsilon_expansion: usize,
+    pub number_of_terms_in_epsilon_expansion: i64,
     pub use_dot_product_notation: bool,
 }
 
@@ -1580,6 +1666,7 @@ impl VakintTerm {
 
         integral_specs.apply_replacement_rules()?;
 
+        let mut could_evaluate_integral = false;
         'eval: for evaluation_approach in vakint.settings.evaluation_order.0.iter() {
             if evaluation_approach.supports(vakint, &integral_specs.canonical_topology) {
                 let evaluated_integral = evaluation_approach.evaluate_integral(
@@ -1589,8 +1676,14 @@ impl VakintTerm {
                 )?;
                 self.numerator = simplify_real(evaluated_integral.as_view());
                 self.integral = Atom::new_num(1);
+                could_evaluate_integral = true;
                 break 'eval;
             }
+        }
+        if !could_evaluate_integral {
+            return Err(VakintError::NoEvaluationMethodFound(
+                self.integral.to_string(),
+            ));
         }
         Ok(())
     }
@@ -1919,7 +2012,7 @@ impl From<VakintExpression> for Atom {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct NumericalEvaluationResult(pub Vec<(i64, Complex<Float>)>);
 
 impl fmt::Display for NumericalEvaluationResult {
@@ -1963,6 +2056,27 @@ impl NumericalEvaluationResult {
 
     pub fn is_zero(&self) -> bool {
         self.0.iter().all(|(_, f)| f.is_zero())
+    }
+
+    pub fn aggregate_errors(&self, other: &NumericalEvaluationResult) -> NumericalEvaluationResult {
+        let mut res = NumericalEvaluationResult::default();
+        let mut orders = vec![];
+        for (o, _val) in self.0.iter() {
+            orders.push(*o);
+        }
+        for (o, _val) in other.0.iter() {
+            orders.push(*o);
+        }
+        orders.sort();
+        for o in orders {
+            let (a, b) = (
+                &self.get_epsilon_coefficient(o),
+                &other.get_epsilon_coefficient(o),
+            );
+
+            res.0.push((0, (a * a + b * b).sqrt()));
+        }
+        res
     }
 
     pub fn does_approx_match(
@@ -2590,7 +2704,7 @@ impl Vakint {
             "max_epsilon_order".into(),
             format!(
                 "{}",
-                vakint.settings.number_of_terms_in_epsilon_expansion - integral.n_loops
+                vakint.settings.number_of_terms_in_epsilon_expansion - (integral.n_loops as i64)
             ),
         );
         vars.insert("contour_deformation".into(), "False".into());
@@ -2632,6 +2746,10 @@ impl Vakint {
         let mut pysecdec_options = vec!["-c".into(), "-i".into(), "qmc".into()];
         pysecdec_options.push("--eps_rel".into());
         pysecdec_options.push(format!("{:.e}", options.relative_precision));
+        pysecdec_options.push("--min_n".into());
+        pysecdec_options.push(format!("{}", options.min_n_evals));
+        pysecdec_options.push("--max_eval".into());
+        pysecdec_options.push(format!("{}", options.max_n_evals));
         if options.quiet {
             pysecdec_options.push("-q".into());
         }
@@ -2644,12 +2762,14 @@ impl Vakint {
             pysecdec_options,
             vakint.settings.clean_tmp_dir,
         )?;
+
         if !options.quiet {
             info!(
                 "PySecDec raw output:\ncentral: {}\nerror : {}",
                 pysecdec_output[0], pysecdec_output[1]
             );
         }
+
         /*
         let pysecdec_output = [
             String::from("ep^(-1)*(2.0000000000000000e+00+(0.0000000000000000e+00)*I)+ep^(0)*(-5.4072569092295630e-01+(0.0000000000000000e+00)*I)+ep^(1)*(2.7180301350542537e+00+(0.0000000000000000e+00)*I)+ep^(2)*(-8.5638398947489147e-01+(0.0000000000000000e+00)*I)"),
@@ -2701,7 +2821,8 @@ impl Vakint {
                         State::get_symbol(vakint.settings.epsilon_symbol.as_str()),
                         Atom::Zero.as_atom_view(),
                         Rational::from(
-                            vakint.settings.number_of_terms_in_epsilon_expansion - integral.n_loops,
+                            vakint.settings.number_of_terms_in_epsilon_expansion
+                                - (integral.n_loops as i64),
                         ),
                         true,
                     ) {
@@ -2734,6 +2855,13 @@ impl Vakint {
         integral_specs: &ReplacementRules,
     ) -> Result<Atom, VakintError> {
         let integral = integral_specs.canonical_topology.get_integral();
+
+        debug!(
+            "Processing the following integral with {}:\n{}",
+            "AlphaLoop".green(),
+            integral
+        );
+
         let alphaloop_expression = integral.alphaloop_expression.as_ref().unwrap().as_view();
 
         // println!("Numerator : {}", numerator);
@@ -2817,7 +2945,8 @@ impl Vakint {
                 "-D".into(),
                 format!(
                     "SELECTEDEPSILONORDER={}",
-                    vakint.settings.number_of_terms_in_epsilon_expansion - integral.n_loops
+                    vakint.settings.number_of_terms_in_epsilon_expansion
+                        - (integral.n_loops as i64)
                 ),
             ],
             vakint.settings.clean_tmp_dir,
@@ -2860,7 +2989,7 @@ impl Vakint {
                     return Err(VakintError::MalformedGraph(format!(
                         "Could not find muV in graph:\n{}",
                         integral.canonical_expression.as_ref().unwrap()
-                    )))
+                    )));
                 }
             }
         } else {
@@ -2929,7 +3058,9 @@ impl Vakint {
         let expanded_evaluation = match evaluated_integral.series(
             State::get_symbol(vakint.settings.epsilon_symbol.as_str()),
             Atom::Zero.as_atom_view(),
-            Rational::from(vakint.settings.number_of_terms_in_epsilon_expansion - integral.n_loops),
+            Rational::from(
+                vakint.settings.number_of_terms_in_epsilon_expansion - (integral.n_loops as i64),
+            ),
             true,
         ) {
             Ok(a) => a,
@@ -3266,6 +3397,7 @@ impl Vakint {
                 }
             };
         }
+        //println!("Topologies generated:\n{}", vakint.topologies);
 
         Ok(vakint)
     }
