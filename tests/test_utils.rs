@@ -230,6 +230,18 @@ pub fn compare_two_evaluations(
         Some(&numerical_external_momenta),
     )
     .unwrap();
+    debug!(
+        "Benchmark {} :: central :\n{}",
+        format!("{}", mod_evaluation_order_a).green(),
+        benchmark_central.clone()
+    );
+    if benchmark_error.is_some() {
+        debug!(
+            "Benchmark {} :: error   :\n{}",
+            format!("{}", mod_evaluation_order_a).green(),
+            benchmark_error.as_ref().unwrap().clone()
+        );
+    }
 
     // Now perform the second evaluation
     vakint.settings.evaluation_order = mod_evaluation_order_b.clone();
@@ -258,6 +270,18 @@ pub fn compare_two_evaluations(
             panic!("Error during parsing of numerical pySecDec result: {}", e);
         }
     };
+    debug!(
+        "Tested {} :: central :\n{}",
+        format!("{}", mod_evaluation_order_b).green(),
+        tested_central.clone()
+    );
+    if tested_error.is_some() {
+        debug!(
+            "Tested {} :: error   :\n{}",
+            format!("{}", mod_evaluation_order_b).green(),
+            tested_error.as_ref().unwrap().clone()
+        );
+    }
 
     let mut combined_error = match (&benchmark_error, &tested_error) {
         (Some(b), Some(t)) => Some(b.aggregate_errors(t)),
@@ -416,7 +440,7 @@ pub fn compare_vakint_evaluation_vs_reference(
             result
         );
         if error.is_some() {
-            println!("Error:\n{}", error.unwrap());
+            debug!("Error:\n{}", error.unwrap());
         }
         debug!("Reference:\n{}", reference);
         debug!("{}", msg)

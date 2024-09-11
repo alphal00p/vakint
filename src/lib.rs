@@ -1,4 +1,5 @@
 pub mod graph;
+pub mod matad;
 mod symbols;
 pub mod topologies;
 pub mod utils;
@@ -1294,9 +1295,9 @@ impl EvaluationMethod {
     ) -> Result<Atom, VakintError> {
         match self {
             EvaluationMethod::AlphaLoop => {
-                vakint.alpha_loop_evaluate(vakint, numerator, integral_specs)
+                vakint.alphaloop_evaluate(vakint, numerator, integral_specs)
             }
-            EvaluationMethod::MATAD => unimplemented!("MATAD evaluations not yet implemented"),
+            EvaluationMethod::MATAD => vakint.matad_evaluate(vakint, numerator, integral_specs),
             EvaluationMethod::FMFT => unimplemented!("FMFT evaluations not yet implemented"),
             EvaluationMethod::PySecDec(opts) => {
                 vakint.pysecdec_evaluate(vakint, numerator, integral_specs, opts)
@@ -1746,8 +1747,6 @@ impl VakintTerm {
         }
         self.numerator = new_numerator;
 
-        self.vectors = VakintTerm::identify_vectors_in_numerator(self.numerator.as_view())?;
-
         Ok(())
     }
 
@@ -1755,7 +1754,7 @@ impl VakintTerm {
         numerator: AtomView,
     ) -> Result<Vec<(String, i64)>, VakintError> {
         let mut vectors = HashSet::new();
-
+        // make sure the numerator is in the form of vec_(id_,idx_)
         let vector_matcher_pattern = Pattern::parse("vec_(id_,idx_)").unwrap();
         let vector_conditions = Condition::from((State::get_symbol("vec_"), symbol_condition()))
             & Condition::from((State::get_symbol("id_"), number_condition()))
@@ -1795,7 +1794,8 @@ impl VakintTerm {
         // Make sure to undo the dot product notation.
         // If it was not used, the command below will do nothing.
         form_numerator = Vakint::convert_from_dot_notation(form_numerator.as_view(), false);
-        for (vec, id) in self.vectors.iter() {
+        let vectors = Self::identify_vectors_in_numerator(form_numerator.as_view())?;
+        for (vec, id) in vectors.iter() {
             form_numerator = Pattern::parse(format!("{}({},idx_)", vec, id).as_str())
                 .unwrap()
                 .replace_all(
@@ -1845,7 +1845,7 @@ impl VakintTerm {
 
         let mut reduced_numerator = vakint.process_form_output(form_result)?;
 
-        for (vec, id) in self.vectors.iter() {
+        for (vec, id) in vectors.iter() {
             reduced_numerator = Pattern::parse(format!("{}{}", vec, id).as_str())
                 .unwrap()
                 .replace_all(
@@ -2348,6 +2348,7 @@ impl Vakint {
         let map = Vakint::get_constants_map(settings, params, externals).unwrap();
         let map_view: HashMap<AtomView<'_>, Complex<Float>, RandomState> =
             map.iter().map(|(k, v)| (k.as_view(), v.clone())).collect();
+
         let binary_prec = settings.get_binary_precision();
         let mut epsilon_coeffs_vec_floats = vec![];
         for (i64, coeff) in epsilon_coeffs_vec.iter() {
@@ -2368,7 +2369,8 @@ impl Vakint {
                     Ok(x) => x,
                     Err(e) => {
                         return Err(VakintError::EvaluationError(format!(
-                            "Is some tensor structure left?: {}",
+                            "Is some tensor structure left? | Expression: '{}' | Error: '{}'",
+                            coeff.to_canonical_string(),
                             e
                         )));
                     }
@@ -2383,7 +2385,7 @@ impl Vakint {
     fn pysecdec_evaluate(
         &self,
         vakint: &Vakint,
-        numerator: AtomView,
+        input_numerator: AtomView,
         integral_specs: &ReplacementRules,
         options: &PySecDecOptions,
     ) -> Result<Atom, VakintError> {
@@ -2394,7 +2396,10 @@ impl Vakint {
             "PySecDec".green(),
             integral
         );
-        let vectors = VakintTerm::identify_vectors_in_numerator(numerator)?;
+        let dot_product_numerator = Vakint::convert_from_dot_notation(input_numerator, false);
+        let vectors = VakintTerm::identify_vectors_in_numerator(dot_product_numerator.as_view())?;
+        let numerator_atom = Vakint::convert_to_dot_notation(input_numerator);
+        let numerator = numerator_atom.as_view();
         let mut processed_numerator = Vakint::convert_to_dot_notation(numerator);
 
         // Make sure there is no open index left
@@ -2607,7 +2612,19 @@ impl Vakint {
         );
         let numerator_path = "numerator.txt";
         vars.insert("numerator_path".into(), numerator_path.into());
-        let numerator_string = processed_numerator.to_canonical_string();
+        // Expand the numerator around epsilon=0 to make sure it is polynomial
+        processed_numerator = processed_numerator
+            .series(
+                State::get_symbol(vakint.settings.epsilon_symbol.as_str()),
+                Atom::Zero.as_atom_view(),
+                Rational::from(vakint.settings.number_of_terms_in_epsilon_expansion),
+                true,
+            )
+            .unwrap()
+            .to_atom();
+        let numerator_string = processed_numerator
+            .to_canonical_string()
+            .replace(vakint.settings.epsilon_symbol.as_str(), "eps");
         // Powers higher than two cannot occur as different dummy indices would have been used in
         // the call 'processed_numerator = Vakint::convert_from_dot_notation(processed_numerator.as_view(), true)'
         let remove_squares_re = Regex::new(r"(?<vec>[\w|-|\d]+)\((?<idx>mu-?\d+)\)\^2").unwrap();
@@ -2848,7 +2865,7 @@ impl Vakint {
             + evaluated_integral[1].to_owned() * S.error_flag.to_owned())
     }
 
-    fn alpha_loop_evaluate(
+    fn alphaloop_evaluate(
         &self,
         vakint: &Vakint,
         numerator: AtomView,
@@ -2926,6 +2943,7 @@ impl Vakint {
         )
         .unwrap();
         let mut vars: HashMap<String, String> = HashMap::new();
+
         vars.insert(
             "numerator".into(),
             vakint.prepare_expression_for_form(form_expression)?,
