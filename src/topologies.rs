@@ -8,8 +8,8 @@ use symbolica::{
 };
 
 use crate::{
-    get_individual_momenta, get_node_ids, get_prop_with_id, symbols::S, Integral, ReplacementRules,
-    VakintError, VakintSettings,
+    get_individual_momenta, get_node_ids, get_prop_with_id, symbols::S, EvaluationOrder, Integral,
+    ReplacementRules, VakintError, VakintSettings,
 };
 pub enum TopologyContractions {
     Custom(Vec<Vec<usize>>),
@@ -42,8 +42,7 @@ impl Topologies {
             1,
             Some(Atom::parse("topo(prop(1,edge(1,1),k(1),msq(1),pow(1)))").unwrap()),
             Some(Atom::parse("I1L(msq(1),pow(1))").unwrap()),
-            Some(Atom::parse("1").unwrap()),
-            None,
+            EvaluationOrder::all_but_fmft(),
         )?
         .into()]);
         // ==
@@ -64,8 +63,7 @@ impl Topologies {
                     .unwrap()
                     .as_view(),
                 TopologyContractions::Custom(vec![vec![], vec![3]]),
-                Some(Atom::parse("1").unwrap().as_view()),
-                None,
+                EvaluationOrder::all_but_fmft(),
             )?
             .0,
         );
@@ -90,8 +88,7 @@ impl Topologies {
                     .unwrap()
                     .as_view(),
                 TopologyContractions::Automatic,
-                Some(Atom::parse("1").unwrap().as_view()),
-                None,
+                EvaluationOrder::all_but_fmft(),
             )?
             .0,
         );
@@ -100,6 +97,7 @@ impl Topologies {
         // ==
         // H topology in FMFT
         // in FMFT paper, FMFT edge ids are these edge ids + 1, except for p_1 which is edge #9 here.
+        // (FMFT -> Vakint) : (1->9, 2->1, 3->2, 4->3, 5->4, 6->5, 7->6, 8->7, 9->8)
         topologies.0.extend(
             Topologies::generate_topologies_with_contractions(
                 Atom::parse(
@@ -123,13 +121,13 @@ impl Topologies {
                 .unwrap()
                 .as_view(),
                 TopologyContractions::Custom(vec![vec![]]),
-                None,
-                Some(Atom::parse("FMFT_H").unwrap().as_view()),
+                EvaluationOrder::fmft_only(),
             )?
             .0,
         );
         // X topology in FMFT
         // in FMFT paper, FMFT edge ids are these edge ids + 1.
+        // (FMFT -> Vakint) : (2->1, 3->2, 4->3, 5->4, 6->5, 7->6, 8->7, 9->8, 10->9)
         topologies.0.extend(
             Topologies::generate_topologies_with_contractions(
                 Atom::parse(
@@ -153,13 +151,13 @@ impl Topologies {
                 .unwrap()
                 .as_view(),
                 TopologyContractions::Custom(vec![vec![]]),
-                None,
-                Some(Atom::parse("FMFT_X").unwrap().as_view()),
+                EvaluationOrder::fmft_only(),
             )?
             .0,
         );
         // BMW topology in FMFT
         // When sorting both these edges and the FMT ones according to their ID, both lists match.
+        // (FMFT -> Vakint) : (3->1, 4->2, 5->3, 6->4, 7->5, 8->6, 9->7, 10->8)
         topologies.0.extend(
             Topologies::generate_topologies_with_contractions(
                 Atom::parse(
@@ -182,13 +180,13 @@ impl Topologies {
                 .unwrap()
                 .as_view(),
                 TopologyContractions::Custom(vec![vec![]]),
-                None,
-                Some(Atom::parse("FMFT_BMW").unwrap().as_view()),
+                EvaluationOrder::fmft_only(),
             )?
             .0,
         );
         // FG topology in FMFT
         // When sorting both these edges and the FMT ones according to their ID, both lists match.
+        // (FMFT -> Vakint) : (1->1, 3->2, 4->3, 5->4, 6->5, 7->6, 8->7, 9->8)
         topologies.0.extend(
             Topologies::generate_topologies_with_contractions(
                 Atom::parse(
@@ -211,16 +209,18 @@ impl Topologies {
                 .unwrap()
                 .as_view(),
                 TopologyContractions::Automatic,
-                None,
-                Some(Atom::parse("FMFT_FG").unwrap().as_view()),
+                EvaluationOrder::fmft_only(),
             )?
             .0,
         );
 
         if settings.allow_unknown_integrals {
-            topologies
-                .0
-                .push(Topology::Unknown(Integral::new(0, None, None, None, None)?));
+            topologies.0.push(Topology::Unknown(Integral::new(
+                0,
+                None,
+                None,
+                EvaluationOrder::pysecdec_only(),
+            )?));
         }
 
         Ok(topologies)
@@ -249,8 +249,7 @@ impl Topologies {
         canonical_expression: AtomView,
         short_expression: AtomView,
         contractions: TopologyContractions,
-        matad_expression: Option<AtomView>,
-        fmft_expression: Option<AtomView>,
+        applicable_evaluation_methods: EvaluationOrder,
     ) -> Result<Self, VakintError> {
         let n_tot_props = Topologies::count_propagators_in_integral(canonical_expression);
         if n_tot_props == 0 {
@@ -269,8 +268,7 @@ impl Topologies {
                     canonical_expression,
                     short_expression,
                     vec![],
-                    matad_expression,
-                    fmft_expression,
+                    applicable_evaluation_methods.clone(),
                 )?;
                 let cs = master_topology
                     .get_integral()
@@ -287,8 +285,7 @@ impl Topologies {
                 canonical_expression,
                 short_expression,
                 contracted_prop_indices,
-                matad_expression,
-                fmft_expression,
+                applicable_evaluation_methods.clone(),
             )?);
         }
         Ok(Topologies(topologies))
@@ -347,21 +344,10 @@ impl Topology {
         canonical_expression: AtomView,
         short_expression: AtomView,
         contraction: Vec<usize>,
-        matad_expression: Option<AtomView>,
-        fmft_expression: Option<AtomView>,
+        applicable_evaluation_methods: EvaluationOrder,
     ) -> Result<Topology, VakintError> {
         let mut contracted_canonical_expression = canonical_expression.to_owned();
         let mut contracted_short_expression = short_expression.to_owned();
-        let mut contracted_matad_expression = if let Some(av) = matad_expression {
-            av.to_owned()
-        } else {
-            Atom::Zero
-        };
-        let mut contracted_fmft_expression = if let Some(av) = fmft_expression {
-            av.to_owned()
-        } else {
-            Atom::Zero
-        };
         let mut nodes_to_merge = vec![];
         for prop_id in contraction.iter() {
             if let Some(m) = get_prop_with_id(contracted_canonical_expression.as_view(), *prop_id) {
@@ -383,11 +369,7 @@ impl Topology {
                         None,
                     );
 
-            for a in [
-                &mut contracted_short_expression,
-                &mut contracted_matad_expression,
-                &mut contracted_fmft_expression,
-            ] {
+            for a in [&mut contracted_short_expression] {
                 if !a.is_zero() {
                     *a = Pattern::parse(format!("pow({})", prop_id).as_str())
                         .unwrap()
@@ -477,16 +459,7 @@ impl Topology {
             n_tot_props,
             Some(contracted_canonical_expression),
             Some(contracted_short_expression),
-            if contracted_matad_expression.is_zero() {
-                None
-            } else {
-                Some(contracted_matad_expression)
-            },
-            if contracted_fmft_expression.is_zero() {
-                None
-            } else {
-                Some(contracted_fmft_expression)
-            },
+            applicable_evaluation_methods,
         )?
         .into())
     }

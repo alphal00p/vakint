@@ -1,5 +1,6 @@
 pub mod graph;
 pub mod matad;
+pub mod matad_numerics;
 mod symbols;
 pub mod topologies;
 pub mod utils;
@@ -39,7 +40,7 @@ use symbolica::{
         rational::{Fraction, Rational},
     },
     fun,
-    id::{Condition, Match, MatchSettings, Pattern, PatternRestriction, WildcardAndRestriction},
+    id::{Condition, Match, MatchSettings, Pattern, PatternRestriction, WildcardRestriction},
     poly::series::Series,
     printer::{AtomPrinter, PrintOptions},
     state::State,
@@ -68,19 +69,23 @@ static MINIMAL_PYSECDEC_VERSION: &str = "1.6.4";
 static FORM_SRC: phf::Map<&'static str, &'static str> = phf_map! {
     "integrateduv.frm" =>  include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/form_src/integrateduv.frm"
+        "/form_src/alphaloop/integrateduv.frm"
     )),
     "tensorreduce.frm" =>  include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/form_src/tensorreduce.frm"
+        "/form_src/alphaloop/tensorreduce.frm"
     )),
     "pvtab10.h" =>  include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/form_src/pvtab10.h"
+        "/form_src/alphaloop/pvtab10.h"
     )),
     "fmft.frm" =>  include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/form_src/fmft.frm"
+        "/form_src/fmft/fmft.frm"
+    )),
+    "matad-ng.hh" =>  include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/form_src/matad/matad-ng.hh"
     )),
 };
 
@@ -96,7 +101,11 @@ static TEMPLATES: phf::Map<&'static str, &'static str> = phf_map! {
     "run_pySecDec_template.txt" => include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/templates/run_pySecDec_template.txt"
-    ))
+    )),
+    "run_matad.txt" => include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/templates/run_matad.txt"
+    )),
 };
 
 #[derive(Error, Debug)]
@@ -148,14 +157,16 @@ pub enum VakintError {
     InvalidLoopNormalization(String, String, String),
     #[error("Symbolica error: {0}")]
     SymbolicaError(String),
+    #[error("MATAD error: {0}")]
+    MATADError(String),
     #[error("Numerical evaluation error: {0}")]
     EvaluationError(String),
     #[error("unknown vakint error")]
     Unknown,
 }
 
-fn propagators_condition() -> PatternRestriction {
-    PatternRestriction::Filter(Box::new(move |m| {
+fn propagators_condition() -> WildcardRestriction {
+    WildcardRestriction::Filter(Box::new(move |m| {
         let props = match m {
             Match::Single(a) => vec![*a],
             Match::Multiple(SliceType::Mul, atoms) => atoms.clone(),
@@ -181,8 +192,8 @@ fn propagators_condition() -> PatternRestriction {
     }))
 }
 
-fn gt_condition(value: i64) -> PatternRestriction {
-    PatternRestriction::Filter(Box::new(move |m| {
+fn gt_condition(value: i64) -> WildcardRestriction {
+    WildcardRestriction::Filter(Box::new(move |m| {
         if let Match::Single(AtomView::Num(a)) = m {
             a.get_coeff_view() > InlineNum::new(value, 1).as_num_view().get_coeff_view()
         } else {
@@ -192,8 +203,8 @@ fn gt_condition(value: i64) -> PatternRestriction {
 }
 
 #[allow(unused)]
-fn lt_condition(value: i64) -> PatternRestriction {
-    PatternRestriction::Filter(Box::new(move |m| {
+fn lt_condition(value: i64) -> WildcardRestriction {
+    WildcardRestriction::Filter(Box::new(move |m| {
         if let Match::Single(AtomView::Num(a)) = m {
             a.get_coeff_view() < InlineNum::new(value, 1).as_num_view().get_coeff_view()
         } else {
@@ -202,8 +213,8 @@ fn lt_condition(value: i64) -> PatternRestriction {
     }))
 }
 
-fn range_condition(min: i64, max: i64) -> PatternRestriction {
-    PatternRestriction::Filter(Box::new(move |m| {
+fn range_condition(min: i64, max: i64) -> WildcardRestriction {
+    WildcardRestriction::Filter(Box::new(move |m| {
         if let Match::Single(AtomView::Num(a)) = m {
             a.get_coeff_view() <= InlineNum::new(max, 1).as_num_view().get_coeff_view()
                 && a.get_coeff_view() >= InlineNum::new(min, 1).as_num_view().get_coeff_view()
@@ -213,14 +224,14 @@ fn range_condition(min: i64, max: i64) -> PatternRestriction {
     }))
 }
 
-fn number_condition() -> PatternRestriction {
-    PatternRestriction::Filter(Box::new(move |m| {
+fn number_condition() -> WildcardRestriction {
+    WildcardRestriction::Filter(Box::new(move |m| {
         matches!(m, Match::Single(AtomView::Num(_)))
     }))
 }
 
-fn even_condition() -> PatternRestriction {
-    PatternRestriction::Filter(Box::new(move |m| {
+fn even_condition() -> WildcardRestriction {
+    WildcardRestriction::Filter(Box::new(move |m| {
         #[allow(warnings)]
         if let Match::Single(AtomView::Num(_)) = m {
             get_integer_from_match(&m).unwrap() % 2 == 0
@@ -230,8 +241,8 @@ fn even_condition() -> PatternRestriction {
     }))
 }
 
-fn symbol_or_number() -> PatternRestriction {
-    PatternRestriction::Filter(Box::new(move |m| {
+fn symbol_or_number() -> WildcardRestriction {
+    WildcardRestriction::Filter(Box::new(move |m| {
         matches!(
             m,
             Match::Single(AtomView::Num(_))
@@ -241,16 +252,16 @@ fn symbol_or_number() -> PatternRestriction {
     }))
 }
 
-fn symbol_condition() -> PatternRestriction {
-    PatternRestriction::Filter(Box::new(move |m| {
+fn symbol_condition() -> WildcardRestriction {
+    WildcardRestriction::Filter(Box::new(move |m| {
         matches!(m, Match::Single(AtomView::Var(_)) | Match::FunctionName(_))
     }))
 }
 
 fn apply_restriction_to_symbols(
     symbols: Vec<Symbol>,
-    restriction: &PatternRestriction,
-) -> Condition<(Symbol, PatternRestriction)> {
+    restriction: &WildcardRestriction,
+) -> Condition<PatternRestriction> {
     symbols[1..].iter().fold(
         Condition::from((symbols[0], restriction.clone())),
         |acc, &s| acc & Condition::from((s, restriction.clone())),
@@ -348,8 +359,6 @@ impl ReplacementRules {
                 integral.canonical_expression.as_mut(),
                 integral.short_expression.as_mut(),
                 integral.alphaloop_expression.as_mut(),
-                integral.matad_expression.as_mut(),
-                integral.fmft_expression.as_mut(),
             ]
             .into_iter()
             .flatten()
@@ -395,9 +404,7 @@ pub struct Integral {
     short_expression: Option<Atom>,
     short_expression_pattern: Option<Pattern>,
     alphaloop_expression: Option<Atom>,
-    fmft_expression: Option<Atom>,
-    matad_expression: Option<Atom>,
-    #[allow(unused)]
+    applicable_evaluation_methods: EvaluationOrder,
     graph: Graph,
 }
 
@@ -544,6 +551,7 @@ fn get_individual_momenta(momentum: &Match) -> Result<Vec<(Symbol, (Atom, i64))>
                 return err;
             },
         );
+
         test = fun!(mom_symbol, &atom_id).into_pattern().replace_all(
             test.as_view(),
             &Atom::Zero.into_pattern().into(),
@@ -588,7 +596,7 @@ fn get_prop_with_id(
 
 impl Default for Integral {
     fn default() -> Self {
-        Integral::new(0, None, None, None, None).unwrap()
+        Integral::new(0, None, None, EvaluationOrder::empty()).unwrap()
     }
 }
 
@@ -599,8 +607,7 @@ impl Integral {
         tot_n_props: usize,
         canonical_expression: Option<Atom>,
         short_expression: Option<Atom>,
-        matad_expression: Option<Atom>,
-        fmft_expression: Option<Atom>,
+        applicable_evaluation_methods: EvaluationOrder,
     ) -> Result<Integral, VakintError> {
         if canonical_expression.is_none() {
             // This is an unknown topology
@@ -619,8 +626,7 @@ impl Integral {
                 short_expression,
                 short_expression_pattern,
                 alphaloop_expression: None,
-                fmft_expression: None,
-                matad_expression: None,
+                applicable_evaluation_methods,
                 graph: Graph::default(),
             });
         }
@@ -849,8 +855,7 @@ impl Integral {
             short_expression,
             short_expression_pattern: Some(short_expression_pattern.into_pattern()),
             alphaloop_expression: Some(alphaloop_expression),
-            fmft_expression,
-            matad_expression,
+            applicable_evaluation_methods,
             graph,
         })
     }
@@ -1182,6 +1187,58 @@ impl fmt::Display for PySecDecOptions {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct FMFTOptions {
+    pub expand_masters: bool,
+    pub susbstitute_masters: bool,
+}
+
+impl Default for FMFTOptions {
+    fn default() -> Self {
+        FMFTOptions {
+            expand_masters: true,
+            susbstitute_masters: true,
+        }
+    }
+}
+
+impl fmt::Display for FMFTOptions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "expand_masters={}, susbstitute_masters={}",
+            self.expand_masters, self.susbstitute_masters
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct MATADOptions {
+    pub expand_masters: bool,
+    pub susbstitute_masters: bool,
+    pub substitute_hpls: bool,
+}
+
+impl Default for MATADOptions {
+    fn default() -> Self {
+        MATADOptions {
+            expand_masters: true,
+            susbstitute_masters: true,
+            substitute_hpls: true,
+        }
+    }
+}
+
+impl fmt::Display for MATADOptions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "expand_masters={}, susbstitute_masters={}, substitute_hpls={}",
+            self.expand_masters, self.susbstitute_masters, self.substitute_hpls
+        )
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VakintDependency {
     FORM,
@@ -1191,8 +1248,8 @@ pub enum VakintDependency {
 #[derive(Debug, Clone)]
 pub enum EvaluationMethod {
     AlphaLoop,
-    MATAD,
-    FMFT,
+    MATAD(MATADOptions),
+    FMFT(FMFTOptions),
     PySecDec(PySecDecOptions),
 }
 
@@ -1200,8 +1257,8 @@ impl fmt::Display for EvaluationMethod {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             EvaluationMethod::AlphaLoop => write!(f, "AlphaLoop"),
-            EvaluationMethod::MATAD => write!(f, "MATTAD"),
-            EvaluationMethod::FMFT => write!(f, "FMFT"),
+            EvaluationMethod::MATAD(opts) => write!(f, "MATTAD ({})", opts),
+            EvaluationMethod::FMFT(opts) => write!(f, "FMFT ({})", opts),
             EvaluationMethod::PySecDec(opts) => {
                 write!(f, "PySecDec ({})", opts)
                 //write!(f, "PySecDec")
@@ -1214,19 +1271,40 @@ impl EvaluationMethod {
     pub fn supports(&self, vakint: &Vakint, topology: &Topology) -> bool {
         match self {
             EvaluationMethod::AlphaLoop => {
-                topology.get_integral().alphaloop_expression.is_some()
-                    && vakint.settings.number_of_terms_in_epsilon_expansion <= 3
+                topology
+                    .get_integral()
+                    .applicable_evaluation_methods
+                    .0
+                    .iter()
+                    .any(|m| matches!(m, EvaluationMethod::AlphaLoop))
+                    && topology.get_integral().alphaloop_expression.is_some()
+                    && vakint.settings.number_of_terms_in_epsilon_expansion <= 4
                     && topology.get_integral().n_loops <= 3
             }
-            EvaluationMethod::MATAD => {
-                topology.get_integral().matad_expression.is_some()
+            EvaluationMethod::MATAD(_) => {
+                topology
+                    .get_integral()
+                    .applicable_evaluation_methods
+                    .0
+                    .iter()
+                    .any(|m| matches!(m, EvaluationMethod::MATAD(_)))
                     && topology.get_integral().n_loops <= 3
             }
-            EvaluationMethod::FMFT => {
-                topology.get_integral().fmft_expression.is_some()
+            EvaluationMethod::FMFT(_) => {
+                topology
+                    .get_integral()
+                    .applicable_evaluation_methods
+                    .0
+                    .iter()
+                    .any(|m| matches!(m, EvaluationMethod::FMFT(_)))
                     && topology.get_integral().n_loops == 4
             }
-            EvaluationMethod::PySecDec(_) => true,
+            EvaluationMethod::PySecDec(_) => topology
+                .get_integral()
+                .applicable_evaluation_methods
+                .0
+                .iter()
+                .any(|m| matches!(m, EvaluationMethod::PySecDec(_))),
         }
     }
 
@@ -1235,10 +1313,10 @@ impl EvaluationMethod {
             EvaluationMethod::AlphaLoop => {
                 vec![VakintDependency::FORM]
             }
-            EvaluationMethod::MATAD => {
+            EvaluationMethod::MATAD(_) => {
                 vec![VakintDependency::FORM]
             }
-            EvaluationMethod::FMFT => {
+            EvaluationMethod::FMFT(_) => {
                 vec![VakintDependency::FORM]
             }
             EvaluationMethod::PySecDec(_) => {
@@ -1256,8 +1334,8 @@ impl EvaluationMethod {
     ) {
         match self {
             EvaluationMethod::AlphaLoop => {}
-            EvaluationMethod::MATAD => {}
-            EvaluationMethod::FMFT => {}
+            EvaluationMethod::MATAD(_) => {}
+            EvaluationMethod::FMFT(_) => {}
             EvaluationMethod::PySecDec(opts) => {
                 let f64_numerical_masses = numerical_masses
                     .iter()
@@ -1297,8 +1375,10 @@ impl EvaluationMethod {
             EvaluationMethod::AlphaLoop => {
                 vakint.alphaloop_evaluate(vakint, numerator, integral_specs)
             }
-            EvaluationMethod::MATAD => vakint.matad_evaluate(vakint, numerator, integral_specs),
-            EvaluationMethod::FMFT => unimplemented!("FMFT evaluations not yet implemented"),
+            EvaluationMethod::MATAD(opts) => {
+                vakint.matad_evaluate(vakint, numerator, integral_specs, opts)
+            }
+            EvaluationMethod::FMFT(_opts) => unimplemented!("FMFT evaluations not yet implemented"),
             EvaluationMethod::PySecDec(opts) => {
                 vakint.pysecdec_evaluate(vakint, numerator, integral_specs, opts)
             }
@@ -1313,8 +1393,8 @@ impl Default for EvaluationOrder {
     fn default() -> Self {
         EvaluationOrder(vec![
             EvaluationMethod::AlphaLoop,
-            EvaluationMethod::MATAD,
-            EvaluationMethod::FMFT,
+            EvaluationMethod::MATAD(MATADOptions::default()),
+            EvaluationMethod::FMFT(FMFTOptions::default()),
             EvaluationMethod::PySecDec(PySecDecOptions::default()),
         ])
     }
@@ -1341,21 +1421,39 @@ impl EvaluationOrder {
     pub fn analytic_only() -> Self {
         EvaluationOrder(vec![
             EvaluationMethod::AlphaLoop,
-            EvaluationMethod::MATAD,
-            EvaluationMethod::FMFT,
+            EvaluationMethod::MATAD(MATADOptions::default()),
+            EvaluationMethod::FMFT(FMFTOptions::default()),
         ])
     }
     pub fn alphaloop_only() -> Self {
         EvaluationOrder(vec![EvaluationMethod::AlphaLoop])
     }
     pub fn matad_only() -> Self {
-        EvaluationOrder(vec![EvaluationMethod::MATAD])
+        EvaluationOrder(vec![EvaluationMethod::MATAD(MATADOptions::default())])
     }
     pub fn fmft_only() -> Self {
-        EvaluationOrder(vec![EvaluationMethod::FMFT])
+        EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions::default())])
     }
     pub fn pysecdec_only() -> Self {
         EvaluationOrder(vec![EvaluationMethod::PySecDec(PySecDecOptions::default())])
+    }
+    pub fn empty() -> Self {
+        EvaluationOrder(vec![])
+    }
+    pub fn all() -> Self {
+        EvaluationOrder(vec![
+            EvaluationMethod::AlphaLoop,
+            EvaluationMethod::MATAD(MATADOptions::default()),
+            EvaluationMethod::FMFT(FMFTOptions::default()),
+            EvaluationMethod::PySecDec(PySecDecOptions::default()),
+        ])
+    }
+    pub fn all_but_fmft() -> Self {
+        EvaluationOrder(vec![
+            EvaluationMethod::AlphaLoop,
+            EvaluationMethod::MATAD(MATADOptions::default()),
+            EvaluationMethod::PySecDec(PySecDecOptions::default()),
+        ])
     }
 
     pub fn adjust(
@@ -1484,7 +1582,7 @@ impl LoopNormalizationFactor {
         let expanded_expr = match expanded_expr.series(
             State::get_symbol(settings.epsilon_symbol.as_str()),
             Atom::Zero.as_atom_view(),
-            Rational::from(settings.number_of_terms_in_epsilon_expansion),
+            Rational::from(settings.number_of_terms_in_epsilon_expansion - 1),
             true,
         ) {
             Ok(a) => a,
@@ -1599,7 +1697,7 @@ impl Default for VakintSettings {
             clean_tmp_dir: env::var("VAKINT_NO_CLEAN_TMP_DIR").is_err(),
             evaluation_order: EvaluationOrder::default(),
             // Default to a three-loop UV subtraction problem, for which alphaLoop implementation can be used.
-            number_of_terms_in_epsilon_expansion: 3,
+            number_of_terms_in_epsilon_expansion: 4,
             use_dot_product_notation: false,
         }
     }
@@ -1608,7 +1706,7 @@ impl Default for VakintSettings {
 #[derive(Debug, Clone)]
 struct FullPattern {
     pattern: Pattern,
-    conditions: Condition<WildcardAndRestriction>,
+    conditions: Condition<PatternRestriction>,
     match_settings: MatchSettings,
 }
 
@@ -2343,7 +2441,9 @@ impl Vakint {
             })
             .collect::<Vec<_>>();
 
-        epsilon_coeffs_vec.push((0, &epsilon_coeffs.1));
+        if !epsilon_coeffs.1.is_zero() {
+            epsilon_coeffs_vec.push((0, &epsilon_coeffs.1));
+        }
 
         let map = Vakint::get_constants_map(settings, params, externals).unwrap();
         let map_view: HashMap<AtomView<'_>, Complex<Float>, RandomState> =
@@ -2516,7 +2616,7 @@ impl Vakint {
                         );
                         for i_loop in 1..=integral.n_loops {
                             let p = Pattern::parse(format!("k({})", i_loop).as_str()).unwrap();
-                            if p.could_match(m.as_view()) {
+                            if utils::could_match(&p, m.as_view()) {
                                 loop_momenta_ids_found.insert(i_loop);
                             }
                             m = p.replace_all(
@@ -2617,7 +2717,10 @@ impl Vakint {
             .series(
                 State::get_symbol(vakint.settings.epsilon_symbol.as_str()),
                 Atom::Zero.as_atom_view(),
-                Rational::from(vakint.settings.number_of_terms_in_epsilon_expansion),
+                Rational::from(
+                    vakint.settings.number_of_terms_in_epsilon_expansion
+                        - (integral.n_loops as i64),
+                ),
                 true,
             )
             .unwrap()
@@ -2721,7 +2824,9 @@ impl Vakint {
             "max_epsilon_order".into(),
             format!(
                 "{}",
-                vakint.settings.number_of_terms_in_epsilon_expansion - (integral.n_loops as i64)
+                vakint.settings.number_of_terms_in_epsilon_expansion
+                    - (integral.n_loops as i64)
+                    - 1
             ),
         );
         vars.insert("contour_deformation".into(), "False".into());
@@ -2839,7 +2944,8 @@ impl Vakint {
                         Atom::Zero.as_atom_view(),
                         Rational::from(
                             vakint.settings.number_of_terms_in_epsilon_expansion
-                                - (integral.n_loops as i64),
+                                - (integral.n_loops as i64)
+                                - 1,
                         ),
                         true,
                     ) {
@@ -2965,6 +3071,7 @@ impl Vakint {
                     "SELECTEDEPSILONORDER={}",
                     vakint.settings.number_of_terms_in_epsilon_expansion
                         - (integral.n_loops as i64)
+                        - 1
                 ),
             ],
             vakint.settings.clean_tmp_dir,
@@ -3077,7 +3184,9 @@ impl Vakint {
             State::get_symbol(vakint.settings.epsilon_symbol.as_str()),
             Atom::Zero.as_atom_view(),
             Rational::from(
-                vakint.settings.number_of_terms_in_epsilon_expansion - (integral.n_loops as i64),
+                vakint.settings.number_of_terms_in_epsilon_expansion
+                    - (integral.n_loops as i64)
+                    - 1,
             ),
             true,
         ) {
@@ -3098,18 +3207,6 @@ impl Vakint {
             None,
             None,
         );
-
-        /*
-        println!("exp res: {}", expanded_evaluation);
-        println!("exp res a: {}", expanded_evaluation.to_atom());
-        let tt = expanded_evaluation
-            .to_atom()
-            .coefficient_list(State::get_symbol(vakint.settings.epsilon_symbol.as_str()));
-        println!("miaou {}", tt.1);
-        for (els, l) in tt.0 {
-            println!("exp res coefs a: {} {}", els, l);
-        }
-        */
 
         Ok(evaluated_integral)
     }
@@ -3169,7 +3266,7 @@ impl Vakint {
     }
 
     pub fn convert_from_dot_notation(atom: AtomView, no_power: bool) -> Atom {
-        let mut expr = atom.to_owned();
+        let mut expr = atom.to_owned().expand();
         let mut running_dummy_index = 1;
 
         if no_power {
@@ -3270,7 +3367,7 @@ impl Vakint {
     }
 
     pub fn convert_to_dot_notation(atom: AtomView) -> Atom {
-        let mut old_expr = atom.to_owned();
+        let mut old_expr = atom.to_owned().expand();
         loop {
             let mut expr = Pattern::parse("v_(id_,idx_)^n_").unwrap().replace_all(
                 old_expr.as_view(),

@@ -198,7 +198,8 @@ impl Graph {
                 *symb_nodes.get(&e.left_node_id).unwrap(),
                 directed,
                 e.mass.to_owned(),
-            );
+            )
+            .unwrap();
         }
         g
     }
@@ -275,10 +276,10 @@ impl Graph {
             if contracted_g_sym.num_loops() != n_loops {
                 continue;
             }
-            let (_map, canonized_graph) = contracted_g_sym.canonize();
-            if !canonized_graphs_identified.contains(&canonized_graph) {
+            let canonized_graph = contracted_g_sym.canonize();
+            if !canonized_graphs_identified.contains(&canonized_graph.graph) {
                 res.push(c);
-                canonized_graphs_identified.push(canonized_graph);
+                canonized_graphs_identified.push(canonized_graph.graph);
             }
         }
         //println!("Resulting next single contractions: {:?}", res);

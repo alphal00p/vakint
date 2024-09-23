@@ -179,7 +179,6 @@ pub fn compare_two_evaluations(
         use_dot_product_notation: true,
         mu_r_sq_symbol: "mursq".into(),
         integral_normalization_factor: LoopNormalizationFactor::MSbar,
-        n_digits_at_evaluation_time: 16,
         evaluation_order: mod_evaluation_order_a.clone(),
         ..vakint_default_settings
     };
@@ -216,20 +215,36 @@ pub fn compare_two_evaluations(
         "Evaluating integral with evaluation order: {}",
         format!("{}", mod_evaluation_order_a).green(),
     );
-    let benchmark_evaluated_integral = vakint
-        .evaluate_integral(if evaluation_orders.0 .1 {
-            integral_reduced.as_view()
-        } else {
-            integral.as_view()
-        })
-        .unwrap();
-    let (benchmark_central, benchmark_error) = Vakint::full_numerical_evaluation(
+    let benchmark_evaluated_integral = match vakint.evaluate_integral(if evaluation_orders.0 .1 {
+        integral_reduced.as_view()
+    } else {
+        integral.as_view()
+    }) {
+        Ok(eval) => eval,
+        Err(e) => {
+            panic!(
+                "Error during benchmark integral evaluation with {} :: error :\n{}",
+                format!("{}", mod_evaluation_order_a).red(),
+                e
+            );
+        }
+    };
+
+    let (benchmark_central, benchmark_error) = match Vakint::full_numerical_evaluation(
         &vakint.settings,
         benchmark_evaluated_integral.as_view(),
         &eval_params,
         Some(&numerical_external_momenta),
-    )
-    .unwrap();
+    ) {
+        Ok(eval) => eval,
+        Err(e) => {
+            panic!(
+                "Error during numerical evaluation of benchmark result with {} :: error:\n{}",
+                format!("{}", mod_evaluation_order_a).red(),
+                e
+            );
+        }
+    };
     debug!(
         "Benchmark {} :: central :\n{}",
         format!("{}", mod_evaluation_order_a).green(),
@@ -249,25 +264,33 @@ pub fn compare_two_evaluations(
         "Evaluating integral with evaluation order: {}",
         format!("{}", mod_evaluation_order_b).green(),
     );
-    let pysec_dec_eval = match vakint.evaluate_integral(if evaluation_orders.1 .1 {
+    let comparison_eval = match vakint.evaluate_integral(if evaluation_orders.1 .1 {
         integral_reduced.as_view()
     } else {
         integral.as_view()
     }) {
         Ok(eval) => eval,
         Err(e) => {
-            panic!("Error during evaluation with: {}", mod_evaluation_order_b);
+            panic!(
+                "Error during comparison valuation with: {} :: error :\n{}",
+                format!("{}", mod_evaluation_order_b).red(),
+                e
+            );
         }
     };
     let (tested_central, tested_error) = match Vakint::full_numerical_evaluation(
         &vakint.settings,
-        pysec_dec_eval.as_view(),
+        comparison_eval.as_view(),
         &eval_params,
         Some(&numerical_external_momenta),
     ) {
         Ok(eval) => eval,
         Err(e) => {
-            panic!("Error during parsing of numerical pySecDec result: {}", e);
+            panic!(
+                "Error during numerical evaluation of benchmark result with {} :: error:\n{}",
+                format!("{}", mod_evaluation_order_b).red(),
+                e
+            );
         }
     };
     debug!(
