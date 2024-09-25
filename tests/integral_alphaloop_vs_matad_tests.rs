@@ -23,7 +23,7 @@ fn test_integrate_3l_no_numerator() {
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings { n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 4, ..VakintSettings::default()},
-        ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only() ,true)),
+        ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only(None) ,true)),
         Atom::parse(
             "( 1 )
             *topo(\
@@ -53,7 +53,7 @@ fn test_integrate_3l_rank_4() {
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings { n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 4, ..VakintSettings::default()},
-        ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only() ,true)),
+        ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only(None) ,true)),
         Atom::parse(
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
@@ -85,10 +85,17 @@ fn test_integrate_3l_rank_4() {
 pub fn evaluate_expression_with_matad(
     vakint: &Vakint,
     input: AtomView,
+    direct_masters_substitution: bool,
 ) -> NumericalEvaluationResult {
     let mut integral = input.to_owned();
 
-    integral = vakint.expand_matad_masters(integral.as_view()).unwrap();
+    if direct_masters_substitution {
+        integral = vakint
+            .substitute_masters_directly(integral.as_view())
+            .unwrap();
+    } else {
+        integral = vakint.expand_matad_masters(integral.as_view()).unwrap();
+    }
 
     // Temporary work around for series bug in Symbolica
     // integral = Pattern::parse("(any___)^-1").unwrap().replace_all(
@@ -109,15 +116,23 @@ pub fn evaluate_expression_with_matad(
         .unwrap()
         .to_atom();
 
-    integral = vakint.substitute_masters(integral.as_view()).unwrap();
-    // Expanding here is important to improve efficiency and avoid symbolica bugs with floating point coefficients
-    integral = integral.expand();
-    integral = vakint.substitute_hpls(integral.as_view()).unwrap();
-    integral = vakint.substitute_poly_gamma(integral.as_view()).unwrap();
-    integral = vakint
-        .substitute_additional_constants(integral.as_view())
-        .unwrap();
-
+    if direct_masters_substitution {
+        // Expanding here is important to improve efficiency and avoid symbolica bugs with floating point coefficients
+        integral = integral.expand();
+        integral = vakint.substitute_poly_gamma(integral.as_view()).unwrap();
+        integral = vakint
+            .substitute_additional_constants(integral.as_view())
+            .unwrap();
+    } else {
+        integral = vakint.substitute_masters(integral.as_view()).unwrap();
+        // Expanding here is important to improve efficiency and avoid symbolica bugs with floating point coefficients
+        integral = integral.expand();
+        integral = vakint.substitute_hpls(integral.as_view()).unwrap();
+        integral = vakint.substitute_poly_gamma(integral.as_view()).unwrap();
+        integral = vakint
+            .substitute_additional_constants(integral.as_view())
+            .unwrap();
+    }
     let muv_sq_symbol = State::get_symbol("muvsq");
     let log_muv_mu_sq = fun!(
         State::LOG,
@@ -332,17 +347,33 @@ pub fn test_eval_matad_masters() {
             5
         ),
     ];
-    for (input, target, number_of_expansion_terms) in expression_to_tests {
-        vakint.settings.number_of_terms_in_epsilon_expansion = number_of_expansion_terms;
-        let res = evaluate_expression_with_matad(&vakint, input.as_view());
+    for (input, target, number_of_expansion_terms) in &expression_to_tests {
+        vakint.settings.number_of_terms_in_epsilon_expansion = *number_of_expansion_terms;
+        let res = evaluate_expression_with_matad(&vakint, input.as_view(), true);
         let (matches, msg) = res.does_approx_match(
-            &target,
+            target,
             None,
             0.1_f64.powi((vakint.settings.n_digits_at_evaluation_time - 5) as i32),
             0.,
         );
         println!(
-            "MATAD evaluation of expression: {}\nyields:\n{}",
+            "MATAD evaluation with direct master substitution of expression: {}\nyields:\n{}",
+            input, res
+        );
+        assert!(matches, "mismatch in evaluation of {}: {}", input, msg);
+    }
+
+    for (input, target, number_of_expansion_terms) in &expression_to_tests {
+        vakint.settings.number_of_terms_in_epsilon_expansion = *number_of_expansion_terms;
+        let res = evaluate_expression_with_matad(&vakint, input.as_view(), false);
+        let (matches, msg) = res.does_approx_match(
+            target,
+            None,
+            0.1_f64.powi((vakint.settings.n_digits_at_evaluation_time - 5) as i32),
+            0.,
+        );
+        println!(
+            "MATAD evaluation without direct master substitution of expression: {}\nyields:\n{}",
             input, res
         );
         assert!(matches, "mismatch in evaluation of {}: {}", input, msg);
@@ -366,7 +397,7 @@ pub fn test_eval_matad_one_master_combination() {
         None,
         None,
     );
-    let res = evaluate_expression_with_matad(&vakint, input.as_view());
+    let res = evaluate_expression_with_matad(&vakint, input.as_view(), true);
     #[rustfmt::skip]
     let (matches, msg) = res.does_approx_match(
         &NumericalEvaluationResult::from_vec(vec![
@@ -381,149 +412,27 @@ pub fn test_eval_matad_one_master_combination() {
         0.,
     );
     debug!(
-        "Evaluation of expression with MATAD: {}\nyields:\n{}",
+        "MATAD evaluation with direct master substitution of expression: {}\nyields:\n{}",
         input, res
     );
     assert!(matches, "{}", msg);
-}
-
-#[test_log::test]
-pub fn quick_test() {
-    let vakint = Vakint::new(Some(VakintSettings {
-        evaluation_order: EvaluationOrder::empty(),
-        n_digits_at_evaluation_time: 40,
-        number_of_terms_in_epsilon_expansion: 4,
-        ..VakintSettings::default()
-    }))
-    .unwrap();
-
-    let a = Atom::parse("muvsq*(-2*ep+1)^-1*(-ep+1)^-1*(D6bar(0)+ep*D6bar(1)+2*ep^-1*Zeta(3)+ep^2*D6bar(2)+ep^3*Oep(3,D6))+16*muvsq*(1736*(-2*ep+4)^2-718*(-2*ep+4)^3+165*(-2*ep+4)^4-20*(-2*ep+4)^5+(-2*ep+4)^6-2208*(-2*ep+4)+1152)^-1*(Gamma(1)+1/2*ep^2*(Gamma(1)*PolyGamma(0,1)^2+Gamma(1)*PolyGamma(1,1))+1/6*ep^3*(Gamma(1)*PolyGamma(0,1)^3+Gamma(1)*PolyGamma(2,1)+3*Gamma(1)*PolyGamma(0,1)*PolyGamma(1,1))+1/24*ep^4*(Gamma(1)*PolyGamma(0,1)^4+3*Gamma(1)*PolyGamma(1,1)^2+Gamma(1)*PolyGamma(3,1)+6*Gamma(1)*PolyGamma(0,1)^2*PolyGamma(1,1)+4*Gamma(1)*PolyGamma(0,1)*PolyGamma(2,1))+1/120*ep^5*(Gamma(1)*PolyGamma(0,1)^5+Gamma(1)*PolyGamma(4,1)+10*Gamma(1)*PolyGamma(0,1)^2*PolyGamma(2,1)+10*Gamma(1)*PolyGamma(0,1)^3*PolyGamma(1,1)+15*Gamma(1)*PolyGamma(0,1)*PolyGamma(1,1)^2+5*Gamma(1)*PolyGamma(0,1)*PolyGamma(3,1)+10*Gamma(1)*PolyGamma(1,1)*PolyGamma(2,1))+2*ep^6*Oep(6,Gamma)+ep*Gamma(1)*PolyGamma(0,1))^3*exp(EulerGamma*ep)^3+muvsq*(-2*ep+1)^-1*(-ep+1)^-1*(2*(-2*ep+4)-6)^-1*(3*(-2*ep+4)-12)*(D5bar(0)+ep*D5bar(1)+2*ep^-1*Zeta(3)+ep^2*D5bar(2)+ep^3*Oep(3,D5))+4*muvsq*(ep-1)^-1*(-2*ep+1)^-1*((-2*ep+4)^2-7*(-2*ep+4)+12)^-1*(Gamma(1)+1/2*ep^2*(Gamma(1)*PolyGamma(0,1)^2+Gamma(1)*PolyGamma(1,1))+1/6*ep^3*(Gamma(1)*PolyGamma(0,1)^3+Gamma(1)*PolyGamma(2,1)+3*Gamma(1)*PolyGamma(0,1)*PolyGamma(1,1))+1/24*ep^4*(Gamma(1)*PolyGamma(0,1)^4+3*Gamma(1)*PolyGamma(1,1)^2+Gamma(1)*PolyGamma(3,1)+6*Gamma(1)*PolyGamma(0,1)^2*PolyGamma(1,1)+4*Gamma(1)*PolyGamma(0,1)*PolyGamma(2,1))+1/120*ep^5*(Gamma(1)*PolyGamma(0,1)^5+Gamma(1)*PolyGamma(4,1)+10*Gamma(1)*PolyGamma(0,1)^2*PolyGamma(2,1)+10*Gamma(1)*PolyGamma(0,1)^3*PolyGamma(1,1)+15*Gamma(1)*PolyGamma(0,1)*PolyGamma(1,1)^2+5*Gamma(1)*PolyGamma(0,1)*PolyGamma(3,1)+10*Gamma(1)*PolyGamma(1,1)*PolyGamma(2,1))+2*ep^6*Oep(6,Gamma)+ep*Gamma(1)*PolyGamma(0,1))^3*(T111bar(0)+ep*T111bar(1)+3/2*ep^-2*Sqrt(3)+ep^2*T111bar(2)+ep^3*T111bar(3)+ep^4*T111bar(4)+ep^5*Oep(5,T1))*exp(EulerGamma*ep)*exp(2*EulerGamma*ep)*Sqrt(3)^-1+muvsq*(-3*ep+1)^-1*(-3*ep+2)^-1*(-2*ep+1)^-1*(-ep+1)^-1*(-3*(-2*ep+4)+8)*(8*(-2*ep+4)-24)^-1*(4*ep^-3-44/3*ep^-2+ep*BNbar(1)+ep^2*BNbar(2)+ep^3*BNbar(3)+ep^4*BNbar(4)+ep^5*Oep(5,BN))*(Gamma(1)+1/2*ep^2*(Gamma(1)*PolyGamma(0,1)^2+Gamma(1)*PolyGamma(1,1))+1/6*ep^3*(Gamma(1)*PolyGamma(0,1)^3+Gamma(1)*PolyGamma(2,1)+3*Gamma(1)*PolyGamma(0,1)*PolyGamma(1,1))+1/24*ep^4*(Gamma(1)*PolyGamma(0,1)^4+3*Gamma(1)*PolyGamma(1,1)^2+Gamma(1)*PolyGamma(3,1)+6*Gamma(1)*PolyGamma(0,1)^2*PolyGamma(1,1)+4*Gamma(1)*PolyGamma(0,1)*PolyGamma(2,1))+1/120*ep^5*(Gamma(1)*PolyGamma(0,1)^5+Gamma(1)*PolyGamma(4,1)+10*Gamma(1)*PolyGamma(0,1)^2*PolyGamma(2,1)+10*Gamma(1)*PolyGamma(0,1)^3*PolyGamma(1,1)+15*Gamma(1)*PolyGamma(0,1)*PolyGamma(1,1)^2+5*Gamma(1)*PolyGamma(0,1)*PolyGamma(3,1)+10*Gamma(1)*PolyGamma(1,1)*PolyGamma(2,1))+2*ep^6*Oep(6,Gamma)+ep*Gamma(1)*PolyGamma(0,1))^3*exp(3*EulerGamma*ep)").unwrap();
-    let mut res_wo_expand = a
-        .series(
-            State::get_symbol("ep"),
-            Atom::Zero.as_view(),
-            Rational::from(1),
-            true,
-        )
-        .unwrap()
-        .to_atom();
-
-    let mut next = vakint.substitute_masters(res_wo_expand.as_view()).unwrap();
-    println!(
-        "test A: {}",
-        (next.to_owned()
-            - vakint
-                .substitute_masters(res_wo_expand.expand().as_view())
-                .unwrap())
-        .expand()
+    let res = evaluate_expression_with_matad(&vakint, input.as_view(), false);
+    #[rustfmt::skip]
+    let (matches, msg) = res.does_approx_match(
+        &NumericalEvaluationResult::from_vec(vec![
+            ( -3, ("1.0".into(), "0.0".into()) ),
+            ( -2, ("5.66666666666666666666666666666666666667".into(),   "0.0".into()) ),
+            ( -1, ("20.17312652385648488703674553970843989141".into(),  "0.0".into()) ),
+            (  0, ("48.81971591461289153001703696320240598328".into(),  "0.0".into()) ),
+            (  1, ("225.02689067182955254127148271373064571626".into(), "0.0".into()) ),
+        ], &vakint.settings),
+        None,
+        0.1_f64.powi((vakint.settings.n_digits_at_evaluation_time -2) as i32),
+        0.,
     );
-    res_wo_expand = next;
-    next = vakint.substitute_hpls(res_wo_expand.as_view()).unwrap();
-    println!(
-        "test B: {}",
-        (next.to_owned()
-            - vakint
-                .substitute_hpls(res_wo_expand.expand().as_view())
-                .unwrap())
-        .expand()
+    debug!(
+        "MATAD evaluation without direct master substitution of expression: {}\nyields:\n{}",
+        input, res
     );
-    res_wo_expand = next;
-    next = vakint
-        .substitute_poly_gamma(res_wo_expand.as_view())
-        .unwrap();
-    let res_w_expand = vakint
-        .substitute_poly_gamma(res_wo_expand.expand().as_view())
-        .unwrap();
-    println!(
-        "test C: {}",
-        (next.to_owned() - res_w_expand.to_owned()).expand()
-    );
-    //println!("res_wo_expand: {}", next.to_owned());
-    //println!("res_w_expand: {}", res_w_expand.to_owned());
-    res_wo_expand = next;
-    next = vakint
-        .substitute_additional_constants(res_wo_expand.as_view())
-        .unwrap();
-    println!(
-        "test D: {}",
-        (next.to_owned()
-            - vakint
-                .substitute_additional_constants(res_wo_expand.expand().as_view())
-                .unwrap())
-        .expand()
-    );
-}
-
-#[test_log::test]
-pub fn bug_revealer() {
-    let repl = vec![
-        (
-            Atom::parse("PolyGamma(2,1)").unwrap(),
-            Atom::parse("-2.40411380631918857079947632302289998153").unwrap(),
-        ),
-        (
-            Atom::parse("PolyGamma(3,1)").unwrap(),
-            Atom::parse("1/15*𝜋^4").unwrap(),
-        ),
-        (
-            Atom::parse("PolyGamma(4,1)").unwrap(),
-            Atom::parse("-24.8862661234408782319527716749688200334").unwrap(),
-        ),
-        (
-            Atom::parse("PolyGamma(1,1)").unwrap(),
-            Atom::parse("1/6*𝜋^2").unwrap(),
-        ),
-        (
-            Atom::parse("PolyGamma(0,1)").unwrap(),
-            Atom::parse("-1*EulerGamma").unwrap(),
-        ),
-    ];
-    // let vakint = Vakint::new(Some(VakintSettings {
-    //     evaluation_order: EvaluationOrder::empty(),
-    //     n_digits_at_evaluation_time: 40,
-    //     number_of_terms_in_epsilon_expansion: 4,
-    //     ..VakintSettings::default()
-    // }))
-    // .unwrap();
-    // let repl = POLY_GAMMA_SUBSTITUTIONS
-    //     .iter()
-    //     .map(|(src, trgt)| {
-    //         (
-    //             src,
-    //             set_precision_in_float_atom(trgt.as_view(), &vakint.settings),
-    //         )
-    //     })
-    //     .collect::<Vec<_>>();
-    let r = Atom::parse("-109.613693492242591502289875861648190882*EulerGamma*PolyGamma(0,1)*Sqrt(3)^-1*ep*muvsq+-119.749906156925311012457652004578886258*EulerGamma*Sqrt(3)^-1*ep*muvsq+-119.749906156925311012457652004578886258*PolyGamma(0,1)*Sqrt(3)^-1*ep*muvsq+-12.1792992769158435002544306512942434313*Sqrt(3)^-1*ep^-1*muvsq+-143.939160813734554375376355191123518049*Sqrt(3)^-1*ep*muvsq+-16*Zeta(3)*ep*muvsq+-18.2689489153737652503816459769413651470*PolyGamma(1,1)*Sqrt(3)^-1*ep*muvsq+-36.5378978307475305007632919538827302939*EulerGamma*Sqrt(3)^-1*muvsq+-36.5378978307475305007632919538827302939*PolyGamma(0,1)*Sqrt(3)^-1*muvsq+-39.9166353856417703374858840015262954192*Sqrt(3)^-1*muvsq+-54.8068467461212957511449379308240954409*EulerGamma^2*Sqrt(3)^-1*ep*muvsq+-54.8068467461212957511449379308240954409*PolyGamma(0,1)^2*Sqrt(3)^-1*ep*muvsq+1/2*PolyGamma(2,1)*muvsq+1/8*PolyGamma(3,1)*ep*muvsq+153/2*EulerGamma*PolyGamma(0,1)^2*ep*muvsq+153/2*EulerGamma^2*PolyGamma(0,1)*ep*muvsq+17*EulerGamma*ep^-1*muvsq+17*PolyGamma(0,1)*ep^-1*muvsq+17/2*PolyGamma(1,1)*muvsq+17/3*ep^-2*muvsq+17/6*PolyGamma(2,1)*ep*muvsq+2*Zeta(3)*ep^-1*muvsq+201*EulerGamma*PolyGamma(0,1)*ep*muvsq+201/2*EulerGamma^2*ep*muvsq+201/2*PolyGamma(0,1)^2*ep*muvsq+229*EulerGamma*ep*muvsq+229*PolyGamma(0,1)*ep*muvsq+27/2*EulerGamma*PolyGamma(0,1)*PolyGamma(1,1)*ep*muvsq+27/2*EulerGamma*PolyGamma(0,1)^2*muvsq+27/2*EulerGamma*PolyGamma(0,1)^3*ep*muvsq+27/2*EulerGamma^2*PolyGamma(0,1)*muvsq+27/2*EulerGamma^3*PolyGamma(0,1)*ep*muvsq+27/4*EulerGamma^2*PolyGamma(1,1)*ep*muvsq+27/4*PolyGamma(0,1)^2*PolyGamma(1,1)*ep*muvsq+27/8*EulerGamma^4*ep*muvsq+27/8*PolyGamma(0,1)^4*ep*muvsq+292.563780289217074177212271317939649077*ep*muvsq+3*EulerGamma*ep^-2*muvsq+3*PolyGamma(0,1)*ep^-2*muvsq+3/2*EulerGamma*PolyGamma(2,1)*ep*muvsq+3/2*PolyGamma(0,1)*PolyGamma(2,1)*ep*muvsq+3/2*PolyGamma(1,1)*ep^-1*muvsq+51*EulerGamma*PolyGamma(0,1)*muvsq+51/2*EulerGamma*PolyGamma(1,1)*ep*muvsq+51/2*EulerGamma^2*muvsq+51/2*EulerGamma^3*ep*muvsq+51/2*PolyGamma(0,1)*PolyGamma(1,1)*ep*muvsq+51/2*PolyGamma(0,1)^2*muvsq+51/2*PolyGamma(0,1)^3*ep*muvsq+59.0857134346069784490202036791057331501*muvsq+67*EulerGamma*muvsq+67*PolyGamma(0,1)*muvsq+67/2*PolyGamma(1,1)*ep*muvsq+67/3*ep^-1*muvsq+81/4*EulerGamma^2*PolyGamma(0,1)^2*ep*muvsq+9*EulerGamma*PolyGamma(0,1)*ep^-1*muvsq+9/2*EulerGamma*PolyGamma(1,1)*muvsq+9/2*EulerGamma^2*ep^-1*muvsq+9/2*EulerGamma^3*muvsq+9/2*PolyGamma(0,1)*PolyGamma(1,1)*muvsq+9/2*PolyGamma(0,1)^2*ep^-1*muvsq+9/2*PolyGamma(0,1)^3*muvsq+9/8*PolyGamma(1,1)^2*ep*muvsq+ep^-3*muvsq").unwrap();
-    let mut r1 = r.clone();
-    let processed_constants1 = repl.clone();
-    r1.repeat_map(Box::new(move |av: AtomView| {
-        let mut res = av.to_owned();
-
-        for (src, trgt) in processed_constants1.iter() {
-            res = src.into_pattern().replace_all(
-                res.as_view(),
-                &trgt.into_pattern().into(),
-                None,
-                None,
-            );
-        }
-        res
-    }));
-    let mut r2 = r.clone().expand();
-    let processed_constants2 = repl.clone();
-    r2.repeat_map(Box::new(move |av: AtomView| {
-        let mut res = av.to_owned();
-
-        for (src, trgt) in processed_constants2.iter() {
-            res = src.into_pattern().replace_all(
-                res.as_view(),
-                &trgt.into_pattern().into(),
-                None,
-                None,
-            );
-        }
-        res
-    }));
-    println!("TEST: {}", (r1 - r2).expand());
+    assert!(matches, "{}", msg);
 }

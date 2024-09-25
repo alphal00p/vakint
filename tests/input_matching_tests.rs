@@ -49,13 +49,13 @@ fn test_1l_matching() {
             )
             .as_ref()
             .map(|a| a.as_view()),
-        Atom::parse("(k(1,2)^2+k(1,33)*p(12,33))*topo(I1LA(muvsq,1))").unwrap(),
+        Atom::parse("(k(1,2)^2+k(1,33)*p(12,33))*topo(I1L(muvsq,1))").unwrap(),
     );
 
     compare_output(
         vakint
             .to_canonical(
-                Atom::parse("(k(1,2)^2+k(1,33)*p(12,33))*topo(I1LA(muvsq,-3))")
+                Atom::parse("(k(1,2)^2+k(1,33)*p(12,33))*topo(I1L(muvsq,-3))")
                     .unwrap()
                     .as_view(),
                 false,
@@ -117,13 +117,13 @@ fn test_2l_matching_3prop() {
             )
             .as_ref()
             .map(|a| a.as_view()),
-        Atom::parse("(k(1,2)*k(1,2)+k(1,77)*k(2,77)+k(2,33)*p(42,33))*topo(I2LA(mUVsq,1,2,1))")
+        Atom::parse("(k(1,2)*k(1,2)+k(1,77)*k(2,77)+k(2,33)*p(42,33))*topo(I2L(mUVsq,1,2,1))")
             .unwrap(),
     );
 
     compare_output(
         vakint.to_canonical(
-            Atom::parse("(k(1,2)*k(1,2)+k(1,77)*k(2,77)+k(2,33)*p(42,33))*topo(I2LA(mUVsq,1,2,1))")
+            Atom::parse("(k(1,2)*k(1,2)+k(1,77)*k(2,77)+k(2,33)*p(42,33))*topo(I2L(mUVsq,1,2,1))")
                 .unwrap()
                 .as_view(),
             false,
@@ -181,13 +181,13 @@ fn test_2l_matching_pinched() {
             )
             .as_ref()
             .map(|a| a.as_view()),
-        Atom::parse("(k(2,2)^2+k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(I2LA(mUVsq,2,1,0))").unwrap(),
+        Atom::parse("(k(2,2)^2+k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(I2L(mUVsq,2,1,0))").unwrap(),
     );
 
     compare_output(
         vakint
             .to_canonical(
-                Atom::parse("(k(2,2)^2+k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(I2LA(mUVsq,2,1,0))")
+                Atom::parse("(k(2,2)^2+k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(I2L(mUVsq,2,1,0))")
                     .unwrap()
                     .as_view(),
                 false,
@@ -216,9 +216,9 @@ fn test_unknown_integrals() {
     });
 
     let unknown_integral = Atom::parse(
-        "(k(11,2)*k(11,2)+k(11,77)*k(22,77)+k(22,33)*p(42,33))*topo(\
-                    prop(33,edge(7,10),k(22),mA,2)*\
-                    prop(55,edge(7,10),k(11),mB,1)\
+        "(k(1,2)*k(1,2)+k(1,77)*k(2,77)+k(2,33)*p(42,33))*topo(\
+                    prop(1,edge(7,10),k(2),mA,2)*\
+                    prop(2,edge(7,10),k(1),mB,1)\
                 )",
     )
     .unwrap();
@@ -236,9 +236,9 @@ fn test_unknown_integrals() {
             .as_ref()
             .map(|a| a.as_view()),
         Atom::parse(
-            "(k(11,2)^2+k(11,77)*k(22,77)+k(22,33)*p(42,33))*topo(UNKNOWN(\
-                        prop(33,edge(7,10),k(22),mA,2)*\
-                        prop(55,edge(7,10),k(11),mB,1))\
+            "(k(1,2)^2+k(1,77)*k(2,77)+k(2,33)*p(42,33))*topo(UNKNOWN(\
+                        prop(1,edge(7,10),k(2),mA,2)*\
+                        prop(2,edge(7,10),k(1),mB,1))\
                     )",
         )
         .unwrap(),

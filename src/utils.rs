@@ -1,5 +1,5 @@
 use symbolica::{
-    atom::{Atom, AtomView},
+    atom::{Atom, AtomView, Symbol},
     coefficient::CoefficientView,
     id::{Condition, MatchSettings, Pattern, PatternOrMap, PatternRestriction},
 };
@@ -77,6 +77,21 @@ pub fn set_precision_in_float_atom(input: AtomView, settings: &VakintSettings) -
     } else {
         input.to_owned()
     }
+}
+
+pub fn set_precision_in_polynomial_atom(
+    input: AtomView,
+    variable: Symbol,
+    settings: &VakintSettings,
+) -> Atom {
+    let mut res = Atom::Zero;
+    let (coeffs, remainder) = input.coefficient_list(variable);
+    for (var_with_power, coeff) in coeffs {
+        let new_coeff = set_precision_in_float_atom(coeff.as_view(), settings);
+        res = res + new_coeff * var_with_power;
+    }
+    let new_remainder = set_precision_in_float_atom(remainder.as_view(), settings);
+    res + new_remainder
 }
 
 #[test]

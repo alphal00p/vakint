@@ -121,7 +121,7 @@ impl Topologies {
                 .unwrap()
                 .as_view(),
                 TopologyContractions::Custom(vec![vec![]]),
-                EvaluationOrder::fmft_only(),
+                EvaluationOrder::fmft_only(None),
             )?
             .0,
         );
@@ -151,7 +151,7 @@ impl Topologies {
                 .unwrap()
                 .as_view(),
                 TopologyContractions::Custom(vec![vec![]]),
-                EvaluationOrder::fmft_only(),
+                EvaluationOrder::fmft_only(None),
             )?
             .0,
         );
@@ -180,7 +180,7 @@ impl Topologies {
                 .unwrap()
                 .as_view(),
                 TopologyContractions::Custom(vec![vec![]]),
-                EvaluationOrder::fmft_only(),
+                EvaluationOrder::fmft_only(None),
             )?
             .0,
         );
@@ -209,7 +209,7 @@ impl Topologies {
                 .unwrap()
                 .as_view(),
                 TopologyContractions::Automatic,
-                EvaluationOrder::fmft_only(),
+                EvaluationOrder::fmft_only(None),
             )?
             .0,
         );
@@ -219,7 +219,7 @@ impl Topologies {
                 0,
                 None,
                 None,
-                EvaluationOrder::pysecdec_only(),
+                EvaluationOrder::pysecdec_only(None),
             )?));
         }
 

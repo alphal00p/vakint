@@ -1,5 +1,5 @@
 mod test_utils;
-use vakint::{utils::simplify_real, EvaluationOrder};
+use vakint::{utils::simplify_real, EvaluationOrder, MATADOptions};
 
 use std::vec;
 
@@ -275,7 +275,7 @@ fn test_integrate_3l_rank_4_matad() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
         VakintSettings{number_of_terms_in_epsilon_expansion: 5,..VakintSettings::default()},
-        EvaluationOrder::matad_only(),
+        EvaluationOrder::matad_only(Some(MATADOptions {direct_numerical_substition: true,..MATADOptions::default()})),
         Atom::parse(
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
@@ -303,7 +303,7 @@ fn test_integrate_3l_rank_4_matad() {
             (-2, ("0.0".into(),  "-15967412.96033300288621485195252".into()),),
             (-1, ("0.0".into(),   "46275660.33034806160550888444548".into()),),
             ( 0, ("0.0".into(),  "-117731367.8844665539198405383934".into()),),
-            ( 1, ("0.0".into(),  "0.0".into()),),
+            ( 1, ("0.0".into(),  "919780256.2106401071849409513709".into()),),
             ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -314,7 +314,7 @@ fn test_integrate_3l_matad() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
         VakintSettings{number_of_terms_in_epsilon_expansion: 5,..VakintSettings::default()},
-        EvaluationOrder::matad_only(),
+        EvaluationOrder::matad_only(None),
         Atom::parse(
             "(1)*topo(\
                  prop(1,edge(1,2),k(1),muvsq,1)\

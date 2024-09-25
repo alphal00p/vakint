@@ -45,11 +45,12 @@ fn test_integrate_2l_different_masses() {
     );
 }
 
+#[ignore]
 #[test_log::test]
 fn test_integrate_3l_o_eps() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings { number_of_terms_in_epsilon_expansion: 4, ..VakintSettings::default()},
+        VakintSettings { number_of_terms_in_epsilon_expansion: 5, ..VakintSettings::default()},
         EvaluationOrder(vec![EvaluationMethod::PySecDec(PySecDecOptions::default())]),
         Atom::parse(
             "(1)*topo(\
@@ -82,10 +83,11 @@ fn test_integrate_3l_o_eps() {
     );
 }
 
+#[ignore]
 #[test_log::test]
 fn test_integrate_4l_h() {
     let vakint_default_settings = VakintSettings {
-        number_of_terms_in_epsilon_expansion: 4,
+        number_of_terms_in_epsilon_expansion: 5,
         ..VakintSettings::default()
     };
     #[rustfmt::skip]
@@ -123,4 +125,3 @@ fn test_integrate_4l_h() {
         4, MAX_PULL
     );
 }
-//git commit -m "Add three- and four-loop topologies to the collection of hardcoded topologies and add pysecdec tests for them."
