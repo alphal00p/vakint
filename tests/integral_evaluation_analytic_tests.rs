@@ -269,3 +269,76 @@ fn test_integrate_3l_rank_4() {
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
 }
+
+#[test_log::test]
+fn test_integrate_3l_rank_4_matad() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings{number_of_terms_in_epsilon_expansion: 5,..VakintSettings::default()},
+        EvaluationOrder::matad_only(),
+        Atom::parse(
+            "(
+                  k(1,11)*k(2,11)*k(1,22)*k(2,22)
+                + p(1,11)*k(3,11)*k(3,22)*p(2,22)
+                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+             )
+            *topo(\
+                 prop(1,edge(1,2),k(1),muvsq,1)\
+                *prop(2,edge(2,3),k(2),muvsq,1)\
+                *prop(3,edge(3,1),k(3),muvsq,1)\
+                *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
+                *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
+                *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
+            )",
+        ).unwrap().as_view(),
+        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        convert_test_externals(
+        &(1..=2)
+            .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            (-3, ("0.0".into(),   "4975068.903103003548576756843470".into()),),
+            (-2, ("0.0".into(),  "-15967412.96033300288621485195252".into()),),
+            (-1, ("0.0".into(),   "46275660.33034806160550888444548".into()),),
+            ( 0, ("0.0".into(),  "-117731367.8844665539198405383934".into()),),
+            ( 1, ("0.0".into(),  "0.0".into()),),
+            ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
+fn test_integrate_3l_matad() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings{number_of_terms_in_epsilon_expansion: 5,..VakintSettings::default()},
+        EvaluationOrder::matad_only(),
+        Atom::parse(
+            "(1)*topo(\
+                 prop(1,edge(1,2),k(1),muvsq,1)\
+                *prop(2,edge(2,3),k(2),muvsq,1)\
+                *prop(3,edge(3,1),k(3),muvsq,1)\
+                *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
+                *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
+                *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
+            )",
+        )
+        .unwrap()
+        .as_view(),
+        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        convert_test_externals(
+        &(1..=1)
+            .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            (-1, ("0.0".into(), "-2311.289033520460340396770711738".into()),),
+            ( 0, ("0.0".into(),  "35134.99893627257345553503414002".into()),),
+            ( 1, ("0.0".into(),  "-287175.6919292485174272232526581".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}

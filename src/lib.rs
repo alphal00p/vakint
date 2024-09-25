@@ -1,7 +1,7 @@
 pub mod graph;
 pub mod matad;
 pub mod matad_numerics;
-mod symbols;
+pub mod symbols;
 pub mod topologies;
 pub mod utils;
 
@@ -120,8 +120,8 @@ pub enum VakintError {
     InvalidShortExpression(String),
     #[error("invalid numerator expression: {0}")]
     InvalidNumerator(String),
-    #[error("Could not find a method suitable for evaluating this integral: {0}")]
-    NoEvaluationMethodFound(String),
+    #[error("Could not find a method suitable for evaluating this integral up to 𝒪(ε^{1}): {0}")]
+    NoEvaluationMethodFound(String, i64),
     #[error(
         "the following integral could not be identified using any of the supported topologies: {0}"
     )]
@@ -1782,6 +1782,9 @@ impl VakintTerm {
         if !could_evaluate_integral {
             return Err(VakintError::NoEvaluationMethodFound(
                 self.integral.to_string(),
+                vakint.settings.number_of_terms_in_epsilon_expansion
+                    - (integral_specs.canonical_topology.get_integral().n_loops as i64)
+                    - 1,
             ));
         }
         Ok(())
@@ -1836,6 +1839,16 @@ impl VakintTerm {
             None,
             None,
         );
+
+        // Substitute epsilon regulator
+        test = Pattern::parse(&vakint.settings.epsilon_symbol)
+            .unwrap()
+            .replace_all(
+                test.as_view(),
+                &Atom::parse("1").unwrap().into_pattern().into(),
+                None,
+                None,
+            );
 
         if vakint.settings.verify_numerator_identification && !matches!(test, Atom::Num(_)) {
             return Err(VakintError::NumeratorNotReplaced(
@@ -2142,6 +2155,24 @@ impl fmt::Display for NumericalEvaluationResult {
 }
 
 impl NumericalEvaluationResult {
+    pub fn from_vec(input: Vec<(i64, (String, String))>, settings: &VakintSettings) -> Self {
+        let binary_prec = settings.get_binary_precision();
+        NumericalEvaluationResult(
+            input
+                .iter()
+                .map(|(eps_pwr, (re, im))| {
+                    (
+                        *eps_pwr,
+                        Complex::new(
+                            Float::parse(re.as_str(), Some(binary_prec)).unwrap(),
+                            Float::parse(im.as_str(), Some(binary_prec)).unwrap(),
+                        ),
+                    )
+                })
+                .collect::<Vec<_>>(),
+        )
+    }
+
     pub fn get_epsilon_coefficients(&self) -> Vec<(i64, Complex<Float>)> {
         self.0.clone()
     }

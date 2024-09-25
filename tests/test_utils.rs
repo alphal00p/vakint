@@ -319,6 +319,7 @@ pub fn compare_two_evaluations(
         max_pull,
     );
     if !matches || !quiet {
+        println!("\n{}\n", "<><><><><>".green());
         println!(
             "Benchmark {} :: central :\n{}",
             format!("{}", mod_evaluation_order_a).green(),
@@ -343,8 +344,10 @@ pub fn compare_two_evaluations(
                 tested_error.unwrap()
             );
         }
-        println!("{}", msg)
+        println!("{}", msg);
+        println!("\n{}\n", "<><><><><>".green());
     } else {
+        println!("\n{}\n", "<><><><><>".green());
         info!(
             "Benchmark {} :: central :\n{}",
             format!("{}", mod_evaluation_order_a).green(),
@@ -369,7 +372,8 @@ pub fn compare_two_evaluations(
                 tested_error.unwrap()
             );
         }
-        info!("{}", msg)
+        info!("{}", msg);
+        println!("\n{}\n", "<><><><><>".green());
     }
     assert!(matches, "Benchmark and numerical result do not match.");
 }

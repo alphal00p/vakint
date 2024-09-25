@@ -41,6 +41,8 @@ pub struct VakintSymbols {
     pub any___: Symbol,
     pub any_a___: Atom,
     pub n_: Symbol,
+    pub a_: Symbol,
+    pub b_: Symbol,
 }
 
 pub static S: LazyLock<VakintSymbols> = LazyLock::new(|| VakintSymbols {
@@ -82,4 +84,6 @@ pub static S: LazyLock<VakintSymbols> = LazyLock::new(|| VakintSymbols {
     any___: State::get_symbol("any___"),
     any_a___: Atom::new_var(State::get_symbol("any___")),
     n_: State::get_symbol("n_"),
+    a_: State::get_symbol("a_"),
+    b_: State::get_symbol("b_"),
 });

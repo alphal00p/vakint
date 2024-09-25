@@ -26,25 +26,27 @@ use crate::{
 use crate::{ReplacementRules, Vakint, VakintError};
 
 #[rustfmt::skip]
-pub static MASTERS_EXPANSION: LazyLock<HashMap<Atom, Atom>> = LazyLock::new(|| {
-    HashMap::<Atom, Atom>::from_iter([
-        ( Atom::parse("miD6").unwrap(), Atom::parse("(D6bar(0) + ep*D6bar(1) + ep^2*D6bar(2) + ep^3*Oep(3, D6) + (2*Zeta(3))/ep)/((1 - 2*ep)*(1 - ep))").unwrap() ),
-        ( Atom::parse("miD5").unwrap(), Atom::parse("(D5bar(0) + ep*D5bar(1) + ep^2*D5bar(2) + ep^3*Oep(3, D5) + (2*Zeta(3))/ep)/((1 - 2*ep)*(1 - ep))").unwrap() ),
-        ( Atom::parse("miD4").unwrap(), Atom::parse("(D4bar(0) + ep*D4bar(1) + ep^2*D4bar(2) + ep^3*Oep(3, D4) + (2*Zeta(3))/ep)/((1 - 2*ep)*(1 - ep))").unwrap() ),
-        ( Atom::parse("miD3").unwrap(), Atom::parse("(D3bar(0) + ep*D3bar(1) + ep^2*D3bar(2) + ep^3*Oep(3, D3) + (2*Zeta(3))/ep)/((1 - 2*ep)*(1 - ep))").unwrap() ),
-        ( Atom::parse("miDM").unwrap(), Atom::parse("(DMbar(0) + ep*DMbar(1) + ep^2*DMbar(2) + ep^3*Oep(3, DM) + (2*Zeta(3))/ep)/((1 - 2*ep)*(1 - ep))").unwrap() ),
-        ( Atom::parse("miDN").unwrap(), Atom::parse("(DNbar(0) + ep*DNbar(1) + ep^2*DNbar(2) + ep^3*Oep(3, DN) + (2*Zeta(3))/ep)/((1 - 2*ep)*(1 - ep))").unwrap() ),
-        ( Atom::parse("miE3").unwrap(), Atom::parse("((exp(3*ep*EulerGamma)*Gamma(1 - ep)*Gamma(1 + ep)^2*Gamma(1 + 2*ep)*(1 + ((1 - ep)*Gamma(1 + 2*ep)*Gamma(1 + 3*ep))/(3*(1 - 3*ep)*Gamma(1 + ep)*Gamma(1 + 4*ep))))/(2*ep^3) + (E3bar(-1)/ep + E3bar(0) + ep*E3bar(1) + ep^2*E3bar(2) + ep^3*E3bar(3) + ep^4*Oep(4, E3))/Sqrt(3))/((1 - 2*ep)^2*(-1 + ep))").unwrap() ),
-        ( Atom::parse("miBN").unwrap(), Atom::parse("(exp(3*ep*EulerGamma)*Gamma(1 + ep)^3*(4/ep^3 - 44/(3*ep^2) + ep*BNbar(1) + ep^2*BNbar(2) + ep^3*BNbar(3) + ep^4*BNbar(4) + ep^5*Oep(5, BN)))/((1 - 3*ep)*(2 - 3*ep)*(1 - 2*ep)*(1 - ep))").unwrap() ),
-        ( Atom::parse("miBN1").unwrap(), Atom::parse("-1/2*(exp(3*ep*EulerGamma)*(-1 + ep)^2*(-4 + 15*ep)*Gamma(-1 + ep)^3)/((-1 + 2*ep)*(-2 + 3*ep)*(-1 + 3*ep)) + (3*Sqrt(3)*(BN1bar(0) + ep*BN1bar(1) + ep^2*BN1bar(2) + ep^3*BN1bar(3) + ep^4*BN1bar(4) + ep^5*Oep(5, BN1)))/(2*(1 - ep)*(-1 + 2*ep)*(-2 + 3*ep)*(-1 + 3*ep))").unwrap() ),
-        ( Atom::parse("miT111").unwrap(), Atom::parse("(exp(2*ep*EulerGamma)*Gamma(1 + ep)^2*((3*Sqrt(3))/(2*ep^2) + ep^5*Oep(5, T1) + T111bar(0) + ep*T111bar(1) + ep^2*T111bar(2) + ep^3*T111bar(3) + ep^4*T111bar(4)))/(Sqrt(3)*(1 - 2*ep)*(-1 + ep))").unwrap() ),
-        ( Atom::parse("Gamma(b_*ep)").unwrap(), Atom::parse("GammaArgs(0,b_)").unwrap() ),
-        ( Atom::parse("Gamma(ep)").unwrap(), Atom::parse("GammaArgs(0,1)").unwrap() ),
-        ( Atom::parse("Gamma(-ep)").unwrap(), Atom::parse("GammaArgs(0,-1)").unwrap() ),
-        ( Atom::parse("Gamma(a_ + ep)").unwrap(), Atom::parse("GammaArgs(a_,1)").unwrap() ),
-        ( Atom::parse("Gamma(a_ - ep)").unwrap(), Atom::parse("GammaArgs(a_,-1)").unwrap() ),
-        ( Atom::parse("Gamma(a_ + b_*ep)").unwrap(), Atom::parse("GammaArgs(a_,b_)").unwrap() ),
-        ( Atom::parse("GammaArgs(a_,b_)").unwrap(), Atom::parse("Gamma(a_) + ep^6*Oep(6, Gamma) + ep*Gamma(a_)*(b_)*PolyGamma(0, a_) + (ep^2*(b_)^2*(Gamma(a_)*PolyGamma(0, a_)^2 + Gamma(a_)*PolyGamma(1, a_)))/2 + (ep^3*(b_)^3*(Gamma(a_)*PolyGamma(0, a_)^3 + 3*Gamma(a_)*PolyGamma(0, a_)*PolyGamma(1, a_) + Gamma(a_)*PolyGamma(2, a_)))/6 + (ep^4*(b_)^4*(Gamma(a_)*PolyGamma(0, a_)^4 + 6*Gamma(a_)*PolyGamma(0, a_)^2*PolyGamma(1, a_) + 3*Gamma(a_)*PolyGamma(1, a_)^2 + 4*Gamma(a_)*PolyGamma(0, a_)*PolyGamma(2, a_) + Gamma(a_)*PolyGamma(3, a_)))/24 + (ep^5*(b_)^5*(Gamma(a_)*PolyGamma(0, a_)^5 + 10*Gamma(a_)*PolyGamma(0, a_)^3*PolyGamma(1, a_) + 15*Gamma(a_)*PolyGamma(0, a_)*PolyGamma(1, a_)^2 + 10*Gamma(a_)*PolyGamma(0, a_)^2*PolyGamma(2, a_) + 10*Gamma(a_)*PolyGamma(1, a_)*PolyGamma(2, a_) + 5*Gamma(a_)*PolyGamma(0, a_)*PolyGamma(3, a_) + Gamma(a_)*PolyGamma(4, a_)))/120").unwrap() ),
+pub static MASTERS_EXPANSION: LazyLock<HashMap<Atom, (Atom, symbolica::id::Condition<symbolica::id::PatternRestriction>)>> = LazyLock::new(|| {
+    HashMap::<Atom, (Atom, symbolica::id::Condition<symbolica::id::PatternRestriction>)>::from_iter([
+        ( Atom::parse("miD6").unwrap(), ( Atom::parse("(D6bar(0) + ep*D6bar(1) + ep^2*D6bar(2) + ep^3*Oep(3, D6) + (2*Zeta(3))/ep)/((1 - 2*ep)*(1 - ep))").unwrap(), Condition::default() ) ),
+        ( Atom::parse("miD5").unwrap(), ( Atom::parse("(D5bar(0) + ep*D5bar(1) + ep^2*D5bar(2) + ep^3*Oep(3, D5) + (2*Zeta(3))/ep)/((1 - 2*ep)*(1 - ep))").unwrap(), Condition::default() ) ),
+        ( Atom::parse("miD4").unwrap(), ( Atom::parse("(D4bar(0) + ep*D4bar(1) + ep^2*D4bar(2) + ep^3*Oep(3, D4) + (2*Zeta(3))/ep)/((1 - 2*ep)*(1 - ep))").unwrap(), Condition::default() ) ),
+        ( Atom::parse("miD3").unwrap(), ( Atom::parse("(D3bar(0) + ep*D3bar(1) + ep^2*D3bar(2) + ep^3*Oep(3, D3) + (2*Zeta(3))/ep)/((1 - 2*ep)*(1 - ep))").unwrap(), Condition::default() ) ),
+        ( Atom::parse("miDM").unwrap(), ( Atom::parse("(DMbar(0) + ep*DMbar(1) + ep^2*DMbar(2) + ep^3*Oep(3, DM) + (2*Zeta(3))/ep)/((1 - 2*ep)*(1 - ep))").unwrap(), Condition::default()) ),
+        ( Atom::parse("miDN").unwrap(), ( Atom::parse("(DNbar(0) + ep*DNbar(1) + ep^2*DNbar(2) + ep^3*Oep(3, DN) + (2*Zeta(3))/ep)/((1 - 2*ep)*(1 - ep))").unwrap(), Condition::default() ) ),
+        ( Atom::parse("miE3").unwrap(), ( Atom::parse("((exp(3*ep*EulerGamma)*Gamma(1 - ep)*Gamma(1 + ep)^2*Gamma(1 + 2*ep)*(1 + ((1 - ep)*Gamma(1 + 2*ep)*Gamma(1 + 3*ep))/(3*(1 - 3*ep)*Gamma(1 + ep)*Gamma(1 + 4*ep))))/(2*ep^3) + (E3bar(-1)/ep + E3bar(0) + ep*E3bar(1) + ep^2*E3bar(2) + ep^3*E3bar(3) + ep^4*Oep(4, E3))/Sqrt(3))/((1 - 2*ep)^2*(-1 + ep))").unwrap(), Condition::default() ) ),
+        ( Atom::parse("miBN").unwrap(), ( Atom::parse("(exp(3*ep*EulerGamma)*Gamma(1 + ep)^3*(4/ep^3 - 44/(3*ep^2) + ep*BNbar(1) + ep^2*BNbar(2) + ep^3*BNbar(3) + ep^4*BNbar(4) + ep^5*Oep(5, BN)))/((1 - 3*ep)*(2 - 3*ep)*(1 - 2*ep)*(1 - ep))").unwrap(), Condition::default() ) ),
+        ( Atom::parse("miBN1").unwrap(), ( Atom::parse("-1/2*(exp(3*ep*EulerGamma)*(-1 + ep)^2*(-4 + 15*ep)*Gamma(-1 + ep)^3)/((-1 + 2*ep)*(-2 + 3*ep)*(-1 + 3*ep)) + (3*Sqrt(3)*(BN1bar(0) + ep*BN1bar(1) + ep^2*BN1bar(2) + ep^3*BN1bar(3) + ep^4*BN1bar(4) + ep^5*Oep(5, BN1)))/(2*(1 - ep)*(-1 + 2*ep)*(-2 + 3*ep)*(-1 + 3*ep))").unwrap(), Condition::default() ) ),
+        ( Atom::parse("miT111").unwrap(), ( Atom::parse("(exp(2*ep*EulerGamma)*Gamma(1 + ep)^2*((3*Sqrt(3))/(2*ep^2) + ep^5*Oep(5, T1) + T111bar(0) + ep*T111bar(1) + ep^2*T111bar(2) + ep^3*T111bar(3) + ep^4*T111bar(4)))/(Sqrt(3)*(1 - 2*ep)*(-1 + ep))").unwrap(), Condition::default() ) ),
+        ( Atom::parse("Gamma(b_*ep)").unwrap(), ( Atom::parse("GammaArgs(0,b_)").unwrap(), Condition::default() ) ),
+        ( Atom::parse("Gamma(ep)").unwrap(), ( Atom::parse("GammaArgs(0,1)").unwrap(), Condition::default() ) ),
+        ( Atom::parse("Gamma(-ep)").unwrap(), ( Atom::parse("GammaArgs(0,-1)").unwrap(), Condition::default() ) ),
+        ( Atom::parse("Gamma(a_ + ep)").unwrap(), ( Atom::parse("GammaArgs(a_,1)").unwrap(), Condition::default() ) ),
+        ( Atom::parse("Gamma(a_ - ep)").unwrap(), ( Atom::parse("GammaArgs(a_,-1)").unwrap(), Condition::default() ) ),
+        ( Atom::parse("Gamma(a_ + b_*ep)").unwrap(), ( Atom::parse("GammaArgs(a_,b_)").unwrap(), Condition::default() ) ),
+        ( Atom::parse("GammaArgs(-1,b_)").unwrap(), ( Atom::parse("-1 + EulerGamma - 1/(ep*(b_)) + ep*(-(b_) + EulerGamma*(b_) - ((EulerGamma^2 + 𝜋^2/6)*(b_))/2) + ep^2*(-(b_)^2 + EulerGamma*(b_)^2 - ((EulerGamma^2 + 𝜋^2/6)*(b_)^2)/2 - ((b_)^2*(-EulerGamma^3 - (EulerGamma*𝜋^2)/2 + PolyGamma(2, 1)))/6) + ep^3*(-(b_)^3 + EulerGamma*(b_)^3 - ((EulerGamma^2 + 𝜋^2/6)*(b_)^3)/2 - ((b_)^3*(-EulerGamma^3 - (EulerGamma*𝜋^2)/2 + PolyGamma(2, 1)))/6 - ((b_)^3*(EulerGamma^4 + EulerGamma^2*𝜋^2 + (3*𝜋^4)/20 - 4*EulerGamma*PolyGamma(2, 1)))/24) + ep^4*(-(b_)^4 + EulerGamma*(b_)^4 - ((EulerGamma^2 + 𝜋^2/6)*(b_)^4)/2 - ((b_)^4*(-EulerGamma^3 - (EulerGamma*𝜋^2)/2 + PolyGamma(2, 1)))/6 - ((b_)^4*(EulerGamma^4 + EulerGamma^2*𝜋^2 + (3*𝜋^4)/20 - 4*EulerGamma*PolyGamma(2, 1)))/24 - ((b_)^4*(-EulerGamma^5 - (5*EulerGamma^3*𝜋^2)/3 - (3*EulerGamma*𝜋^4)/4 + 10*EulerGamma^2*PolyGamma(2, 1) + (5*𝜋^2*PolyGamma(2, 1))/3 + PolyGamma(4, 1)))/120) + ep^5*(-(b_)^5 + EulerGamma*(b_)^5 - ((EulerGamma^2 + 𝜋^2/6)*(b_)^5)/2 - ((b_)^5*(-EulerGamma^3 - (EulerGamma*𝜋^2)/2 + PolyGamma(2, 1)))/6 - ((b_)^5*(EulerGamma^4 + EulerGamma^2*𝜋^2 + (3*𝜋^4)/20 - 4*EulerGamma*PolyGamma(2, 1)))/24 - ((b_)^5*(-EulerGamma^5 - (5*EulerGamma^3*𝜋^2)/3 - (3*EulerGamma*𝜋^4)/4 + 10*EulerGamma^2*PolyGamma(2, 1) + (5*𝜋^2*PolyGamma(2, 1))/3 + PolyGamma(4, 1)))/120 - ((b_)^5*(EulerGamma^6 + (5*EulerGamma^4*𝜋^2)/2 + (9*EulerGamma^2*𝜋^4)/4 + (61*𝜋^6)/168 - 20*EulerGamma^3*PolyGamma(2, 1) - 10*EulerGamma*𝜋^2*PolyGamma(2, 1) + 10*PolyGamma(2, 1)^2 - 6*EulerGamma*PolyGamma(4, 1)))/720) + ep^6 * Oep(6, Gamma)").unwrap(), Condition::default() ) ),
+        ( Atom::parse("GammaArgs(0,b_)").unwrap(), ( Atom::parse("-EulerGamma + 1/(ep*(b_)) + (ep*(6*EulerGamma^2 + 𝜋^2)*(b_))/12 + (ep^2*(b_)^2*(-EulerGamma^3 - (EulerGamma*𝜋^2)/2 + PolyGamma(2, 1)))/6 + (ep^3*(b_)^3*(EulerGamma^4 + EulerGamma^2*𝜋^2 + (3*𝜋^4)/20 - 4*EulerGamma*PolyGamma(2, 1)))/24 + (ep^4*(b_)^4*(-EulerGamma^5 - (5*EulerGamma^3*𝜋^2)/3 - (3*EulerGamma*𝜋^4)/4 + 10*EulerGamma^2*PolyGamma(2, 1) + (5*𝜋^2*PolyGamma(2, 1))/3 + PolyGamma(4, 1)))/120 + (ep^5*(b_)^5*(EulerGamma^6 + (5*EulerGamma^4*𝜋^2)/2 + (9*EulerGamma^2*𝜋^4)/4 + (61*𝜋^6)/168 - 20*EulerGamma^3*PolyGamma(2, 1) - 10*EulerGamma*𝜋^2*PolyGamma(2, 1) + 10*PolyGamma(2, 1)^2 - 6*EulerGamma*PolyGamma(4, 1)))/720 + ep^6 * Oep(6, Gamma)").unwrap(), Condition::default() ) ),
+        ( Atom::parse("GammaArgs(a_,b_)").unwrap(), ( Atom::parse("Gamma(a_) + ep^6*Oep(6, Gamma) + ep*Gamma(a_)*(b_)*PolyGamma(0, a_) + (ep^2*(b_)^2*(Gamma(a_)*PolyGamma(0, a_)^2 + Gamma(a_)*PolyGamma(1, a_)))/2 + (ep^3*(b_)^3*(Gamma(a_)*PolyGamma(0, a_)^3 + 3*Gamma(a_)*PolyGamma(0, a_)*PolyGamma(1, a_) + Gamma(a_)*PolyGamma(2, a_)))/6 + (ep^4*(b_)^4*(Gamma(a_)*PolyGamma(0, a_)^4 + 6*Gamma(a_)*PolyGamma(0, a_)^2*PolyGamma(1, a_) + 3*Gamma(a_)*PolyGamma(1, a_)^2 + 4*Gamma(a_)*PolyGamma(0, a_)*PolyGamma(2, a_) + Gamma(a_)*PolyGamma(3, a_)))/24 + (ep^5*(b_)^5*(Gamma(a_)*PolyGamma(0, a_)^5 + 10*Gamma(a_)*PolyGamma(0, a_)^3*PolyGamma(1, a_) + 15*Gamma(a_)*PolyGamma(0, a_)*PolyGamma(1, a_)^2 + 10*Gamma(a_)*PolyGamma(0, a_)^2*PolyGamma(2, a_) + 10*Gamma(a_)*PolyGamma(1, a_)*PolyGamma(2, a_) + 5*Gamma(a_)*PolyGamma(0, a_)*PolyGamma(3, a_) + Gamma(a_)*PolyGamma(4, a_)))/120 + ep^6*Oep(6, Gamma)").unwrap(), Condition::from((S.a_, gt_condition(0))) ) ),
     ])
 });
 
@@ -123,7 +125,7 @@ impl Vakint {
             let mut res = av.to_owned();
             res = Pattern::parse("Gam(x_,y_)").unwrap().replace_all(
                 res.as_view(),
-                &Pattern::parse("exp(ep*y_*EulerGamma)*Gamma[x_+ep*y_]")
+                &Pattern::parse("exp(ep*y_*EulerGamma)*Gamma(x_+ep*y_)")
                     .unwrap()
                     .into(),
                 None,
@@ -131,23 +133,39 @@ impl Vakint {
             );
             res = Pattern::parse("iGam(x_,y_)").unwrap().replace_all(
                 res.as_view(),
-                &Pattern::parse("exp(-ep*y_*EulerGamma)/Gamma[x_+ep*y_]")
+                &Pattern::parse("exp(-ep*y_*EulerGamma)/Gamma(x_+ep*y_)")
                     .unwrap()
                     .into(),
                 None,
                 None,
             );
-            for (src, trgt) in MASTERS_EXPANSION.iter() {
+            for (src, (trgt, restriction)) in MASTERS_EXPANSION.iter() {
                 res = src.into_pattern().replace_all(
                     res.as_view(),
                     &trgt.into_pattern().into(),
-                    None,
+                    Some(restriction),
                     None,
                 );
             }
             res
         }));
-
+        if let Some(m) = Pattern::parse("GammaArgs(x_,y_)")
+            .unwrap()
+            .pattern_match(
+                r.as_view(),
+                &Condition::default(),
+                &MatchSettings::default(),
+            )
+            .next()
+        {
+            return Err(VakintError::MATADError(
+            format!("MATAD result contains a Gamma function whose numerical evaluation is not implemented in vakint: Gamma({}+{}*{})",
+                m.match_stack.get(S.x_).unwrap().to_atom(),
+                m.match_stack.get(S.y_).unwrap().to_atom(),
+                self.settings.epsilon_symbol
+            ),
+        ));
+        }
         Ok(r)
     }
 
@@ -180,7 +198,7 @@ impl Vakint {
             })
             .collect::<Vec<_>>();
         let mut r = result.to_owned();
-        let mut r = result.to_owned();
+
         r = Pattern::parse("Gamma(n_)").unwrap().replace_all(
             r.as_view(),
             &PatternOrMap::Map(Box::new(move |match_in| {
@@ -203,6 +221,22 @@ impl Vakint {
             res
         }));
 
+        if let Some(m) = Pattern::parse("PolyGamma(x_,y_)")
+            .unwrap()
+            .pattern_match(
+                r.as_view(),
+                &Condition::default(),
+                &MatchSettings::default(),
+            )
+            .next()
+        {
+            return Err(VakintError::MATADError(
+            format!("MATAD result contains a PolyGamma function whose numerical evaluation is not implemented in vakint: PolyGamma({},{})",
+                m.match_stack.get(S.x_).unwrap().to_atom(),
+                m.match_stack.get(S.y_).unwrap().to_atom()
+            ),
+        ));
+        }
         Ok(r)
     }
 
@@ -321,11 +355,6 @@ impl Vakint {
         };
 
         let mut numerator = Vakint::convert_to_dot_notation(input_numerator);
-        println!("numerator before {}", numerator);
-        println!(
-            "pattern {}",
-            fun!(S.dot, fun!(S.p, S.id1_a), fun!(S.k, S.id2_a))
-        );
         if utils::could_match(
             &fun!(S.dot, fun!(S.p, S.id1_a), fun!(S.k, S.id2_a)).into_pattern(),
             numerator.as_view(),
@@ -334,7 +363,6 @@ impl Vakint {
                 format!("Make sure the numerator has been tensor-reduced before being processed by MATAD : {}", numerator)
             ));
         }
-        println!("numerator after {}", numerator);
 
         // Now map all exterior dot products into a special function `vkdot` so that it does not interfere with MATAD
         numerator = fun!(S.dot, fun!(S.p, S.id1_a), fun!(S.p, S.id2_a))
@@ -472,7 +500,9 @@ impl Vakint {
             vakint.settings.clean_tmp_dir,
         )?;
 
+        //println!("form_result = {}", form_result);
         let mut evaluated_integral = vakint.process_matad_form_output(form_result)?;
+        //println!("evaluated_integral first = {}", evaluated_integral);
 
         evaluated_integral = Pattern::parse("M^pow_").unwrap().replace_all(
             evaluated_integral.as_view(),
@@ -532,14 +562,14 @@ impl Vakint {
             evaluated_integral = self.expand_matad_masters(evaluated_integral.as_view())?;
 
             // Temporary work around for series bug in Symbolica
-            evaluated_integral = Pattern::parse("(any___)^-1").unwrap().replace_all(
-                evaluated_integral.as_view(),
-                &PatternOrMap::Map(Box::new(move |match_in| {
-                    Atom::new_num(1) / match_in.get(S.any___).unwrap().to_atom().expand()
-                })),
-                None,
-                None,
-            );
+            // evaluated_integral = Pattern::parse("(any___)^-1").unwrap().replace_all(
+            //     evaluated_integral.as_view(),
+            //     &PatternOrMap::Map(Box::new(move |match_in| {
+            //         Atom::new_num(1) / match_in.get(S.any___).unwrap().to_atom().expand()
+            //     })),
+            //     None,
+            //     None,
+            // );
             evaluated_integral = match evaluated_integral.series(
                 State::get_symbol("ep"),
                 Atom::Zero.as_view(),
@@ -572,6 +602,8 @@ impl Vakint {
                 debug!("{}: Substituting masters with HPLs ...", "MATAD".green());
                 evaluated_integral = self.substitute_masters(evaluated_integral.as_view())?;
                 if options.substitute_hpls {
+                    // Expanding here is important to improve efficiency and avoid symbolica bugs with floating point coefficients
+                    evaluated_integral = evaluated_integral.expand();
                     debug!("{}: Substituting HPLs with numerics ...", "MATAD".green());
                     evaluated_integral = self.substitute_hpls(evaluated_integral.as_view())?;
                     evaluated_integral =
