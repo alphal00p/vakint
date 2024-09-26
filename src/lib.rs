@@ -1,3 +1,5 @@
+pub mod fmft;
+pub mod fmft_numerics;
 pub mod graph;
 pub mod matad;
 pub mod matad_numerics;
@@ -107,6 +109,10 @@ static TEMPLATES: phf::Map<&'static str, &'static str> = phf_map! {
         env!("CARGO_MANIFEST_DIR"),
         "/templates/run_matad.txt"
     )),
+    "run_fmft.txt" => include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/templates/run_fmft.txt"
+    )),
 };
 
 #[derive(Error, Debug)]
@@ -162,6 +168,8 @@ pub enum VakintError {
     SymbolicaError(String),
     #[error("MATAD error: {0}")]
     MATADError(String),
+    #[error("FMFT error: {0}")]
+    FMFTError(String),
     #[error("Numerical evaluation error: {0}")]
     EvaluationError(String),
     #[error("unknown vakint error")]
@@ -1385,7 +1393,9 @@ impl EvaluationMethod {
             EvaluationMethod::MATAD(opts) => {
                 vakint.matad_evaluate(vakint, numerator, integral_specs, opts)
             }
-            EvaluationMethod::FMFT(_opts) => unimplemented!("FMFT evaluations not yet implemented"),
+            EvaluationMethod::FMFT(opts) => {
+                vakint.fmft_evaluate(vakint, numerator, integral_specs, opts)
+            }
             EvaluationMethod::PySecDec(opts) => {
                 vakint.pysecdec_evaluate(vakint, numerator, integral_specs, opts)
             }
@@ -1487,6 +1497,7 @@ impl EvaluationOrder {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct VakintSettings {
     #[allow(unused)]
     pub use_pysecdec: bool,
@@ -1506,6 +1517,7 @@ pub struct VakintSettings {
     //   b) for the two-loop integrals, the double pole, single pole and finite terms will be needed, so again three terms
     pub number_of_terms_in_epsilon_expansion: i64,
     pub use_dot_product_notation: bool,
+    pub temporary_directory: Option<String>,
 }
 
 impl VakintSettings {
@@ -1533,6 +1545,8 @@ impl VakintSettings {
         )
     }
 }
+
+#[derive(Debug, Clone)]
 pub enum LoopNormalizationFactor {
     #[allow(non_camel_case_types)]
     pySecDec,
@@ -1712,6 +1726,7 @@ impl Default for VakintSettings {
             // Default to a three-loop UV subtraction problem, for which alphaLoop implementation can be used.
             number_of_terms_in_epsilon_expansion: 4,
             use_dot_product_notation: false,
+            temporary_directory: None,
         }
     }
 }
@@ -1965,6 +1980,7 @@ impl VakintTerm {
             ("run_tensor_reduction.frm".into(), rendered),
             vec![],
             vakint.settings.clean_tmp_dir,
+            vakint.settings.temporary_directory.clone(),
         )?;
 
         let mut reduced_numerator = vakint.process_form_output(form_result)?;
@@ -2141,29 +2157,33 @@ pub struct NumericalEvaluationResult(pub Vec<(i64, Complex<Float>)>);
 
 impl fmt::Display for NumericalEvaluationResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.0
-                .iter()
-                .map(|(power, float_eval)| format!(
-                    "{} : {}",
-                    format!(
-                        "ε^{}{}",
-                        match *power {
-                            power if power > 0 => "+",
-                            0 => " ",
-                            power if power < 0 => "",
-                            _ => unreachable!(),
-                        },
-                        power
-                    )
-                    .green(),
-                    format!("{}", float_eval).blue()
-                ))
-                .collect::<Vec<_>>()
-                .join("\n")
-        )
+        if self.0.is_empty() {
+            write!(f, "{}", "Empty result".green())
+        } else {
+            write!(
+                f,
+                "{}",
+                self.0
+                    .iter()
+                    .map(|(power, float_eval)| format!(
+                        "{} : {}",
+                        format!(
+                            "ε^{}{}",
+                            match *power {
+                                power if power > 0 => "+",
+                                0 => " ",
+                                power if power < 0 => "",
+                                _ => unreachable!(),
+                            },
+                            power
+                        )
+                        .green(),
+                        format!("{}", float_eval).blue()
+                    ))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            )
+        }
     }
 }
 
@@ -2192,7 +2212,13 @@ impl NumericalEvaluationResult {
     pub fn get_epsilon_coefficient(&self, power: i64) -> Complex<Float> {
         match self.0.iter().find(|(i, _f)| *i == power) {
             Some((_, f)) => f.clone(),
-            None => Complex::new(self.0[0].1.re.zero(), self.0[0].1.re.zero()),
+            None => {
+                if self.0.is_empty() {
+                    Complex::new(Float::with_val(53, 0.), Float::with_val(53, 0.))
+                } else {
+                    Complex::new(self.0[0].1.re.zero(), self.0[0].1.re.zero())
+                }
+            }
         }
     }
 
@@ -2940,6 +2966,7 @@ impl Vakint {
             pysecdec_options,
             vakint.settings.clean_tmp_dir && options.reuse_existing_output.is_none(),
             options.reuse_existing_output.clone(),
+            vakint.settings.temporary_directory.clone(),
         )?;
 
         if !options.quiet {
@@ -3042,15 +3069,52 @@ impl Vakint {
             integral
         );
 
+        let muv_sq_symbol = if let Some(m) = Pattern::parse("prop(args__,m_,pow_)")
+            .unwrap()
+            .pattern_match(
+                integral.canonical_expression.as_ref().unwrap().as_view(),
+                &Condition::default(),
+                &MatchSettings::default(),
+            )
+            .next()
+        {
+            match m
+                .match_stack
+                .get(State::get_symbol("m_"))
+                .unwrap()
+                .to_atom()
+            {
+                Atom::Var(s) => s.get_symbol(),
+                _ => {
+                    return Err(VakintError::MalformedGraph(format!(
+                        "Could not find muV in graph:\n{}",
+                        integral.canonical_expression.as_ref().unwrap()
+                    )));
+                }
+            }
+        } else {
+            return Err(VakintError::MalformedGraph(format!(
+                "Could not find muV in graph:\n{}",
+                integral.canonical_expression.as_ref().unwrap()
+            )));
+        };
+
         let alphaloop_expression = integral.alphaloop_expression.as_ref().unwrap().as_view();
 
+        let mut numerator = numerator.to_owned();
+        numerator = Atom::new_var(muv_sq_symbol).into_pattern().replace_all(
+            numerator.as_view(),
+            &Pattern::parse("mUV^2").unwrap().into(),
+            None,
+            None,
+        );
         // println!("Numerator : {}", numerator);
         // println!("Evaluating AlphaLoop : {}", alphaloop_expression);
         // println!("Graph:\n{}", integral.graph.to_graphviz());
 
         // Make sure to undo the dot product notation.
         // If it was not used, the command below will do nothing.
-        let mut form_expression = numerator.to_owned() * alphaloop_expression.to_owned();
+        let mut form_expression = numerator * alphaloop_expression.to_owned();
         form_expression = Vakint::convert_to_dot_notation(form_expression.as_view());
         // println!("Input expression with dot products : {}", form_expression);
 
@@ -3132,6 +3196,7 @@ impl Vakint {
                 ),
             ],
             vakint.settings.clean_tmp_dir,
+            vakint.settings.temporary_directory.clone(),
         )?;
 
         let mut evaluated_integral = vakint.process_form_output(form_result)?;
@@ -3150,36 +3215,6 @@ impl Vakint {
             evaluated_integral =
                 Vakint::convert_from_dot_notation(evaluated_integral.as_view(), false);
         }
-
-        let muv_sq_symbol = if let Some(m) = Pattern::parse("prop(args__,m_,pow_)")
-            .unwrap()
-            .pattern_match(
-                integral.canonical_expression.as_ref().unwrap().as_view(),
-                &Condition::default(),
-                &MatchSettings::default(),
-            )
-            .next()
-        {
-            match m
-                .match_stack
-                .get(State::get_symbol("m_"))
-                .unwrap()
-                .to_atom()
-            {
-                Atom::Var(s) => s.get_symbol(),
-                _ => {
-                    return Err(VakintError::MalformedGraph(format!(
-                        "Could not find muV in graph:\n{}",
-                        integral.canonical_expression.as_ref().unwrap()
-                    )));
-                }
-            }
-        } else {
-            return Err(VakintError::MalformedGraph(format!(
-                "Could not find muV in graph:\n{}",
-                integral.canonical_expression.as_ref().unwrap()
-            )));
-        };
 
         evaluated_integral = Pattern::parse("mUV").unwrap().replace_all(
             evaluated_integral.as_view(),
@@ -3215,8 +3250,8 @@ impl Vakint {
             format!(
                 "(\
                     𝑖*(𝜋^((4-2*{eps})/2))\
-                 *(exp(-EulerGamma))^({eps})\
-                 *(exp(-logmUVmu-log_mu_sq))^({eps})\
+                 * (exp(-EulerGamma))^({eps})\
+                 * (exp(-logmUVmu-log_mu_sq))^({eps})\
                  )^{n_loops}",
                 eps = self.settings.epsilon_symbol,
                 n_loops = integral.n_loops
@@ -3669,6 +3704,7 @@ impl Vakint {
         options: Vec<String>,
         clean: bool,
         reused_path: Option<String>,
+        temporary_directory: Option<String>,
     ) -> Result<Vec<String>, VakintError> {
         let tmp_dir = &(if let Some(reused_path_specified) = reused_path.as_ref() {
             let specified_dir = PathBuf::from(reused_path_specified);
@@ -3682,7 +3718,11 @@ impl Vakint {
             }
             specified_dir
         } else {
-            let tmp_directory = &env::temp_dir().join("vakint_temp_pysecdec");
+            let tmp_directory = if let Some(temp_path) = temporary_directory {
+                &PathBuf::from(temp_path).join("vakint_temp_pysecdec")
+            } else {
+                &env::temp_dir().join("vakint_temp_pysecdec")
+            };
             if tmp_directory.exists() {
                 fs::remove_dir_all(tmp_directory)?;
             }
@@ -3751,8 +3791,14 @@ impl Vakint {
         input: (String, String),
         options: Vec<String>,
         clean: bool,
+        temporary_directory: Option<String>,
     ) -> Result<String, VakintError> {
-        let tmp_dir = &env::temp_dir().join("vakint_temp");
+        let tmp_dir = if let Some(temp_path) = temporary_directory {
+            &PathBuf::from(temp_path).join("vakint_temp")
+        } else {
+            &env::temp_dir().join("vakint_temp")
+        };
+
         if tmp_dir.exists() {
             fs::remove_dir_all(tmp_dir)?;
         }

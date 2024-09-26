@@ -24,7 +24,7 @@ use crate::{
     MATADOptions, TEMPLATES,
 };
 
-use crate::{ReplacementRules, Vakint, VakintError};
+use crate::{ReplacementRules, Vakint, VakintError, VakintSettings};
 
 #[rustfmt::skip]
 pub static MASTERS_EXPANSION: LazyLock<HashMap<Atom, (Atom, symbolica::id::Condition<symbolica::id::PatternRestriction>)>> = LazyLock::new(|| {
@@ -93,11 +93,20 @@ pub static MASTERS_SUBSTITUTION: LazyLock<HashMap<Atom, Atom>> = LazyLock::new(|
         ( Atom::parse("T111bar(4)").unwrap(), Atom::parse("96*HI(-1, -1, -1, -1, 1, 0, om1) + 96*HI(-1, -1, -1, 1, -1, 0, om1) - 312*HI(-1, -1, -1, 1, 1, 1, om1) + 96*HI(-1, -1, 1, -1, -1, 1, om1) + 96*HI(-1, -1, 1, -1, 1, -1, om1) + 64*HI(-1, -1, 1, -1, 1, 0, om1) - 504*HI(-1, -1, 1, -1, 1, 1, om1) + (320*HI(-1, -1, 1, 0, 1, 1, om1))/3 + 192*HI(-1, -1, 1, 1, -1, -1, om1) + 224*HI(-1, -1, 1, 1, -1, 0, om1) - 792*HI(-1, -1, 1, 1, -1, 1, om1) + (127*HI(-1, -1, 1, 1, 0, 1, om1))/3 - 1176*HI(-1, -1, 1, 1, 1, -1, om1) - 409*HI(-1, -1, 1, 1, 1, 0, om1) + 96*HI(-1, 1, -1, -1, -1, 1, om1) + 96*HI(-1, 1, -1, -1, 1, -1, om1) + 64*HI(-1, 1, -1, -1, 1, 0, om1) + 224*HI(-1, 1, -1, 1, -1, 0, om1) - 192*HI(-1, 1, -1, 1, -1, 1, om1) + 160*HI(-1, 1, -1, 1, 0, -1, om1) - 288*HI(-1, 1, -1, 1, 1, -1, om1) - (5189*HI(-1, 1, -1, 1, 1, 1, om1))/2 - 420*HI(-1, 1, 0, -1, 1, 1, om1) + 160*HI(-1, 1, 0, 1, -1, -1, om1) - 500*HI(-1, 1, 0, 1, -1, 1, om1) - (2165*HI(-1, 1, 0, 1, 0, 1, om1))/18 - 740*HI(-1, 1, 0, 1, 1, -1, om1) - (7235*HI(-1, 1, 0, 1, 1, 0, om1))/18 - 192*HI(-1, 1, 1, -1, -1, -1, om1) + 632*HI(-1, 1, 1, -1, -1, 1, om1) - (1269422*HI(-1, 1, 1, -1, 0, 0, om1))/4161 - (1001731*HI(-1, 1, 1, -1, 0, 1, om1))/4161 + 824*HI(-1, 1, 1, -1, 1, -1, om1) + (203321*HI(-1, 1, 1, -1, 1, 0, om1))/1387 - (6715537*HI(-1, 1, 1, -1, 1, 1, om1))/1387 - 1011*HI(-1, 1, 1, 0, -1, 1, om1) + (5798108*HI(-1, 1, 1, 0, 0, -1, om1))/12483 - (1982708*HI(-1, 1, 1, 0, 1, -1, om1))/1387 + 2800*HI(-1, 1, 1, 1, -1, -1, om1) + (664056*HI(-1, 1, 1, 1, -1, 0, om1))/1387 - (20832225*HI(-1, 1, 1, 1, -1, 1, om1))/2774 - (1740076*HI(-1, 1, 1, 1, 0, -1, om1))/657 + (502923119*HI(-1, 1, 1, 1, 0, 0, om1))/449388 - (18162250*HI(-1, 1, 1, 1, 1, -1, om1))/1387 + (7166073467*HI(-1, 1, 1, 1, 1, 1, om1))/224694 + 96*HI(1, -1, -1, -1, -1, 1, om1) + 96*HI(1, -1, -1, -1, 1, -1, om1) + 64*HI(1, -1, -1, -1, 1, 0, om1) + 224*HI(1, -1, -1, 1, -1, 0, om1) - 192*HI(1, -1, -1, 1, -1, 1, om1) + 160*HI(1, -1, -1, 1, 0, -1, om1) - 288*HI(1, -1, -1, 1, 1, -1, om1) - (5189*HI(1, -1, -1, 1, 1, 1, om1))/2 + 536*HI(1, -1, 1, -1, -1, 1, om1) + 728*HI(1, -1, 1, -1, 1, -1, om1) + (1162*HI(1, -1, 1, -1, 1, 0, om1))/3 - 5900*HI(1, -1, 1, -1, 1, 1, om1) - 320*HI(1, -1, 1, 0, -1, -1, om1) - (247571*HI(1, -1, 1, 0, 1, -1, om1))/1387 + (6935939*HI(1, -1, 1, 0, 1, 1, om1))/12483 + 2096*HI(1, -1, 1, 1, -1, -1, om1) + (3995630*HI(1, -1, 1, 1, -1, 0, om1))/4161 - (25993133*HI(1, -1, 1, 1, -1, 1, om1))/2774 + (2339932507*HI(1, -1, 1, 1, 0, 1, om1))/898776 - (20346339*HI(1, -1, 1, 1, 1, -1, om1))/1387 + (1987391897*HI(1, -1, 1, 1, 1, 0, om1))/299592 - 160*HI(1, 0, 1, -1, -1, -1, om1) - (190762625*HI(1, 0, 1, -1, 1, 0, om1))/137313 + (172992580*HI(1, 0, 1, -1, 1, 1, om1))/45771 - (585*HI(1, 0, 1, 0, -1, 1, om1))/2 - (585*HI(1, 0, 1, 0, 1, -1, om1))/2 + (1401897460*HI(1, 0, 1, 0, 1, 0, om1))/1235817 + (1280*HI(1, 0, 1, 1, -1, -1, om1))/3 - (131698420*HI(1, 0, 1, 1, -1, 0, om1))/137313 + (3771385*HI(1, 0, 1, 1, -1, 1, om1))/803 - (13518640*HI(1, 0, 1, 1, 0, -1, om1))/12483 + (94194535*HI(1, 0, 1, 1, 1, -1, om1))/45771 - (224239650581*HI(1, 0, 1, 1, 1, 1, om1))/7414902 + 192*HI(1, 1, -1, -1, -1, -1, om1) + 440*HI(1, 1, -1, -1, -1, 1, om1) + 632*HI(1, 1, -1, -1, 1, -1, om1) + (1162*HI(1, 1, -1, -1, 1, 0, om1))/3 - (19523*HI(1, 1, -1, -1, 1, 1, om1))/3 + (85309*HI(1, 1, -1, 0, 1, -1, om1))/1387 + 1520*HI(1, 1, -1, 1, -1, -1, om1) + 1201*HI(1, 1, -1, 1, -1, 0, om1) - (65065*HI(1, 1, -1, 1, -1, 1, om1))/6 + (1286089*HI(1, 1, -1, 1, 0, -1, om1))/657 + (294745883*HI(1, 1, -1, 1, 0, 1, om1))/112347 - (66781712*HI(1, 1, -1, 1, 1, -1, om1))/4161 + (7672706315*HI(1, 1, -1, 1, 1, 0, om1))/898776 - (1500994997*HI(1, 1, -1, 1, 1, 1, om1))/112347 - 331*HI(1, 1, 0, -1, -1, 1, om1) - (373788*HI(1, 1, 0, -1, 1, -1, om1))/1387 - (1040075156*HI(1, 1, 0, -1, 1, 0, om1))/411939 + (71036008625022455*HI(1, 1, 0, 1, -1, -1, om1))/31412461173192 - (408164510625851*HI(1, 1, 0, 1, -1, 0, om1))/387808162632 + (112240612313169253*HI(1, 1, 0, 1, -1, 1, om1))/62824922346384 - (1671079834843531*HI(1, 1, 0, 1, 1, -1, om1))/296343973332 - 208*HI(1, 1, 1, -1, -1, -1, om1) + (4630766069502545*HI(1, 1, 1, -1, -1, 0, om1))/1903785525648 - (23840913916053689*HI(1, 1, 1, -1, -1, 1, om1))/1903785525648 + (236736287552028065*HI(1, 1, 1, -1, 0, -1, om1))/62824922346384 + (65236932450127865*HI(1, 1, 1, -1, 0, 0, om1))/17134069730832 - (324735078822098209*HI(1, 1, 1, -1, 0, 1, om1))/188474767039152 - (33937640451327857*HI(1, 1, 1, -1, 1, -1, om1))/1903785525648 + (217890103688771579*HI(1, 1, 1, -1, 1, 0, om1))/62824922346384 - (98098907738411707*HI(1, 1, 1, -1, 1, 1, om1))/62824922346384 + (60053281459284215*HI(1, 1, 1, 0, -1, -1, om1))/10470820391064 - (14276309865069491*HI(1, 1, 1, 0, -1, 0, om1))/5235410195532 - (17608277669750297*HI(1, 1, 1, 0, -1, 1, om1))/2326848975792 + (113893834864667471*HI(1, 1, 1, 0, 0, -1, om1))/205608836769984 + (2578864206755062092340321*HI(1, 1, 1, 0, 0, 0, om1))/97922442164725499904 - (4028157988084297*HI(1, 1, 1, 0, 1, -1, om1))/183698603352 + (342310613376007581255845*HI(1, 1, 1, 0, 1, 1, om1))/5153812745511868416 - (580499376653049347*HI(1, 1, 1, 1, -1, -1, om1))/31412461173192 - (47970936019094809*HI(1, 1, 1, 1, -1, 0, om1))/3306574860336 + (175367882302986940*HI(1, 1, 1, 1, -1, 1, om1))/3926557646649 - (48827026671130603771*HI(1, 1, 1, 1, 0, -1, om1))/1130848602234912 + (29301329002972334771885311*HI(1, 1, 1, 1, 0, 1, om1))/195844884329450999808 + (4274072449929751295*HI(1, 1, 1, 1, 1, -1, om1))/31412461173192 + (9649675317039589744890323*HI(1, 1, 1, 1, 1, 0, om1))/65281628109816999936").unwrap() )
     ])
 });
+pub struct MATAD {
+    settings: VakintSettings,
+}
 
-#[allow(unused)]
-impl Vakint {
-    pub fn process_matad_form_output(&self, form_output: String) -> Result<Atom, VakintError> {
-        let mut res = self.process_form_output(form_output)?;
+impl MATAD {
+    pub fn with_settings(settings: VakintSettings) -> Self {
+        MATAD { settings }
+    }
+
+    pub fn process_matad_form_output(
+        &self,
+        processed_form_output: Atom,
+    ) -> Result<Atom, VakintError> {
+        let mut res = processed_form_output.to_owned();
         res = Pattern::parse("d").unwrap().replace_all(
             res.as_view(),
             &Pattern::parse("4-2*ep").unwrap().into(),
@@ -339,7 +348,9 @@ impl Vakint {
 
         Ok(r)
     }
+}
 
+impl Vakint {
     pub fn matad_evaluate(
         &self,
         vakint: &Vakint,
@@ -364,6 +375,8 @@ impl Vakint {
                 .unwrap_or("None".to_string())
         )));
 
+        let matad = MATAD::with_settings(vakint.settings.clone());
+
         let integral_name = if let Some(short_expression) = integral.short_expression.as_ref() {
             if let Some(m) = fun!(S.fun_, S.any_a___)
                 .into_pattern()
@@ -386,6 +399,32 @@ impl Vakint {
             return err;
         };
 
+        let muv_sq_symbol = if let Some(m) = fun!(S.fun_, S.x_a, S.any_a___)
+            .into_pattern()
+            .pattern_match(
+                integral.short_expression.as_ref().unwrap().as_view(),
+                &(Condition::from((S.x_, symbol_condition()))
+                    & Condition::from((S.fun_, symbol_condition()))),
+                &MatchSettings::default(),
+            )
+            .next()
+        {
+            match m.match_stack.get(S.x_).unwrap().to_atom() {
+                Atom::Var(s) => s.get_symbol(),
+                _ => {
+                    return Err(VakintError::MalformedGraph(format!(
+                        "Could not find muV in graph:\n{}",
+                        integral.short_expression.as_ref().unwrap()
+                    )));
+                }
+            }
+        } else {
+            return Err(VakintError::MalformedGraph(format!(
+                "Could not find muV in graph:\n{}",
+                integral.short_expression.as_ref().unwrap()
+            )));
+        };
+
         // Here we map the propagators in the correct order for the definition of the topology in MATAD
         let vakint_to_matad_edge_map = match integral_name.as_str() {
             "I1L" => vec![1],
@@ -400,6 +439,12 @@ impl Vakint {
         };
 
         let mut numerator = Vakint::convert_to_dot_notation(input_numerator);
+        numerator = Atom::new_var(muv_sq_symbol).into_pattern().replace_all(
+            numerator.as_view(),
+            &Pattern::parse("M^2").unwrap().into(),
+            None,
+            None,
+        );
         if utils::could_match(
             &fun!(S.dot, fun!(S.p, S.id1_a), fun!(S.k, S.id2_a)).into_pattern(),
             numerator.as_view(),
@@ -428,7 +473,7 @@ impl Vakint {
         let momenta = integral_specs.get_propagator_property_list("q_");
         let mut lmb_prop_indices = vec![];
         for i_loop in 1..=integral.n_loops {
-            if let Some((i_edge, _)) = momenta.iter().find(|(i_prop, k)| {
+            if let Some((i_edge, _)) = momenta.iter().find(|(_i_prop, k)| {
                 k.as_view() == fun!(S.k, Atom::new_num(i_loop as i64)).as_view()
             }) {
                 lmb_prop_indices.push(*i_edge);
@@ -481,7 +526,7 @@ impl Vakint {
             .replace_all(&numerator.to_canonical_string(), "($vecA.$vecB)")
             .to_string();
 
-        let mut powers = (1..=integral.n_props)
+        let powers = (1..=integral.n_props)
             .map(|i_prop| {
                 integral_specs
                     .canonical_expression_substitutions
@@ -503,6 +548,7 @@ impl Vakint {
         let template = Template::parse_template(TEMPLATES.get("run_matad.txt").unwrap()).unwrap();
         let mut vars: HashMap<String, String> = HashMap::new();
         vars.insert("numerator".into(), numerator_string);
+        vars.insert("symbols".into(), muv_sq_symbol.to_string());
         vars.insert("integral".into(), integral_string);
         vars.insert("n_loops".into(), format!("{}", integral.n_loops));
         let rendered = template
@@ -512,41 +558,17 @@ impl Vakint {
             })
             .unwrap();
 
-        let muv_sq_symbol = if let Some(m) = fun!(S.fun_, S.x_a, S.any_a___)
-            .into_pattern()
-            .pattern_match(
-                integral.short_expression.as_ref().unwrap().as_view(),
-                &(Condition::from((S.x_, symbol_condition()))
-                    & Condition::from((S.fun_, symbol_condition()))),
-                &MatchSettings::default(),
-            )
-            .next()
-        {
-            match m.match_stack.get(S.x_).unwrap().to_atom() {
-                Atom::Var(s) => s.get_symbol(),
-                _ => {
-                    return Err(VakintError::MalformedGraph(format!(
-                        "Could not find muV in graph:\n{}",
-                        integral.short_expression.as_ref().unwrap()
-                    )));
-                }
-            }
-        } else {
-            return Err(VakintError::MalformedGraph(format!(
-                "Could not find muV in graph:\n{}",
-                integral.short_expression.as_ref().unwrap()
-            )));
-        };
-
         let form_result = vakint.run_form(
             &["matad-ng.hh".into()],
             ("run_matad.frm".into(), rendered),
             vec![],
             vakint.settings.clean_tmp_dir,
+            vakint.settings.temporary_directory.clone(),
         )?;
 
         //println!("form_result = {}", form_result);
-        let mut evaluated_integral = vakint.process_matad_form_output(form_result)?;
+        let processed_form_result = self.process_form_output(form_result)?;
+        let mut evaluated_integral = matad.process_matad_form_output(processed_form_result)?;
         //println!("evaluated_integral first = {}", evaluated_integral);
 
         evaluated_integral = Pattern::parse("M^pow_").unwrap().replace_all(
@@ -562,6 +584,7 @@ impl Vakint {
                 "( 
                     (𝑖*(𝜋^((4-2*{eps})/2)))\
                   * (exp(-EulerGamma))^({eps})\
+                  * (exp(-logmUVmu-log_mu_sq))^({eps})\
                  )^{n_loops}",
                 eps = self.settings.epsilon_symbol,
                 n_loops = integral.n_loops
@@ -605,7 +628,7 @@ impl Vakint {
                     expansion_depth
                 );
                 evaluated_integral =
-                    self.substitute_masters_directly(evaluated_integral.as_view())?;
+                    matad.substitute_masters_directly(evaluated_integral.as_view())?;
             } else {
                 debug!(
                     "{}: Expanding masters and including terms up to and including {}^{} ...",
@@ -613,7 +636,7 @@ impl Vakint {
                     self.settings.epsilon_symbol,
                     expansion_depth
                 );
-                evaluated_integral = self.expand_matad_masters(evaluated_integral.as_view())?;
+                evaluated_integral = matad.expand_matad_masters(evaluated_integral.as_view())?;
             }
             // Temporary work around for series bug in Symbolica
             // evaluated_integral = Pattern::parse("(any___)^-1").unwrap().replace_all(
@@ -663,22 +686,38 @@ impl Vakint {
                     "MATAD".green()
                 );
                 evaluated_integral = evaluated_integral.expand();
-                evaluated_integral = self.substitute_poly_gamma(evaluated_integral.as_view())?;
+                evaluated_integral = matad.substitute_poly_gamma(evaluated_integral.as_view())?;
                 evaluated_integral =
-                    self.substitute_additional_constants(evaluated_integral.as_view())?;
+                    matad.substitute_additional_constants(evaluated_integral.as_view())?;
             } else if options.susbstitute_masters {
                 debug!("{}: Substituting masters with HPLs ...", "MATAD".green());
-                evaluated_integral = self.substitute_masters(evaluated_integral.as_view())?;
+                evaluated_integral = matad.substitute_masters(evaluated_integral.as_view())?;
                 if options.substitute_hpls {
                     // Expanding here is important to improve efficiency and avoid symbolica bugs with floating point coefficients
                     evaluated_integral = evaluated_integral.expand();
                     debug!("{}: Substituting HPLs with numerics ...", "MATAD".green());
-                    evaluated_integral = self.substitute_hpls(evaluated_integral.as_view())?;
+                    evaluated_integral = matad.substitute_hpls(evaluated_integral.as_view())?;
                     evaluated_integral =
-                        self.substitute_poly_gamma(evaluated_integral.as_view())?;
+                        matad.substitute_poly_gamma(evaluated_integral.as_view())?;
                     evaluated_integral =
-                        self.substitute_additional_constants(evaluated_integral.as_view())?;
+                        matad.substitute_additional_constants(evaluated_integral.as_view())?;
                 }
+            }
+            // Sanity check
+            if let Some(m) = Pattern::parse("Oep(x_,y_)")
+                .unwrap()
+                .pattern_match(
+                    evaluated_integral.as_view(),
+                    &Condition::default(),
+                    &MatchSettings::default(),
+                )
+                .next()
+            {
+                return Err(VakintError::FMFTError(format!(
+                    "FMFT expansion yielded terms beyond expansion depth supported: Oep({},{})",
+                    m.match_stack.get(S.x_).unwrap().to_atom(),
+                    m.match_stack.get(S.y_).unwrap().to_atom(),
+                )));
             }
         }
 

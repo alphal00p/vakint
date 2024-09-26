@@ -1,17 +1,16 @@
 #-
-#include matad-ng.hh
+#include fmft.frm
 
 CF p,vkdot;
 S {symbols};
 * sim indicates the massive ith denominator and 1/pi.pi the massless counterpart
 L integral = ({numerator})*({integral});
 * Loop evaluation
-#call matad({n_loops})
-* expansion upto ep^3
-*#call exp4d(6)
-*hide;
+#call fmft
+* expand up to O(ep^0)
+*#call exp4d(0)
 .sort
-*Print +S;
+
 #write<out.txt> \"%E\",integral
 
 .end

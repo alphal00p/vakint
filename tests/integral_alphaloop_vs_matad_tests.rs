@@ -9,7 +9,7 @@ use symbolica::{
     state::State,
 };
 use test_utils::compare_two_evaluations;
-use vakint::{EvaluationOrder, NumericalEvaluationResult, Vakint, VakintSettings};
+use vakint::{matad::MATAD, EvaluationOrder, NumericalEvaluationResult, Vakint, VakintSettings};
 
 use crate::test_utils::{convert_test_externals, convert_test_params};
 
@@ -82,6 +82,40 @@ fn test_integrate_3l_rank_4() {
     );
 }
 
+#[test_log::test]
+fn test_integrate_3l_rank_4_different_scales() {
+    #[rustfmt::skip]
+    compare_two_evaluations(
+        VakintSettings { n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 4, ..VakintSettings::default()},
+        ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only(None) ,true)),
+        Atom::parse(
+            "(
+                  k(1,11)*k(2,11)*k(1,22)*k(2,22)
+                + p(1,11)*k(3,11)*k(3,22)*p(2,22)
+                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+             )
+            *topo(\
+                 prop(1,edge(1,2),k(1),muvsq,1)\
+                *prop(2,edge(2,3),k(2),muvsq,1)\
+                *prop(3,edge(3,1),k(3),muvsq,1)\
+                *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
+                *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
+                *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
+            )",
+        ).unwrap().as_view(),
+        convert_test_params(&[("muvsq".into(), 3.0), ("mursq".into(), 5.0)].iter().cloned().collect(),
+        N_DIGITS_ANLYTICAL_EVALUATION),
+        convert_test_externals(
+        &(1..=2)
+            .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+            //.map(|i| (i, (17.0*((0) as f64), 4.0*((0) as f64), 3.0*((0) as f64), 12.0*((0) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION),
+            COMPARISON_REL_THRESHOLD, MAX_PULL,
+        true,
+    );
+}
+
 pub fn evaluate_expression_with_matad(
     vakint: &Vakint,
     input: AtomView,
@@ -89,12 +123,13 @@ pub fn evaluate_expression_with_matad(
 ) -> NumericalEvaluationResult {
     let mut integral = input.to_owned();
 
+    let matad = MATAD::with_settings(vakint.settings.clone());
     if direct_masters_substitution {
-        integral = vakint
+        integral = matad
             .substitute_masters_directly(integral.as_view())
             .unwrap();
     } else {
-        integral = vakint.expand_matad_masters(integral.as_view()).unwrap();
+        integral = matad.expand_matad_masters(integral.as_view()).unwrap();
     }
 
     // Temporary work around for series bug in Symbolica
@@ -119,17 +154,17 @@ pub fn evaluate_expression_with_matad(
     if direct_masters_substitution {
         // Expanding here is important to improve efficiency and avoid symbolica bugs with floating point coefficients
         integral = integral.expand();
-        integral = vakint.substitute_poly_gamma(integral.as_view()).unwrap();
-        integral = vakint
+        integral = matad.substitute_poly_gamma(integral.as_view()).unwrap();
+        integral = matad
             .substitute_additional_constants(integral.as_view())
             .unwrap();
     } else {
-        integral = vakint.substitute_masters(integral.as_view()).unwrap();
+        integral = matad.substitute_masters(integral.as_view()).unwrap();
         // Expanding here is important to improve efficiency and avoid symbolica bugs with floating point coefficients
         integral = integral.expand();
-        integral = vakint.substitute_hpls(integral.as_view()).unwrap();
-        integral = vakint.substitute_poly_gamma(integral.as_view()).unwrap();
-        integral = vakint
+        integral = matad.substitute_hpls(integral.as_view()).unwrap();
+        integral = matad.substitute_poly_gamma(integral.as_view()).unwrap();
+        integral = matad
             .substitute_additional_constants(integral.as_view())
             .unwrap();
     }
