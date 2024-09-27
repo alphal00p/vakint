@@ -105,11 +105,11 @@ impl Topologies {
                          prop(1,edge(5,1),k(1),msq(1),pow(1))\
                         *prop(2,edge(2,6),k(2),msq(1),pow(2))\
                         *prop(3,edge(6,5),k(3),msq(1),pow(3))\
-                        *prop(4,edge(4,3),k(4),msq(1),pow(4))\
-                        *prop(5,edge(3,6),k(1)-k(3),msq(1),pow(5))\
-                        *prop(6,edge(6,4),k(2)-k(3),msq(1),pow(6))\
-                        *prop(7,edge(3,1),k(3)-k(1)+k(4),msq(1),pow(7))\
-                        *prop(8,edge(2,4),k(3)-k(2)+k(4),msq(1),pow(8))\
+                        *prop(4,edge(3,4),k(4),msq(1),pow(4))\
+                        *prop(5,edge(4,5),k(1)-k(3),msq(1),pow(5))\
+                        *prop(6,edge(6,3),k(2)-k(3),msq(1),pow(6))\
+                        *prop(7,edge(4,1),k(3)-k(1)+k(4),msq(1),pow(7))\
+                        *prop(8,edge(2,3),k(3)-k(2)+k(4),msq(1),pow(8))\
                         *prop(9,edge(1,2),k(3)+k(4),msq(1),pow(9))\
                     )",
                 )
@@ -208,7 +208,8 @@ impl Topologies {
                 )
                 .unwrap()
                 .as_view(),
-                TopologyContractions::Automatic,
+                // Place all further pinched topologies on that FX one
+                TopologyContractions::Automatic, //TopologyContractions::Custom(vec![vec![], vec![3]]),
                 EvaluationOrder::fmft_only(None),
             )?
             .0,

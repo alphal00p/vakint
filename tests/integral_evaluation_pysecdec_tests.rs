@@ -119,8 +119,7 @@ fn test_integrate_4l_h() {
             .collect(),
             4),
         vec![
-            // This does not have an analytical expression yet (FMFT not implemented yet)
-            (0,  ("-12799.61".into(), "0.0".into()),),
+            (0,  ("-12799.53514305961548130719263292".into(), "0.0".into()),),
         ],
         4, MAX_PULL
     );

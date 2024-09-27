@@ -410,31 +410,218 @@ fn test_integrate_4l_h_rank_4() {
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
-            // This does not have an analytical expression yet (FMFT not implemented yet)
             (0,  ("-12799.53514305961548130719263292".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
 }
 
-#[test]
-pub fn quick_one() {
-    let a = Atom::parse("-3*Oep(0,I_PR11d)*g(p(1),p(2))*muvsq^-1*𝜋^8+-3/4*Oep(0,I_PR11d)*muvsq^-1*𝜋^8+1132.865148903507427147525574662*muvsq^-1*𝜋^8+3/4*Oep(0,I_PR9d)*muvsq^-1*𝜋^8+342.7952688176604228845786723443*g(p(1),p(2))*muvsq^-1*𝜋^8").unwrap();
-    if let Some(m) = symbolica::id::Pattern::parse("Oep(x_,y_)")
-        .unwrap()
-        .pattern_match(
-            a.as_view(),
-            &symbolica::id::Condition::default(),
-            &symbolica::id::MatchSettings::default(),
-        )
-        .next()
-    {
-        println!(
-            "FMFT expansion yielded terms beyond expansion depth supported: Oep({},{})",
-            m.match_stack.get(vakint::symbols::S.x_).unwrap().to_atom(),
-            m.match_stack.get(vakint::symbols::S.y_).unwrap().to_atom(),
-        );
-    } else {
-        println!("NO MATCH!");
-    }
+#[test_log::test]
+#[allow(non_snake_case)]
+fn test_integrate_4l_PR9d_from_H() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings { number_of_terms_in_epsilon_expansion: 5, n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
+        Atom::parse(
+            "( 1 )*topo(\
+                 prop(1,edge(5,1),k(1),muvsq,1)\
+                *prop(2,edge(2,6),k(2),muvsq,1)\
+                *prop(3,edge(6,5),k(3),muvsq,0)\
+                *prop(4,edge(3,4),k(4),muvsq,2)\
+                *prop(5,edge(4,5),k(1)-k(3),muvsq,1)\
+                *prop(6,edge(6,3),k(2)-k(3),muvsq,1)\
+                *prop(7,edge(4,1),k(3)-k(1)+k(4),muvsq,1)\
+                *prop(8,edge(2,3),k(3)-k(2)+k(4),muvsq,1)\
+                *prop(9,edge(1,2),k(3)+k(4),muvsq,0)\
+            )",
+        ).unwrap().as_view(),
+        // Masses chosen equal on purpose here so as to have a reliable target analytical result
+        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        convert_test_externals(
+        &(1..=2)
+            .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            // TBD
+            (0,  ("0.0".into(), "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
+#[allow(non_snake_case)]
+fn test_integrate_4l_PR9d_from_X() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings { number_of_terms_in_epsilon_expansion: 5, n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
+        Atom::parse(
+            "( 1 )*topo(\
+                prop(1,edge(5,1),k(1),muvsq,1)\
+                *prop(2,edge(2,6),k(2),muvsq,1)\
+                *prop(3,edge(6,5),k(3),muvsq,0)\
+                *prop(4,edge(4,3),k(4),muvsq,2)\
+                *prop(5,edge(3,5),k(1)-k(3),muvsq,1)\
+                *prop(6,edge(6,4),k(2)-k(3),muvsq,1)\
+                *prop(7,edge(3,2),k(3)-k(1)+k(4),muvsq,1)\
+                *prop(8,edge(1,4),k(3)-k(2)+k(4),muvsq,1)\
+                *prop(9,edge(2,1),k(3)-k(1)-k(2)+k(4),muvsq,0)\
+            )",
+        ).unwrap().as_view(),
+        // Masses chosen equal on purpose here so as to have a reliable target analytical result
+        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        convert_test_externals(
+        &(1..=2)
+            .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            // TBD
+            (0,  ("0.0".into(), "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
+#[allow(non_snake_case)]
+fn test_integrate_4l_PR9d_from_H_pinch() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings { number_of_terms_in_epsilon_expansion: 5, n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
+        Atom::parse(
+            "( 1 )*topo(\
+                 prop(1,edge(5,2),k(1),muvsq,1)\
+                *prop(2,edge(2,5),k(2),muvsq,1)\
+                *prop(4,edge(3,4),k(3),muvsq,2)\
+                *prop(5,edge(4,5),k(4),muvsq,1)\
+                *prop(6,edge(5,3),k(4)+k(2)-k(1),muvsq,1)\
+                *prop(7,edge(4,2),k(3)-k(4),muvsq,1)\
+                *prop(8,edge(2,3),k(1)-k(2)+k(3)-k(4),muvsq,1)\
+            )",
+        ).unwrap().as_view(),
+        // Masses chosen equal on purpose here so as to have a reliable target analytical result
+        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        convert_test_externals(
+        &(1..=2)
+            .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            // TBD
+            (0,  ("0.0".into(), "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
+#[allow(non_snake_case)]
+fn test_integrate_4l_PR9d_from_FG() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings { number_of_terms_in_epsilon_expansion: 5, n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
+        Atom::parse(
+            "( 1 )*topo(\
+                 prop(1,edge(5,3),k(1),muvsq,1)\
+                *prop(2,edge(3,4),k(2),muvsq,2)\
+                *prop(3,edge(4,5),k(3),muvsq,1)\
+                *prop(4,edge(2,1),k(1)-k(3),muvsq,0)\
+                *prop(5,edge(5,1),k(4),muvsq,1)\
+                *prop(6,edge(4,2),k(2)-k(3),muvsq,1)\
+                *prop(7,edge(1,5),k(1)-k(3)+k(4),muvsq,1)\
+                *prop(8,edge(3,2),k(1)-k(2),muvsq,1)\
+            )",
+        ).unwrap().as_view(),
+        // Masses chosen equal on purpose here so as to have a reliable target analytical result
+        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        convert_test_externals(
+        &(1..=2)
+            .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            // TBD
+            (0,  ("0.0".into(), "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
+#[allow(non_snake_case)]
+fn test_integrate_4l_PR9d_from_FG_pinch() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings { number_of_terms_in_epsilon_expansion: 5, n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
+        Atom::parse(
+            "( 1 )*topo(\
+                 prop(1,edge(5,3),k(1),muvsq,1)\
+                *prop(2,edge(3,4),k(2),muvsq,2)\
+                *prop(3,edge(4,5),k(3),muvsq,1)\
+                *prop(5,edge(5,1),k(4),muvsq,1)\
+                *prop(6,edge(4,1),k(2)-k(3),muvsq,1)\
+                *prop(7,edge(1,5),k(1)-k(3)+k(4),muvsq,1)\
+                *prop(8,edge(3,1),k(1)-k(2),muvsq,1)\
+            )",
+        ).unwrap().as_view(),
+        // Masses chosen equal on purpose here so as to have a reliable target analytical result
+        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        convert_test_externals(
+        &(1..=2)
+            .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            // TBD
+            (0,  ("0.0".into(), "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
+#[allow(non_snake_case)]
+fn test_integrate_4l_PR11d() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings { number_of_terms_in_epsilon_expansion: 5, n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
+        Atom::parse(
+            "( 1 )*topo(\
+                 prop(1,edge(1,2),k(1),muvsq,2)\
+                *prop(2,edge(2,5),k(2),muvsq,1)\
+                *prop(3,edge(3,4),k(3),muvsq,1)\
+                *prop(4,edge(4,5),k(4),muvsq,1)\
+                *prop(5,edge(2,3),k(1)-k(2),muvsq,1)\
+                *prop(6,edge(4,1),k(3)-k(4),muvsq,1)\
+                *prop(7,edge(5,3),k(2)+k(3)-k(1),muvsq,1)\
+                *prop(8,edge(1,5),k(3)-k(4)-k(1),muvsq,1)\
+            )",
+        ).unwrap().as_view(),
+        // Masses chosen equal on purpose here so as to have a reliable target analytical result
+        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        convert_test_externals(
+        &(1..=2)
+            .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            // TBD
+            (0,  ("0.0".into(), "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
 }

@@ -881,7 +881,6 @@ impl Integral {
             None,
             None,
         );
-
         if let Some(short_expression_pattern) = self.short_expression_pattern.as_ref() {
             if let Some(m1) = short_expression_pattern
                 .pattern_match(
@@ -904,9 +903,10 @@ impl Integral {
                     {
                         // We do not want to match propagators with zero powers in the short form,
                         // as these should be matched to the pinched version with a hardcoded zero power
-                        if a.is_zero() {
-                            return Ok(None);
-                        }
+                        // TMPTESTFIX
+                        // if a.is_zero() {
+                        //     return Ok(None);
+                        // }
                         replacement_rules.canonical_expression_substitutions.insert(
                             Atom::parse(format!("pow({})", i_prop).as_str()).unwrap(),
                             a.to_owned(),
@@ -974,21 +974,40 @@ impl Integral {
             None,
         );
 
+        let node_regexp = Regex::new(r"^n(\d+)[l|r]\_$").unwrap();
+
         // println!("input: {}", undirected_input);
         // println!(
         //     "pattern: {}",
         //     self.generic_pattern.pattern.to_atom().unwrap()
         // );
-        if let Some(m1) = self
-            .generic_pattern
-            .pattern
-            .pattern_match(
-                undirected_input.as_view(),
-                &self.generic_pattern.conditions,
-                &self.generic_pattern.match_settings,
-            )
-            .next()
-        {
+        let mut topology_matcher = self.generic_pattern.pattern.pattern_match(
+            undirected_input.as_view(),
+            &self.generic_pattern.conditions,
+            &self.generic_pattern.match_settings,
+        );
+        let mut next_match = topology_matcher.next();
+        #[allow(clippy::never_loop)]
+        #[allow(unused_assignments)]
+        while next_match.is_some() {
+            let m1 = next_match.unwrap();
+            // Make sure that all matched nodes are distinct
+            let mut node_matches = HashMap::<String, Atom>::default();
+            for (k, v) in m1.match_stack.get_matches() {
+                if let Some(regex_match) = node_regexp.captures(&k.to_string()) {
+                    node_matches.insert(
+                        String::from(regex_match.get(1).unwrap().as_str()),
+                        v.to_atom(),
+                    );
+                }
+            }
+            let distinct_nodes = HashSet::<Atom>::from_iter(node_matches.values().cloned());
+
+            if distinct_nodes.len() != node_matches.len() {
+                next_match = topology_matcher.next();
+                // We do not need a continue here I believe
+                break;
+            }
             let mut replacement_rules = ReplacementRules::default();
 
             for prop_id in 1..=self.n_props {
@@ -1106,7 +1125,7 @@ impl Integral {
                             );
                         if is_edge_flipped {
                             canonical_momenta_atom_for_pattern =
-                                canonical_momenta_atom_for_pattern * -1
+                                (canonical_momenta_atom_for_pattern * -1).expand()
                         }
 
                         replacement_rules
@@ -1120,10 +1139,12 @@ impl Integral {
                     );
                 }
             }
-            Ok(Some(replacement_rules))
-        } else {
-            Ok(None)
+            // println!("FROM integral: {}", self);
+            // println!("Found match: {}", replacement_rules);
+            // panic!("STOP");
+            return Ok(Some(replacement_rules));
         }
+        Ok(None)
     }
 
     fn to_canonical(&self, replacement_rules: &ReplacementRules, short_form: bool) -> Atom {
@@ -1145,14 +1166,15 @@ impl Integral {
         }
 
         // Remove propagators with zero powers
-        new_expression = Pattern::parse("prop(propID_,edge(nl_,nr_),q_,mUVsq_,0)")
-            .unwrap()
-            .replace_all(
-                new_expression.as_view(),
-                &Pattern::parse("1").unwrap().into(),
-                None,
-                None,
-            );
+        // TMPTESTFIX
+        // new_expression = Pattern::parse("prop(propID_,edge(nl_,nr_),q_,mUVsq_,0)")
+        //     .unwrap()
+        //     .replace_all(
+        //         new_expression.as_view(),
+        //         &Pattern::parse("1").unwrap().into(),
+        //         None,
+        //         None,
+        //     );
 
         new_expression
     }
