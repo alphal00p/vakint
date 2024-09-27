@@ -350,6 +350,7 @@ impl Topology {
         let mut contracted_canonical_expression = canonical_expression.to_owned();
         let mut contracted_short_expression = short_expression.to_owned();
         let mut nodes_to_merge = vec![];
+
         for prop_id in contraction.iter() {
             if let Some(m) = get_prop_with_id(contracted_canonical_expression.as_view(), *prop_id) {
                 let (left_node_id, right_node_id) = get_node_ids(&m).unwrap();
@@ -378,6 +379,7 @@ impl Topology {
                 }
             }
         }
+
         let mut old_contracted_canonical_expression = contracted_canonical_expression.clone();
         'replace_contracted_nodes: loop {
             for (old_node_id, new_node_id) in nodes_to_merge.iter() {
@@ -406,56 +408,6 @@ impl Topology {
             old_contracted_canonical_expression = contracted_canonical_expression.clone();
         }
 
-        /*
-        if !contracted_prop_indices.is_empty() {
-            let short_integral_symbol = if let Some(m) = Pattern::parse("fn_(args__)")
-                .unwrap()
-                .pattern_match(
-                    contracted_short_expression.as_view(),
-                    &Condition::default(),
-                    &MatchSettings::default(),
-                )
-                .next()
-            {
-                if let Match::FunctionName(s) =
-                    m.match_stack.get(State::get_symbol("fn_")).unwrap()
-                {
-                    s.to_string()
-                } else {
-                    return Err(VakintError::InvalidShortExpression(format!(
-                        "{}",
-                        short_expression
-                    )));
-                }
-            } else {
-                return Err(VakintError::InvalidShortExpression(format!(
-                    "{}",
-                    short_expression
-                )));
-            };
-            contracted_short_expression =
-                Pattern::parse(format!("{}(args__)", short_integral_symbol).as_str())
-                    .unwrap()
-                    .replace_all(
-                        contracted_short_expression.as_view(),
-                        &Pattern::parse(
-                            format!(
-                                "{}_{}(args__)",
-                                short_integral_symbol,
-                                contracted_prop_indices
-                                    .iter()
-                                    .map(|c| format!("{}", c))
-                                    .collect::<Vec<_>>()
-                                    .join("_")
-                            )
-                            .as_str(),
-                        )
-                        .unwrap(),
-                        None,
-                        None,
-                    );
-        }
-        */
         Ok(Integral::new(
             n_tot_props,
             Some(contracted_canonical_expression),

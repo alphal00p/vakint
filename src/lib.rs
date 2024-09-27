@@ -417,6 +417,8 @@ pub struct Integral {
     alphaloop_expression: Option<Atom>,
     applicable_evaluation_methods: EvaluationOrder,
     graph: Graph,
+    node_pairs: HashMap<Symbol, HashSet<Symbol>>,
+    unoriented_generic_pattern: FullPattern,
 }
 
 impl fmt::Display for Integral {
@@ -632,13 +634,15 @@ impl Integral {
                 name: "Unknown".into(),
                 n_loops: 0,
                 n_props: 0,
-                generic_pattern: all_accepting_pattern,
+                generic_pattern: all_accepting_pattern.clone(),
                 canonical_expression: None,
                 short_expression,
                 short_expression_pattern,
                 alphaloop_expression: None,
                 applicable_evaluation_methods,
                 graph: Graph::default(),
+                unoriented_generic_pattern: all_accepting_pattern,
+                node_pairs: HashMap::new(),
             });
         }
         let e = canonical_expression.clone().unwrap();
@@ -650,7 +654,10 @@ impl Integral {
         let mut old_atom = e.clone();
 
         let mut generic_expression = Atom::parse("1").unwrap();
-        let mut generic_condition = Condition::default();
+        let mut generic_condition: Condition<PatternRestriction> = Condition::default();
+        let mut unoriented_generic_expression = Atom::parse("1").unwrap();
+        let mut unoriented_generic_condition: Condition<PatternRestriction> = Condition::default();
+        let mut node_pairs = HashMap::<Symbol, HashSet<Symbol>>::default();
 
         for i_prop in 1..=tot_n_props {
             if let Some(m) = get_prop_with_id(e.as_view(), i_prop) {
@@ -743,16 +750,23 @@ impl Integral {
                     format!("prop(id{id}_,uedge(n{id_l_node}l_,n{id_r_node}r_),q{id}__,{mass},{power})",
                     id=i_prop,id_l_node=id_node_left, id_r_node=id_node_right,
                     mass=mass_symbol_string, power=pow_symbol_string).as_str()).unwrap();
+                unoriented_generic_expression = unoriented_generic_expression * Atom::parse(
+                        format!("prop(id{id}_,uedge(n{id_l_node}_,n{id_r_node}_),q{id}__,{mass},{power})",
+                        id=i_prop,id_l_node=id_node_left, id_r_node=id_node_right,
+                        mass=mass_symbol_string, power=pow_symbol_string).as_str()).unwrap();
+
+                let new_conditions =
+                    Condition::from((State::get_symbol(mass_symbol_string), symbol_or_number()))
+                        & Condition::from((
+                            State::get_symbol(format!("pow{}_", i_prop).as_str()),
+                            number_condition(),
+                        ))
+                        & Condition::from((
+                            State::get_symbol(format!("id{}_", i_prop).as_str()),
+                            number_condition(),
+                        ));
                 generic_condition = generic_condition
-                    & Condition::from((State::get_symbol(mass_symbol_string), symbol_or_number()))
-                    & Condition::from((
-                        State::get_symbol(format!("pow{}_", i_prop).as_str()),
-                        number_condition(),
-                    ))
-                    & Condition::from((
-                        State::get_symbol(format!("id{}_", i_prop).as_str()),
-                        number_condition(),
-                    ))
+                    & new_conditions.clone()
                     & apply_restriction_to_symbols(
                         vec![
                             State::get_symbol(format!("n{}l_", id_node_left).as_str()),
@@ -760,6 +774,24 @@ impl Integral {
                         ],
                         &symbol_or_number(),
                     );
+                unoriented_generic_condition = unoriented_generic_condition
+                    & new_conditions
+                    & apply_restriction_to_symbols(
+                        vec![
+                            State::get_symbol(format!("n{}_", id_node_left).as_str()),
+                            State::get_symbol(format!("n{}_", id_node_right).as_str()),
+                        ],
+                        &symbol_or_number(),
+                    );
+                for (id, side) in [(id_node_left, "l"), (id_node_right, "r")] {
+                    let new_entry = State::get_symbol(format!("n{}{}_", id, side));
+                    node_pairs
+                        .entry(State::get_symbol(format!("n{}_", id)))
+                        .and_modify(|v| {
+                            v.insert(new_entry);
+                        })
+                        .or_insert(HashSet::from([new_entry]));
+                }
                 next_atom = Pattern::parse(format!("prop({},args__)", i_prop).as_str())
                     .unwrap()
                     .replace_all(
@@ -781,6 +813,11 @@ impl Integral {
         let generic_pattern = FullPattern {
             pattern: generic_expression.into_pattern(),
             conditions: generic_condition,
+            match_settings: MatchSettings::default(),
+        };
+        let unoriented_generic_pattern = FullPattern {
+            pattern: unoriented_generic_expression.into_pattern(),
+            conditions: unoriented_generic_condition,
             match_settings: MatchSettings::default(),
         };
 
@@ -868,6 +905,8 @@ impl Integral {
             alphaloop_expression: Some(alphaloop_expression),
             applicable_evaluation_methods,
             graph,
+            unoriented_generic_pattern,
+            node_pairs,
         })
     }
 
@@ -901,9 +940,9 @@ impl Integral {
                         .match_stack
                         .get(State::get_symbol(format!("pow{}_", i_prop).as_str()))
                     {
-                        // We do not want to match propagators with zero powers in the short form,
+                        // NO: We do not want to match propagators with zero powers in the short form,
                         // as these should be matched to the pinched version with a hardcoded zero power
-                        // TMPTESTFIX
+                        // ZERO_POWERS: Better to keep them to allow use to match to higher-level inputs
                         // if a.is_zero() {
                         //     return Ok(None);
                         // }
@@ -974,40 +1013,61 @@ impl Integral {
             None,
         );
 
-        let node_regexp = Regex::new(r"^n(\d+)[l|r]\_$").unwrap();
+        // Make sure that the unoriented topology could at least match, otherwise abort immediately
+        if self
+            .unoriented_generic_pattern
+            .pattern
+            .pattern_match(
+                undirected_input.as_view(),
+                &self.unoriented_generic_pattern.conditions,
+                &MatchSettings::default(),
+            )
+            .next()
+            .is_none()
+        {
+            return Ok(None);
+        }
 
-        // println!("input: {}", undirected_input);
-        // println!(
-        //     "pattern: {}",
-        //     self.generic_pattern.pattern.to_atom().unwrap()
-        // );
         let mut topology_matcher = self.generic_pattern.pattern.pattern_match(
             undirected_input.as_view(),
             &self.generic_pattern.conditions,
             &self.generic_pattern.match_settings,
         );
-        let mut next_match = topology_matcher.next();
-        #[allow(clippy::never_loop)]
-        #[allow(unused_assignments)]
-        while next_match.is_some() {
-            let m1 = next_match.unwrap();
+        'outer: while let Some(m1) = topology_matcher.next() {
+            // println!("VHDEBUG match result:");
+            // for (k, v) in m1.match_stack.get_matches() {
+            //     println!("{} -> {}", k, v.to_atom());
+            // }
             // Make sure that all matched nodes are distinct
-            let mut node_matches = HashMap::<String, Atom>::default();
-            for (k, v) in m1.match_stack.get_matches() {
-                if let Some(regex_match) = node_regexp.captures(&k.to_string()) {
-                    node_matches.insert(
-                        String::from(regex_match.get(1).unwrap().as_str()),
-                        v.to_atom(),
-                    );
-                }
+            let mut node_matches: HashMap<Symbol, HashSet<Atom>> = HashMap::default();
+            for (unoriented_node, oriented_nodes) in self.node_pairs.iter() {
+                node_matches
+                    .entry(*unoriented_node)
+                    .or_insert(HashSet::from_iter(
+                        oriented_nodes
+                            .iter()
+                            .map(|&on| m1.match_stack.get(on).unwrap().to_atom()),
+                    ));
             }
-            let distinct_nodes = HashSet::<Atom>::from_iter(node_matches.values().cloned());
 
-            if distinct_nodes.len() != node_matches.len() {
-                next_match = topology_matcher.next();
-                // We do not need a continue here I believe
-                break;
+            // This check that all oriented node point to the same value
+            if node_matches.values().any(|nodes| nodes.len() != 1) {
+                continue 'outer;
             }
+            // This check that all unoriented nodes point to different values
+            if HashSet::<Atom>::from_iter(
+                node_matches
+                    .values()
+                    .map(|nodes| nodes.iter().next().unwrap())
+                    .cloned(),
+            )
+            .len()
+                != node_matches.len()
+            {
+                // We do not need a continue here because there is not enough distinct nodes w.r.t canonical expression I believe
+                break 'outer;
+            }
+
             let mut replacement_rules = ReplacementRules::default();
 
             for prop_id in 1..=self.n_props {
@@ -1139,11 +1199,25 @@ impl Integral {
                     );
                 }
             }
-            // println!("FROM integral: {}", self);
-            // println!("Found match: {}", replacement_rules);
-            // panic!("STOP");
+            // println!("VHDEBUG FROM integral: {}", self);
+            // println!("VHDEBUG Found match: {}", replacement_rules);
+            // panic!("VHDEBUG STOP");
             return Ok(Some(replacement_rules));
         }
+
+        // let msg = [
+        //     format!("User topology: {}", undirected_input),
+        //     format!(
+        //         "Unoriented pattern: {}",
+        //         self.unoriented_generic_pattern.pattern.to_atom().unwrap()
+        //     ),
+        //     format!(
+        //         "Oriented pattern: {}",
+        //         self.generic_pattern.pattern.to_atom().unwrap()
+        //     ),
+        // ];
+        // unreachable!("There should have been a match in Vakint at this stage. This is a logic error in vakint.\n{}",msg.join("\n"));
+
         Ok(None)
     }
 
@@ -1165,8 +1239,8 @@ impl Integral {
             );
         }
 
-        // Remove propagators with zero powers
-        // TMPTESTFIX
+        // NO: Remove propagators with zero powers
+        // ZERO_POWERS: Better to keep them to allow use to match to higher-level inputs
         // new_expression = Pattern::parse("prop(propID_,edge(nl_,nr_),q_,mUVsq_,0)")
         //     .unwrap()
         //     .replace_all(
