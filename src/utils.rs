@@ -2,9 +2,10 @@ use symbolica::{
     atom::{Atom, AtomView, Symbol},
     coefficient::CoefficientView,
     id::{Condition, MatchSettings, Pattern, PatternOrMap, PatternRestriction},
+    state::State,
 };
 
-use crate::VakintSettings;
+use crate::{eq_condition, VakintSettings};
 
 pub fn replace_until_stable(
     target: AtomView<'_>,
@@ -27,6 +28,13 @@ pub fn replace_until_stable(
 pub fn simplify_real(input: AtomView) -> Atom {
     let mut res = replace_until_stable(
         input,
+        &Pattern::parse("x_^y_").unwrap(),
+        &Pattern::parse("1").unwrap().into(),
+        Some(&Condition::from((State::get_symbol("y_"), eq_condition(0)))),
+        None,
+    );
+    res = replace_until_stable(
+        res.as_view(),
         &Pattern::parse("log(exp(x_))").unwrap(),
         &Pattern::parse("x_").unwrap().into(),
         None,

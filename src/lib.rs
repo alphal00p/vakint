@@ -213,6 +213,16 @@ fn gt_condition(value: i64) -> WildcardRestriction {
     }))
 }
 
+fn eq_condition(value: i64) -> WildcardRestriction {
+    WildcardRestriction::Filter(Box::new(move |m| {
+        if let Match::Single(AtomView::Num(a)) = m {
+            a.get_coeff_view() == InlineNum::new(value, 1).as_num_view().get_coeff_view()
+        } else {
+            false
+        }
+    }))
+}
+
 #[allow(unused)]
 fn lt_condition(value: i64) -> WildcardRestriction {
     WildcardRestriction::Filter(Box::new(move |m| {
@@ -1482,7 +1492,7 @@ impl EvaluationMethod {
         numerator: AtomView,
         integral_specs: &ReplacementRules,
     ) -> Result<Atom, VakintError> {
-        match self {
+        let result = match self {
             EvaluationMethod::AlphaLoop => {
                 vakint.alphaloop_evaluate(vakint, numerator, integral_specs)
             }
@@ -1495,7 +1505,9 @@ impl EvaluationMethod {
             EvaluationMethod::PySecDec(opts) => {
                 vakint.pysecdec_evaluate(vakint, numerator, integral_specs, opts)
             }
-        }
+        }?;
+        // Simplify logarithms and zero powers knowing that all arguments are real
+        Ok(simplify_real(result.as_view()))
     }
 }
 
@@ -1647,6 +1659,7 @@ pub enum LoopNormalizationFactor {
     #[allow(non_camel_case_types)]
     pySecDec,
     MSbar,
+    FMFTandMATAD,
     Custom(String),
 }
 
@@ -1654,6 +1667,9 @@ impl LoopNormalizationFactor {
     pub fn to_expression(&self) -> String {
         match self {
             LoopNormalizationFactor::pySecDec => "(𝑖*(𝜋^((4-2*eps)/2)))^(-n_loops)".into(),
+            LoopNormalizationFactor::FMFTandMATAD => {
+                "( 𝑖*(𝜋^((4-2*eps)/2)) * (exp(-EulerGamma))^(eps) )^(-n_loops)".into()
+            }
             LoopNormalizationFactor::MSbar => {
                 "(exp(log_mu_sq)/(4*𝜋*exp(-EulerGamma)))^(eps*n_loops)".into()
             }
@@ -1761,6 +1777,14 @@ impl fmt::Display for LoopNormalizationFactor {
                     f,
                     "{} convention [ {} ]",
                     String::from("MSbar").green(),
+                    self.to_expression()
+                )
+            }
+            LoopNormalizationFactor::FMFTandMATAD => {
+                write!(
+                    f,
+                    "{} convention [ {} ]",
+                    String::from("FMFTandMATAD").green(),
                     self.to_expression()
                 )
             }
@@ -2657,7 +2681,9 @@ impl Vakint {
     ) -> Result<Atom, VakintError> {
         let integral = integral_specs.canonical_topology.get_integral();
 
-        let pysecdec_inputs = if options.reuse_existing_output.is_some() {
+        let pysecdec_inputs = if options.reuse_existing_output.is_some()
+            && PathBuf::from(options.reuse_existing_output.as_ref().unwrap()).exists()
+        {
             vec![("run_pySecDec.py".into(), "".into())]
         } else {
             debug!(
@@ -3296,6 +3322,11 @@ impl Vakint {
         )?;
 
         let mut evaluated_integral = vakint.process_form_output(form_result)?;
+        debug!(
+            "{}: raw result from FORM:\n{}",
+            "AlphaLoop".green(),
+            evaluated_integral
+        );
 
         // Convert vectors back from pi(j) notation to p(i,j) notation
         for (s, t) in vector_mapping.iter() {
@@ -3802,15 +3833,21 @@ impl Vakint {
         reused_path: Option<String>,
         temporary_directory: Option<String>,
     ) -> Result<Vec<String>, VakintError> {
+        let mut generate_pysecdec_sources = true;
         let tmp_dir = &(if let Some(reused_path_specified) = reused_path.as_ref() {
             let specified_dir = PathBuf::from(reused_path_specified);
             if !specified_dir.exists() {
-                return Err(VakintError::PySecDecError(format!(
-                    "User-specified directory to be reused for pySecDec run '{}' does not exist.",
-                    reused_path_specified
-                )));
+                if fs::create_dir(specified_dir.clone()).is_err() {
+                    return Err(VakintError::PySecDecError(format!(
+                        "Could not create user-specified directory to be reused for pySecDec run '{}'.",
+                        reused_path_specified.green()
+                    )));
+                } else {
+                    warn!("User-specified directory '{}' not found, and was instead created and pySecDec sources will be regenerated.", reused_path_specified);
+                }
             } else {
-                warn!("{}",format!("User requested to re-use existing directory '{}' for the pysecdec run. This is of course potentially unsafe and should be used for debugging only.", reused_path_specified).red());
+                generate_pysecdec_sources = false;
+                warn!("{}",format!("User requested to re-use existing directory '{}' for the pysecdec run.\nThis is of course potentially unsafe and should be used for debugging only.\nRemove that directory to start clean.", reused_path_specified).red());
             }
             specified_dir
         } else {
@@ -3819,15 +3856,18 @@ impl Vakint {
             } else {
                 &env::temp_dir().join("vakint_temp_pysecdec")
             };
-            if tmp_directory.exists() {
-                fs::remove_dir_all(tmp_directory)?;
-            }
-            fs::create_dir(tmp_directory)?;
-            for input in input.iter() {
-                fs::write(tmp_directory.join(&input.0).to_str().unwrap(), &input.1)?;
-            }
             tmp_directory.clone()
         });
+
+        if generate_pysecdec_sources {
+            if tmp_dir.exists() {
+                fs::remove_dir_all(tmp_dir)?;
+            }
+            fs::create_dir(tmp_dir)?;
+            for input in input.iter() {
+                fs::write(tmp_dir.join(&input.0).to_str().unwrap(), &input.1)?;
+            }
+        };
 
         let mut cmd = Command::new(self.settings.python_exe_path.as_str());
         cmd.arg(input[0].clone().0);

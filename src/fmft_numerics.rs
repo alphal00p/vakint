@@ -8,18 +8,18 @@ use crate::{gt_condition, symbols::S};
 #[rustfmt::skip]
 pub static MASTERS_EXPANSION: LazyLock<HashMap<Atom, (Atom, symbolica::id::Condition<symbolica::id::PatternRestriction>)>> = LazyLock::new(|| {
     HashMap::<Atom, (Atom, symbolica::id::Condition<symbolica::id::PatternRestriction>)>::from_iter([
-        ( Atom::parse("PR0").unwrap(), ( Atom::parse("PR0ep0+ep*PR0ep1+Oep(2,I_PR0)").unwrap(), Condition::default() )  ),
+        ( Atom::parse("PR0").unwrap(), ( Atom::parse("PR0ep0+ep*PR0ep1+ep^2*Oep(2,I_PR0)").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR1").unwrap(), ( Atom::parse("ep*PR1ep1+ep^2*PR1ep2+ep^3*Oep(3,I_PR1)").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR2").unwrap(), ( Atom::parse("ep*PR2ep1+ep^2*PR2ep2+ep^3*Oep(3,I_PR2)").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR3").unwrap(), ( Atom::parse("ep*PR3ep1+ep^2*Oep(2,I_PR3)").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR4").unwrap(), ( Atom::parse("PR4fin+ep*PR4ep1+ep^2*Oep(2,I_PR4)").unwrap(), Condition::default() )  ),
-        ( Atom::parse("PR4d").unwrap(), ( Atom::parse("PR4dfin+ep^1*Oep(1,I_PR4d)").unwrap(), Condition::default() )  ),
+        ( Atom::parse("PR4d").unwrap(), ( Atom::parse("PR4dfin+ep*PR4dep1+ep^2*Oep(2,I_PR4d)").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR5").unwrap(), ( Atom::parse("PR5ep0+ep*PR5ep1+ep^2*Oep(2,I_PR5)").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR6").unwrap(), ( Atom::parse("PR6ep0+PR6ep1+ep^2*Oep(2,I_PR6)").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR7").unwrap(), ( Atom::parse("ep*PR7ep1+ep^2*Oep(2,I_PR7)").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR8").unwrap(), ( Atom::parse("PR8ep0+ep*PR8ep1+ep^2*Oep(2,I_PR8)").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR9").unwrap(), ( Atom::parse("PR9ep0+ep*PR9ep1+ep^2*Oep(2,I_PR9)").unwrap(), Condition::default() )  ),
-        ( Atom::parse("PR9d").unwrap(), ( Atom::parse("PR9dep0+ep*PR9dep1+ep^2*Oep(2,I_PR9d)").unwrap(), Condition::default() )  ),
+        ( Atom::parse("PR9d").unwrap(), ( Atom::parse("PR9dep0+ep*Oep(1,I_PR9d)").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR9x").unwrap(), ( Atom::parse("Oep(0,I_PR9x)").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR10").unwrap(), ( Atom::parse("PR10ep0+ep*PR10ep1+ep^2*Oep(2,I_PR10)").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR11").unwrap(), ( Atom::parse("PR11ep0+ep*PR11ep1+ep^2*Oep(2,I_PR11)").unwrap(), Condition::default() )  ),
@@ -46,6 +46,7 @@ pub static MASTERS_NUMERIC_SUBSTITUTIONS: LazyLock<HashMap<Atom, (Atom, symbolic
         ( Atom::parse("PR4fin").unwrap(), ( Atom::parse("242.050117954643804014978717265484640593495789035`47.38390529861516").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR4ep1").unwrap(), ( Atom::parse("805.39356980484714806569188577471546264034539425`47.9060081579143").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR4dfin").unwrap(), ( Atom::parse("-15.493368092575709193442653275474471557939250538`46.19014583899977").unwrap(), Condition::default() )  ),
+        ( Atom::parse("PR4dep1").unwrap(), ( Atom::parse("-108.14476548488341355588400831`29").unwrap(), Condition::default() )  ), // WARNING: TO CHECK recomputed by Andrey Pikelner
         ( Atom::parse("PR7ep1").unwrap(), ( Atom::parse("351.856393954858174102752810400730901320324640654`47.546365447459706").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR5ep0").unwrap(), ( Atom::parse("97.954502530323744507518417753851225794669866652`46.99102440336427").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR5ep1").unwrap(), ( Atom::parse("-731.294667127790531502130328099791000927488914711`47.8640924063992").unwrap(), Condition::default() )  ),
@@ -55,13 +56,12 @@ pub static MASTERS_NUMERIC_SUBSTITUTIONS: LazyLock<HashMap<Atom, (Atom, symbolic
         ( Atom::parse("PR10ep1").unwrap(), ( Atom::parse("1331.5086201597755726386137211977445023921648218940000000000001`48.124343982397725").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR9ep0").unwrap(), ( Atom::parse("176.299364244027074851255484186336943940219584747`47.24625074618583").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR9ep1").unwrap(), ( Atom::parse("1102.674905892778154755242510361805072623630374182`48.042447491236786").unwrap(), Condition::default() )  ),
-        ( Atom::parse("PR9dep0").unwrap(), ( Atom::parse("Oep(0,I_PR9d)").unwrap(), Condition::default() )  ),
-        ( Atom::parse("PR9dep1").unwrap(), ( Atom::parse("Oep(1,I_PR9d)").unwrap(), Condition::default() )  ),
+        ( Atom::parse("PR9dep0").unwrap(), ( Atom::parse("-28.31064373017674207211847385`28").unwrap(), Condition::default() )  ), // WARNING: TO CHECK recomputed by Andrey Pikelner
         ( Atom::parse("PR15ep0").unwrap(), ( Atom::parse("48.009027958906674363678485283983092360809357278`46.681322912876965").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR15ep1").unwrap(), ( Atom::parse("-218.149672530810769655687707694718045665686497758`47.338754565394495").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR11ep0").unwrap(), ( Atom::parse("-38.9591108409575465929423742740719803039848425076`47.590609036469615").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR11ep1").unwrap(), ( Atom::parse("233.597607608865655738939645820511962434908583903`47.36846839063391").unwrap(), Condition::default() )  ),
-        ( Atom::parse("PR11dep0").unwrap(), ( Atom::parse("Oep(0,I_PR11d)").unwrap(), Condition::default() )  ),        
+        ( Atom::parse("PR11dep0").unwrap(), ( Atom::parse("-2.906486288643112641819206`26").unwrap(), Condition::default() )  ), // WARNING: TO CHECK recomputed by Andrey Pikelner    
         ( Atom::parse("PR12ep0").unwrap(), ( Atom::parse("-1.348948021709708959864454302921398883618322214161`48.129995215558075").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR12ep1").unwrap(), ( Atom::parse("8.3499252416092701380389129975518639518139171516`46.92168258718397").unwrap(), Condition::default() )  ),
         ( Atom::parse("PR0ep0").unwrap(), ( Atom::parse("-0.997672576874263051049093586736116142011864780629`47.998988034886594").unwrap(), Condition::default() )  ),

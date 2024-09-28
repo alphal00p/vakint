@@ -160,7 +160,7 @@ fn test_2l_matching_pinched() {
         Atom::parse(
             "(k(2,2)^2+k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(\
                         prop(1,edge(2,2),k(1),mUVsq,2)*\
-                        prop(2,edge(2,2),k(2),mUVsq,1)\
+                        prop(2,edge(2,2),k(2),mUVsq,1)
                     )",
         )
         .unwrap(),
@@ -196,8 +196,9 @@ fn test_2l_matching_pinched() {
             .map(|a| a.as_view()),
         Atom::parse(
             "(k(2,2)^2+k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(\
-                        prop(1,edge(2,2),k(1),mUVsq,2)*\
-                        prop(2,edge(2,2),k(2),mUVsq,1)\
+                        prop(1,edge(1,2),k(1),mUVsq,2)*\
+                        prop(2,edge(1,2),k(2),mUVsq,1)*\
+                        prop(3,edge(2,1),k(1)+k(2),mUVsq,0)
                 )",
         )
         .unwrap(),

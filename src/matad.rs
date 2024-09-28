@@ -566,11 +566,13 @@ impl Vakint {
             vakint.settings.temporary_directory.clone(),
         )?;
 
-        //println!("form_result = {}", form_result);
         let processed_form_result = self.process_form_output(form_result)?;
         let mut evaluated_integral = matad.process_matad_form_output(processed_form_result)?;
-        //println!("evaluated_integral first = {}", evaluated_integral);
-
+        debug!(
+            "{}: raw result from FORM:\n{}",
+            "MATAD".green(),
+            evaluated_integral
+        );
         evaluated_integral = Pattern::parse("M^pow_").unwrap().replace_all(
             evaluated_integral.as_view(),
             &Pattern::parse(format!("{}^(pow_/2)", muv_sq_symbol).as_str())

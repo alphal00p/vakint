@@ -403,7 +403,6 @@ pub fn compare_vakint_evaluation_vs_reference(
         allow_unknown_integrals: true,
         use_dot_product_notation: true,
         mu_r_sq_symbol: "mursq".into(),
-        integral_normalization_factor: LoopNormalizationFactor::MSbar,
         n_digits_at_evaluation_time: prec,
         evaluation_order: mod_evaluation_order.clone(),
         ..vakint_default_settings
@@ -419,6 +418,7 @@ pub fn compare_vakint_evaluation_vs_reference(
         .evaluate_integral(integral.as_view())
         .unwrap_or_else(|op| panic!("Failed to evaluate integral: {}", op));
 
+    debug!("Result before numerical evaluation:\n{}", integral);
     let (result, error) = Vakint::full_numerical_evaluation(
         &vakint.settings,
         integral.as_view(),

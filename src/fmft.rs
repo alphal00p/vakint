@@ -523,11 +523,13 @@ impl Vakint {
             vakint.settings.temporary_directory.clone(),
         )?;
 
-        println!("form_result = {}", form_result);
         let processed_form_result = self.process_form_output(form_result)?;
         let mut evaluated_integral = fmft.process_fmft_form_output(processed_form_result)?;
-        println!("evaluated_integral first = {}", evaluated_integral);
-
+        debug!(
+            "{}: raw result from FORM:\n{}",
+            "FMFT".green(),
+            evaluated_integral
+        );
         // Restore dimensionality now
         evaluated_integral = evaluated_integral
             * Atom::parse(format!("{}^{}", muv_sq_symbol, muv_sq_dimension).as_str()).unwrap();

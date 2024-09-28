@@ -16,7 +16,8 @@ fn test_integrate_1l_pysecdec() {
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
-        ((&EvaluationOrder::analytic_only() ,true),(&EvaluationOrder::pysecdec_only(None) ,false)),
+        ((&EvaluationOrder::analytic_only() ,true),
+        (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_1l_pysecdec".into()),..PySecDecOptions::default() })) ,false)),
         Atom::parse(
             "(1)*topo(\
             prop(1,edge(1,1),k(1),muvsq,1)\
@@ -40,7 +41,8 @@ fn test_integrate_1l_pysecdec_non_unit_mass() {
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
-        ((&EvaluationOrder::analytic_only() ,true),(&EvaluationOrder::pysecdec_only(None) ,false)),
+        ((&EvaluationOrder::analytic_only() ,true),
+        (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_1l_pysecdec_non_unit_mass".into()),..PySecDecOptions::default() })) ,false)),
         Atom::parse(
             "(1)*topo(\
             prop(1,edge(1,1),k(1),muvsq,1)\
@@ -64,7 +66,8 @@ fn test_integrate_1l_pysecdec_non_unit_scale() {
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
-        ((&EvaluationOrder::analytic_only() ,true),(&EvaluationOrder::pysecdec_only(None) ,false)),
+        ((&EvaluationOrder::analytic_only() ,true),
+        (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_1l_pysecdec_non_unit_scale".into()),..PySecDecOptions::default() })) ,false)),
         Atom::parse(
             "(1)*topo(\
             prop(1,edge(1,1),k(1),muvsq,1)\
@@ -88,7 +91,8 @@ fn test_integrate_1l_pysecdec_num_rank_two() {
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
-        ((&EvaluationOrder::analytic_only() ,true),(&EvaluationOrder::pysecdec_only(None) ,false)),
+        ((&EvaluationOrder::analytic_only() ,true),
+        (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_1l_pysecdec_num_rank_two".into()),..PySecDecOptions::default() })) ,false)),
         Atom::parse(
             "((k(1,33)*k(1,33))^2+k(1,55)*p(1,55))*topo(\
             prop(1,edge(1,1),k(1),muvsq,1)\
@@ -112,7 +116,8 @@ fn test_integrate_1l_pysecdec_dot_product_external() {
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
-        ((&EvaluationOrder::analytic_only() ,true),(&EvaluationOrder::pysecdec_only(None) ,false)),
+        ((&EvaluationOrder::analytic_only() ,true),
+        (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_1l_pysecdec_dot_product_external".into()),..PySecDecOptions::default() })) ,false)),
         Atom::parse(
             "(k(1,1)*p(1,1)*k(1,2)*p(2,2))*topo(\
                 prop(1,edge(1,1),k(1),muvsq,1)\
@@ -135,7 +140,8 @@ fn test_integrate_2l_pysecdec() {
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
-        ((&EvaluationOrder::analytic_only() ,true),(&EvaluationOrder::pysecdec_only(None) ,false)),
+        ((&EvaluationOrder::analytic_only() ,true),
+        (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_2l_pysecdec".into()),..PySecDecOptions::default() })) ,false)),
         Atom::parse(
             "(1)*topo(\
                 prop(1,edge(1,2),k(1),muvsq,1)\
@@ -161,7 +167,8 @@ fn test_integrate_2l_pysecdec_pinched() {
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
-        ((&EvaluationOrder::analytic_only() ,true),(&EvaluationOrder::pysecdec_only(None) ,false)),
+        ((&EvaluationOrder::analytic_only() ,true),
+        (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_2l_pysecdec_pinched".into()),..PySecDecOptions::default() })) ,false)),
         Atom::parse(
             "(1)*topo(\
                 prop(1,edge(1,2),k(1),muvsq,1)\
@@ -186,7 +193,8 @@ fn test_integrate_2l_pysecdec_pinched_other_lmb() {
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
-        ((&EvaluationOrder::analytic_only() ,true),(&EvaluationOrder::pysecdec_only(None) ,false)),
+        ((&EvaluationOrder::analytic_only() ,true),
+        (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_2l_pysecdec_pinched_other_lmb".into()),..PySecDecOptions::default() })) ,false)),
         Atom::parse(
             "(1)*topo(\
                 prop(1,edge(1,2),k(1),muvsq,1)\
@@ -211,7 +219,8 @@ fn test_integrate_2l_pysecdec_rank_four_num() {
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
-        ((&EvaluationOrder::analytic_only() ,true),(&EvaluationOrder::pysecdec_only(None) ,false)),
+        ((&EvaluationOrder::analytic_only() ,true),
+        (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_2l_pysecdec_rank_four_num".into()),..PySecDecOptions::default() })) ,false)),
         Atom::parse(
             "(
                   k(1,11)*k(2,22)*k(1,11)*k(2,22)
@@ -242,7 +251,8 @@ fn test_integrate_3l_pysecdec() {
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
-        ((&EvaluationOrder::analytic_only() ,true),(&EvaluationOrder::pysecdec_only(None) ,false)),
+        ((&EvaluationOrder::analytic_only() ,true),
+        (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_3l_pysecdec".into()),..PySecDecOptions::default() })) ,false)),
         Atom::parse(
             "( 1 )
             *topo(\
@@ -274,7 +284,7 @@ fn test_integrate_3l_rank_4() {
         VakintSettings::default(),
         ((&EvaluationOrder::analytic_only() ,true),
          (&EvaluationOrder(vec![EvaluationMethod::PySecDec(
-            PySecDecOptions{ min_n_evals: 100_000, max_n_evals: 10_000_000, ..PySecDecOptions::default()} )]) ,true)),
+            PySecDecOptions{ min_n_evals: 100_000, max_n_evals: 10_000_000, reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_integrate_3l_rank_4".into()),..PySecDecOptions::default()} )]) ,true)),
         Atom::parse(
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
@@ -312,7 +322,7 @@ fn test_integrate_3l_rank_4_matad() {
          (&EvaluationOrder(vec![EvaluationMethod::PySecDec(
             PySecDecOptions{ 
                 // reuse_existing_output: Some("./SAVED_PYSECDEC_OUTPUTS/test_integrate_3l_rank_4_matad".into()),
-                min_n_evals: 100_000, max_n_evals: 10_000_000, ..PySecDecOptions::default()} )]) ,true)),
+                min_n_evals: 100_000, max_n_evals: 10_000_000, reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_3l_rank_4_matad".into()), ..PySecDecOptions::default()} )]) ,true)),
         Atom::parse(
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)

@@ -1,5 +1,8 @@
 mod test_utils;
-use vakint::{utils::simplify_real, EvaluationMethod, EvaluationOrder, FMFTOptions, MATADOptions};
+use vakint::{
+    utils::simplify_real, EvaluationMethod, EvaluationOrder, FMFTOptions, LoopNormalizationFactor,
+    MATADOptions,
+};
 
 use std::vec;
 
@@ -138,10 +141,65 @@ fn test_integrate_1l_a() {
 }
 
 #[test_log::test]
+fn test_integrate_1l_simple() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings{number_of_terms_in_epsilon_expansion: 2, integral_normalization_factor: LoopNormalizationFactor::pySecDec,..VakintSettings::default()},
+        EvaluationOrder::analytic_only(),
+        Atom::parse(
+            "( 1 )*topo(\
+                prop(1,edge(1,1),k(1),muvsq,1)\
+            )",
+        )
+        .unwrap()
+        .as_view(),
+        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        HashMap::default(),
+        vec![
+            (-1, ("1.0".into(), "0.0".into()),),
+            (0,  ("4.227843350984671393934879099176e-1".into(),  "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
+fn test_integrate_1l_cross_product() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings{number_of_terms_in_epsilon_expansion: 5, integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
+        EvaluationOrder::analytic_only(),
+        Atom::parse(
+            "(k(1,11)*p(1,11)*k(1,12)*p(1,12))*topo(\
+                prop(1,edge(1,1),k(1),muvsq,2)\
+            )",
+        )
+        .unwrap()
+        .as_view(),
+        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        convert_test_externals(
+        &(1..=1)
+            .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            (-1, ("0.0".into(), "-15.41829599538179739876641630989".into()),),
+            (0,  ("0.0".into(),  "41.25556923066471696715797280407".into()),),
+            (1,  ("0.0".into(), "-75.58506810083682014451198579381".into()),),
+            (2,  ("0.0".into(),  "104.8268973321405776943695037314".into()),),
+            (3,  ("0.0".into(),  "-130.2125934660588794479583559489".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
 fn test_integrate_1l_dot_product_external() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings::default(),
+        VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::analytic_only(),
         Atom::parse(
             "(k(1,1)*p(1,1)*k(1,2)*p(2,2))*topo(\
@@ -171,7 +229,7 @@ fn test_integrate_1l_dot_product_external() {
 fn test_integrate_2l() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings::default(),
+        VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::analytic_only(),
         Atom::parse(
             "(1)*topo(\
@@ -203,7 +261,7 @@ fn test_integrate_2l() {
 fn test_integrate_3l() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings::default(),
+        VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::alphaloop_only(),
         Atom::parse(
             "(1)*topo(\
@@ -236,7 +294,7 @@ fn test_integrate_3l() {
 fn test_integrate_3l_rank_4() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings::default(),
+        VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::alphaloop_only(),
         Atom::parse(
             "(
@@ -274,7 +332,7 @@ fn test_integrate_3l_rank_4() {
 fn test_integrate_3l_rank_4_matad() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings{number_of_terms_in_epsilon_expansion: 5,..VakintSettings::default()},
+        VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar, number_of_terms_in_epsilon_expansion: 5,..VakintSettings::default()},
         EvaluationOrder::matad_only(Some(MATADOptions {direct_numerical_substition: true,..MATADOptions::default()})),
         Atom::parse(
             "(
@@ -313,7 +371,7 @@ fn test_integrate_3l_rank_4_matad() {
 fn test_integrate_3l_matad() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings{number_of_terms_in_epsilon_expansion: 5,..VakintSettings::default()},
+        VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar, number_of_terms_in_epsilon_expansion: 5,..VakintSettings::default()},
         EvaluationOrder::matad_only(None),
         Atom::parse(
             "(1)*topo(\
@@ -347,19 +405,19 @@ fn test_integrate_3l_matad() {
 fn test_integrate_4l_h() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings { number_of_terms_in_epsilon_expansion: 5, n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::MSbar, number_of_terms_in_epsilon_expansion: 5, n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
         Atom::parse(
             "(1)*topo(\
-                 prop(2,edge(5,1),k(1),muvsq,1)\
-                *prop(3,edge(2,6),k(2),muvsq,1)\
-                *prop(4,edge(6,5),k(3),muvsq,1)\
-                *prop(5,edge(4,3),k(4),muvsq,1)\
-                *prop(6,edge(3,5),k(1)-k(3),muvsq,1)\
-                *prop(7,edge(6,4),k(2)-k(3),muvsq,1)\
-                *prop(8,edge(3,2),k(3)-k(1)+k(4),muvsq,1)\
-                *prop(9,edge(1,4),k(3)-k(2)+k(4),muvsq,1)\
-                *prop(1,edge(2,1),k(3)-k(1)-k(2)+k(4),muvsq,1)\
+                 prop(1,edge(5,1),k(1),muvsq,1)\
+                *prop(2,edge(2,6),k(2),muvsq,1)\
+                *prop(3,edge(6,5),k(3),muvsq,1)\
+                *prop(4,edge(3,4),k(4),muvsq,1)\
+                *prop(5,edge(4,5),k(1)-k(3),muvsq,1)\
+                *prop(6,edge(6,3),k(2)-k(3),muvsq,1)\
+                *prop(7,edge(4,1),k(3)-k(1)+k(4),muvsq,1)\
+                *prop(8,edge(2,3),k(3)-k(2)+k(4),muvsq,1)\
+                *prop(9,edge(1,2),k(3)+k(4),muvsq,1)\
             )",
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
@@ -382,7 +440,7 @@ fn test_integrate_4l_h() {
 fn test_integrate_4l_h_rank_4() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings { number_of_terms_in_epsilon_expansion: 5, n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::MSbar, number_of_terms_in_epsilon_expansion: 5, n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
         Atom::parse(
             "(
@@ -390,15 +448,15 @@ fn test_integrate_4l_h_rank_4() {
                 + p(1,11)*k(3,11)*k(3,22)*p(2,22)
                 + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
              )*topo(\
-                 prop(2,edge(5,1),k(1),muvsq,1)\
-                *prop(3,edge(2,6),k(2),muvsq,1)\
-                *prop(4,edge(6,5),k(3),muvsq,1)\
-                *prop(5,edge(4,3),k(4),muvsq,1)\
-                *prop(6,edge(3,5),k(1)-k(3),muvsq,1)\
-                *prop(7,edge(6,4),k(2)-k(3),muvsq,1)\
-                *prop(8,edge(3,2),k(3)-k(1)+k(4),muvsq,1)\
-                *prop(9,edge(1,4),k(3)-k(2)+k(4),muvsq,1)\
-                *prop(1,edge(2,1),k(3)-k(1)-k(2)+k(4),muvsq,1)\
+                 prop(1,edge(5,1),k(1),muvsq,1)\
+                *prop(2,edge(2,6),k(2),muvsq,1)\
+                *prop(3,edge(6,5),k(3),muvsq,1)\
+                *prop(4,edge(3,4),k(4),muvsq,1)\
+                *prop(5,edge(4,5),k(1)-k(3),muvsq,1)\
+                *prop(6,edge(6,3),k(2)-k(3),muvsq,1)\
+                *prop(7,edge(4,1),k(3)-k(1)+k(4),muvsq,1)\
+                *prop(8,edge(2,3),k(3)-k(2)+k(4),muvsq,1)\
+                *prop(9,edge(1,2),k(3)+k(4),muvsq,1)\
             )",
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
@@ -410,7 +468,7 @@ fn test_integrate_4l_h_rank_4() {
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
-            (0,  ("-12799.53514305961548130719263292".into(), "0.0".into()),),
+            (0,  ("-900538.9715718440021693147649038".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -421,7 +479,8 @@ fn test_integrate_4l_h_rank_4() {
 fn test_integrate_4l_PR9d_from_H() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings { number_of_terms_in_epsilon_expansion: 5, n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5, 
+            n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
         Atom::parse(
             "( 1 )*topo(\
@@ -445,8 +504,7 @@ fn test_integrate_4l_PR9d_from_H() {
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
-            // TBD
-            (0,  ("0.0".into(), "0.0".into()),),
+            (0,  ("-28.31064373017674207211847384976".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -457,7 +515,8 @@ fn test_integrate_4l_PR9d_from_H() {
 fn test_integrate_4l_PR9d_from_X() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings { number_of_terms_in_epsilon_expansion: 5, n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5, 
+            n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
         Atom::parse(
             "( 1 )*topo(\
@@ -481,8 +540,7 @@ fn test_integrate_4l_PR9d_from_X() {
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
-            // TBD
-            (0,  ("0.0".into(), "0.0".into()),),
+            (0,  ("-28.31064373017674207211847384976".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -493,7 +551,8 @@ fn test_integrate_4l_PR9d_from_X() {
 fn test_integrate_4l_PR9d_from_H_pinch() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings { number_of_terms_in_epsilon_expansion: 5, n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5, 
+            n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
         Atom::parse(
             "( 1 )*topo(\
@@ -515,8 +574,7 @@ fn test_integrate_4l_PR9d_from_H_pinch() {
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
-            // TBD
-            (0,  ("0.0".into(), "0.0".into()),),
+            (0,  ("-28.31064373017674207211847384976".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -527,7 +585,8 @@ fn test_integrate_4l_PR9d_from_H_pinch() {
 fn test_integrate_4l_PR9d_from_FG() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings { number_of_terms_in_epsilon_expansion: 5, n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5, 
+            n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
         Atom::parse(
             "( 1 )*topo(\
@@ -550,8 +609,7 @@ fn test_integrate_4l_PR9d_from_FG() {
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
-            // TBD
-            (0,  ("0.0".into(), "0.0".into()),),
+            (0,  ("-28.31064373017674207211847384976".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -562,7 +620,8 @@ fn test_integrate_4l_PR9d_from_FG() {
 fn test_integrate_4l_PR9d_from_FG_pinch() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings { number_of_terms_in_epsilon_expansion: 5, n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5, 
+                         n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
         Atom::parse(
             "( 1 )*topo(\
@@ -584,8 +643,7 @@ fn test_integrate_4l_PR9d_from_FG_pinch() {
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
-            // TBD
-            (0,  ("0.0".into(), "0.0".into()),),
+            (0,  ("-28.31064373017674207211847384976".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -619,8 +677,7 @@ fn test_integrate_4l_PR11d() {
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
-            // TBD
-            (0,  ("0.0".into(), "0.0".into()),),
+            (0,  ("-2.906486288643112641819206002127".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
