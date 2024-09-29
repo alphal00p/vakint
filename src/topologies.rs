@@ -16,6 +16,7 @@ pub enum TopologyContractions {
     Automatic,
 }
 
+#[derive(Debug, Clone)]
 pub struct Topologies(Vec<Topology>);
 
 impl fmt::Display for Topologies {

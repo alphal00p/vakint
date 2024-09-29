@@ -1920,6 +1920,7 @@ impl From<Pattern> for FullPattern {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Vakint {
     #[allow(unused)]
     pub settings: VakintSettings,
@@ -2574,6 +2575,99 @@ impl NumericalEvaluationResult {
 }
 
 impl Vakint {
+    pub fn new(settings: Option<VakintSettings>) -> Result<Self, VakintError> {
+        // Force initialization of symbolica symbols with proper attributes
+        LazyLock::force(&S);
+        let vakint_settings = settings.unwrap_or_default();
+
+        // Verify that the chosen normalisation only contains the expected symbols
+        let (_full_atom, expanded, evaluated) = vakint_settings
+            .integral_normalization_factor
+            .validate(&vakint_settings)?;
+
+        debug!(
+            "Loop normalisation factor considered:\nFull                          : {}\nExpanded (n_loops=1)          : {}\nEvaluated (n_loops=1, mu_r=1) :\n{}",
+            vakint_settings.integral_normalization_factor, expanded, evaluated
+        );
+
+        let topologies = Topologies::generate_topologies(&vakint_settings)?;
+        let vakint = Vakint {
+            settings: vakint_settings,
+            topologies,
+        };
+
+        if vakint
+            .settings
+            .evaluation_order
+            .0
+            .iter()
+            .any(|em| em.dependencies().contains(&VakintDependency::FORM))
+        {
+            let form_version = vakint.get_form_version()?;
+            match compare_to(form_version.clone(), MINIMAL_FORM_VERSION, Cmp::Ge) {
+                Ok(valid) => {
+                    if valid {
+                        debug!(
+                            "{} successfully detected with version '{}'",
+                            "FORM".green(),
+                            form_version.green()
+                        );
+                    } else {
+                        return Err(VakintError::FormVersion(format!(
+                        "{} version installed on your system does not meet minimal requirements: {}<{}",
+                        "FORM".red(),
+                        form_version.red(), MINIMAL_FORM_VERSION
+                    )));
+                    }
+                }
+                Err(_) => {
+                    return Err(VakintError::FormVersion(format!(
+                        "Could not parse {} version '{}'.",
+                        "FORM".red(),
+                        form_version.red()
+                    )))
+                }
+            };
+        }
+
+        if vakint
+            .settings
+            .evaluation_order
+            .0
+            .iter()
+            .any(|em| em.dependencies().contains(&VakintDependency::PySecDec))
+        {
+            let pysecdec_version = vakint.get_pysecdec_version()?;
+            match compare_to(pysecdec_version.clone(), MINIMAL_PYSECDEC_VERSION, Cmp::Ge) {
+                Ok(valid) => {
+                    if valid {
+                        debug!(
+                            "{} successfully detected with version '{}'.",
+                            "PySecDec".green(),
+                            pysecdec_version.green()
+                        );
+                    } else {
+                        return Err(VakintError::FormVersion(format!(
+                            "{} version installed on your system does not meet minimal requirements: {}<{}.",
+                            "PySecDec".red(),
+                            pysecdec_version.red(), MINIMAL_PYSECDEC_VERSION
+                        )));
+                    }
+                }
+                Err(_) => {
+                    return Err(VakintError::FormVersion(format!(
+                        "Could not parse {} version '{}'.",
+                        "PySecDec".red(),
+                        pysecdec_version.red()
+                    )))
+                }
+            };
+        }
+        //println!("Topologies generated:\n{}", vakint.topologies);
+
+        Ok(vakint)
+    }
+
     pub fn params_from_f64(
         &self,
         params: &HashMap<String, f64, ahash::RandomState>,
@@ -3790,99 +3884,6 @@ impl Vakint {
             }
         }
         old_expr
-    }
-
-    pub fn new(settings: Option<VakintSettings>) -> Result<Self, VakintError> {
-        // Force initialization of symbolica symbols with proper attributes
-        LazyLock::force(&S);
-        let vakint_settings = settings.unwrap_or_default();
-
-        // Verify that the chosen normalisation only contains the expected symbols
-        let (_full_atom, expanded, evaluated) = vakint_settings
-            .integral_normalization_factor
-            .validate(&vakint_settings)?;
-
-        debug!(
-            "Loop normalisation factor considered:\nFull                          : {}\nExpanded (n_loops=1)          : {}\nEvaluated (n_loops=1, mu_r=1) :\n{}",
-            vakint_settings.integral_normalization_factor, expanded, evaluated
-        );
-
-        let topologies = Topologies::generate_topologies(&vakint_settings)?;
-        let vakint = Vakint {
-            settings: vakint_settings,
-            topologies,
-        };
-
-        if vakint
-            .settings
-            .evaluation_order
-            .0
-            .iter()
-            .any(|em| em.dependencies().contains(&VakintDependency::FORM))
-        {
-            let form_version = vakint.get_form_version()?;
-            match compare_to(form_version.clone(), MINIMAL_FORM_VERSION, Cmp::Ge) {
-                Ok(valid) => {
-                    if valid {
-                        debug!(
-                            "{} successfully detected with version '{}'",
-                            "FORM".green(),
-                            form_version.green()
-                        );
-                    } else {
-                        return Err(VakintError::FormVersion(format!(
-                        "{} version installed on your system does not meet minimal requirements: {}<{}",
-                        "FORM".red(),
-                        form_version.red(), MINIMAL_FORM_VERSION
-                    )));
-                    }
-                }
-                Err(_) => {
-                    return Err(VakintError::FormVersion(format!(
-                        "Could not parse {} version '{}'.",
-                        "FORM".red(),
-                        form_version.red()
-                    )))
-                }
-            };
-        }
-
-        if vakint
-            .settings
-            .evaluation_order
-            .0
-            .iter()
-            .any(|em| em.dependencies().contains(&VakintDependency::PySecDec))
-        {
-            let pysecdec_version = vakint.get_pysecdec_version()?;
-            match compare_to(pysecdec_version.clone(), MINIMAL_PYSECDEC_VERSION, Cmp::Ge) {
-                Ok(valid) => {
-                    if valid {
-                        debug!(
-                            "{} successfully detected with version '{}'.",
-                            "PySecDec".green(),
-                            pysecdec_version.green()
-                        );
-                    } else {
-                        return Err(VakintError::FormVersion(format!(
-                            "{} version installed on your system does not meet minimal requirements: {}<{}.",
-                            "PySecDec".red(),
-                            pysecdec_version.red(), MINIMAL_PYSECDEC_VERSION
-                        )));
-                    }
-                }
-                Err(_) => {
-                    return Err(VakintError::FormVersion(format!(
-                        "Could not parse {} version '{}'.",
-                        "PySecDec".red(),
-                        pysecdec_version.red()
-                    )))
-                }
-            };
-        }
-        //println!("Topologies generated:\n{}", vakint.topologies);
-
-        Ok(vakint)
     }
 
     pub fn prepare_expression_for_form(&self, expression: Atom) -> Result<String, VakintError> {
