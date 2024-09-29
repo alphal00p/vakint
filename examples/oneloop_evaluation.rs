@@ -7,7 +7,7 @@ fn main() {
         allow_unknown_integrals: false,
         use_dot_product_notation: true,
         integral_normalization_factor: vakint::LoopNormalizationFactor::MSbar,
-        n_digits_at_evaluation_time: 16,
+        run_time_decimal_precision: 16,
         ..VakintSettings::default()
     }))
     .unwrap();

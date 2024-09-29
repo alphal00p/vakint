@@ -20,60 +20,6 @@ pub fn get_vakint(vakint_settings: VakintSettings) -> Vakint {
 }
 
 #[allow(unused)]
-pub fn convert_test_params(
-    params: &HashMap<String, f64, ahash::RandomState>,
-    decimal_prec: u32,
-) -> HashMap<String, Complex<Float>, ahash::RandomState> {
-    let binary_prec: u32 = ((decimal_prec as f64) * LOG2_10).floor() as u32;
-    params
-        .iter()
-        .map(|(k, v)| {
-            (
-                k.clone(),
-                Complex::new(
-                    Float::with_val(binary_prec, v),
-                    Float::with_val(binary_prec, 0),
-                ),
-            )
-        })
-        .collect()
-}
-
-#[allow(unused)]
-pub fn convert_test_externals(
-    externals: &HashMap<usize, (f64, f64, f64, f64), ahash::RandomState>,
-    decimal_prec: u32,
-) -> HashMap<usize, Momentum, ahash::RandomState> {
-    let binary_prec: u32 = ((decimal_prec as f64) * LOG2_10).floor() as u32;
-    externals
-        .iter()
-        .map(|(&k, v)| {
-            (
-                k,
-                (
-                    Complex::new(
-                        Float::with_val(binary_prec, v.0),
-                        Float::with_val(binary_prec, 0.0),
-                    ),
-                    Complex::new(
-                        Float::with_val(binary_prec, v.1),
-                        Float::with_val(binary_prec, 0.0),
-                    ),
-                    Complex::new(
-                        Float::with_val(binary_prec, v.2),
-                        Float::with_val(binary_prec, 0.0),
-                    ),
-                    Complex::new(
-                        Float::with_val(binary_prec, v.3),
-                        Float::with_val(binary_prec, 0.0),
-                    ),
-                ),
-            )
-        })
-        .collect()
-}
-
-#[allow(unused)]
 pub fn compare_output(output: Result<AtomView, &VakintError>, expected_output: Atom) -> Atom {
     match output {
         Ok(r) => {
@@ -403,7 +349,7 @@ pub fn compare_vakint_evaluation_vs_reference(
         allow_unknown_integrals: true,
         use_dot_product_notation: true,
         mu_r_sq_symbol: "mursq".into(),
-        n_digits_at_evaluation_time: prec,
+        run_time_decimal_precision: prec,
         evaluation_order: mod_evaluation_order.clone(),
         ..vakint_default_settings
     };

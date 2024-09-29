@@ -4,7 +4,7 @@ use symbolica::atom::Atom;
 use test_utils::compare_two_evaluations;
 use vakint::{EvaluationMethod, EvaluationOrder, PySecDecOptions, VakintSettings};
 
-use crate::test_utils::{convert_test_externals, convert_test_params};
+use vakint::{externals_from_f64, params_from_f64};
 
 const N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC: u32 = 16;
 const COMPARISON_WITH_PYSECDEC_REL_THRESHOLD: f64 = 1.0e-7;
@@ -23,9 +23,9 @@ fn test_integrate_1l_pysecdec() {
             prop(1,edge(1,1),k(1),muvsq,1)\
         )",
         ).unwrap().as_view(),
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=2)
             .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
             .collect(),
@@ -48,9 +48,9 @@ fn test_integrate_1l_pysecdec_non_unit_mass() {
             prop(1,edge(1,1),k(1),muvsq,1)\
         )",
         ).unwrap().as_view(),
-        convert_test_params(&[("muvsq".into(), 2.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 2.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=2)
             .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
             .collect(),
@@ -73,9 +73,9 @@ fn test_integrate_1l_pysecdec_non_unit_scale() {
             prop(1,edge(1,1),k(1),muvsq,1)\
         )",
         ).unwrap().as_view(),
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=2)
             .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
             .collect(),
@@ -98,9 +98,9 @@ fn test_integrate_1l_pysecdec_num_rank_two() {
             prop(1,edge(1,1),k(1),muvsq,1)\
         )",
         ).unwrap().as_view(),
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=2)
             .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
             .collect(),
@@ -123,9 +123,9 @@ fn test_integrate_1l_pysecdec_dot_product_external() {
                 prop(1,edge(1,1),k(1),muvsq,1)\
             )",
         ).unwrap().as_view(),
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=2)
             .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
             .collect(),
@@ -149,9 +149,9 @@ fn test_integrate_2l_pysecdec() {
                 *prop(3,edge(2,1),k(1)+k(2),muvsq,1)\
             )",
         ).unwrap().as_view(),
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=2)
             .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
             .collect(),
@@ -175,9 +175,9 @@ fn test_integrate_2l_pysecdec_pinched() {
                 *prop(2,edge(1,2),k(2),muvsq,1)
             )",
         ).unwrap().as_view(),
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=2)
             .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
             .collect(),
@@ -201,9 +201,9 @@ fn test_integrate_2l_pysecdec_pinched_other_lmb() {
                 *prop(3,edge(2,1),k(1)+k(2),muvsq,1)
             )",
         ).unwrap().as_view(),
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=2)
             .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
             .collect(),
@@ -233,9 +233,9 @@ fn test_integrate_2l_pysecdec_rank_four_num() {
                 * prop(3,edge(2,1),k(1)+k(2),muvsq,1)\
             )",
         ).unwrap().as_view(),
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=2)
             .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
             .collect(),
@@ -264,9 +264,9 @@ fn test_integrate_3l_pysecdec() {
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
             )",
         ).unwrap().as_view(),
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=2)
             .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
             .collect(),
@@ -300,9 +300,9 @@ fn test_integrate_3l_rank_4() {
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
             )",
         ).unwrap().as_view(),
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=2)
             .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
             .collect(),
@@ -338,9 +338,9 @@ fn test_integrate_3l_rank_4_matad() {
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
             )",
         ).unwrap().as_view(),
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=2)
             .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
             .collect(),

@@ -109,7 +109,7 @@ fn test_set_precision_in_float_atom() {
         set_precision_in_float_atom(
             Atom::parse("1.23456789113245423`100").unwrap().as_view(),
             &VakintSettings {
-                n_digits_at_evaluation_time: 30,
+                run_time_decimal_precision: 30,
                 ..VakintSettings::default()
             }
         )

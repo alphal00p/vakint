@@ -6,9 +6,9 @@ use vakint::{
 use std::{collections::HashMap, vec};
 
 use symbolica::atom::Atom;
-use test_utils::convert_test_params;
+use vakint::{externals_from_f64, params_from_f64};
 
-use crate::test_utils::{compare_vakint_evaluation_vs_reference, convert_test_externals};
+use crate::test_utils::compare_vakint_evaluation_vs_reference;
 
 const N_DIGITS_PYSECDEC_EVALUATION_FOR_TESTS: u32 = 10;
 // PySecDec QMC is often very optimistic
@@ -28,7 +28,7 @@ fn test_integrate_1l_simple() {
         .unwrap()
         .as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_PYSECDEC_EVALUATION_FOR_TESTS),
         HashMap::default(),
         vec![
@@ -54,9 +54,9 @@ fn test_integrate_1l_cross_product() {
         .unwrap()
         .as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_PYSECDEC_EVALUATION_FOR_TESTS),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=1)
             .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
             .collect(),
@@ -89,9 +89,9 @@ fn test_integrate_2l_different_masses() {
         .unwrap()
         .as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
-        convert_test_params(&[("muvsqA".into(), 1.0), ("muvsqB".into(), 1.0), ("muvsqC".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsqA".into(), 1.0), ("muvsqB".into(), 1.0), ("muvsqC".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_PYSECDEC_EVALUATION_FOR_TESTS),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=1)
             .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
             .collect(),
@@ -126,9 +126,9 @@ fn test_integrate_3l_o_eps() {
         .unwrap()
         .as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_PYSECDEC_EVALUATION_FOR_TESTS),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=1)
             .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
             .collect(),
@@ -174,7 +174,7 @@ fn test_integrate_4l_h() {
         .unwrap()
         .as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             4),
         HashMap::default(),
         vec![
@@ -212,7 +212,7 @@ fn test_integrate_4l_PR9d_from_FG_pinch() {
         .unwrap()
         .as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             4),
         HashMap::default(),
         vec![
@@ -251,7 +251,7 @@ fn test_integrate_4l_PR11d() {
         .unwrap()
         .as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             4),
         HashMap::default(),
         vec![

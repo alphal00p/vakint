@@ -176,6 +176,58 @@ pub enum VakintError {
     Unknown,
 }
 
+pub fn params_from_f64(
+    params: &HashMap<String, f64, ahash::RandomState>,
+    decimal_prec: u32,
+) -> HashMap<String, Complex<Float>, ahash::RandomState> {
+    let binary_prec: u32 = ((decimal_prec as f64) * LOG2_10).floor() as u32;
+    params
+        .iter()
+        .map(|(k, v)| {
+            (
+                k.clone(),
+                Complex::new(
+                    Float::with_val(binary_prec, v),
+                    Float::with_val(binary_prec, 0),
+                ),
+            )
+        })
+        .collect()
+}
+
+pub fn externals_from_f64(
+    externals: &HashMap<usize, (f64, f64, f64, f64), ahash::RandomState>,
+    decimal_prec: u32,
+) -> HashMap<usize, Momentum, ahash::RandomState> {
+    let binary_prec: u32 = ((decimal_prec as f64) * LOG2_10).floor() as u32;
+    externals
+        .iter()
+        .map(|(&k, v)| {
+            (
+                k,
+                (
+                    Complex::new(
+                        Float::with_val(binary_prec, v.0),
+                        Float::with_val(binary_prec, 0.0),
+                    ),
+                    Complex::new(
+                        Float::with_val(binary_prec, v.1),
+                        Float::with_val(binary_prec, 0.0),
+                    ),
+                    Complex::new(
+                        Float::with_val(binary_prec, v.2),
+                        Float::with_val(binary_prec, 0.0),
+                    ),
+                    Complex::new(
+                        Float::with_val(binary_prec, v.3),
+                        Float::with_val(binary_prec, 0.0),
+                    ),
+                ),
+            )
+        })
+        .collect()
+}
+
 fn propagators_condition() -> WildcardRestriction {
     WildcardRestriction::Filter(Box::new(move |m| {
         let props = match m {
@@ -1615,7 +1667,7 @@ pub struct VakintSettings {
     pub python_exe_path: String,
     pub verify_numerator_identification: bool,
     pub integral_normalization_factor: LoopNormalizationFactor,
-    pub n_digits_at_evaluation_time: u32,
+    pub run_time_decimal_precision: u32,
     pub allow_unknown_integrals: bool,
     pub clean_tmp_dir: bool,
     pub evaluation_order: EvaluationOrder,
@@ -1634,7 +1686,7 @@ impl VakintSettings {
     }
 
     pub fn get_binary_precision(&self) -> u32 {
-        ((self.n_digits_at_evaluation_time.max(17) as f64) * LOG2_10).floor() as u32
+        ((self.run_time_decimal_precision.max(17) as f64) * LOG2_10).floor() as u32
     }
 
     pub fn real_to_prec(&self, re: &str) -> Complex<Float> {
@@ -1838,7 +1890,7 @@ impl Default for VakintSettings {
             form_exe_path: env::var("FORM_PATH").unwrap_or("form".into()),
             python_exe_path: env::var("PYTHON_BIN_PATH").unwrap_or("python3".into()),
             verify_numerator_identification: true,
-            n_digits_at_evaluation_time: 16,
+            run_time_decimal_precision: 32,
             integral_normalization_factor: LoopNormalizationFactor::pySecDec,
             allow_unknown_integrals: true,
             clean_tmp_dir: env::var("VAKINT_NO_CLEAN_TMP_DIR").is_err(),
@@ -2308,6 +2360,80 @@ impl fmt::Display for NumericalEvaluationResult {
 }
 
 impl NumericalEvaluationResult {
+    pub fn to_atom(&self, epsilon_symbol: Symbol) -> Atom {
+        let mut res = Atom::Zero;
+        for (exp, coeff) in self.get_epsilon_coefficients() {
+            res = res
+                + (Atom::new_num(coeff.re) + Atom::new_var(State::I) * Atom::new_num(coeff.im))
+                    * Atom::new_var(epsilon_symbol).pow(&Atom::new_num(exp))
+        }
+        res
+    }
+
+    pub fn from_atom(
+        input: AtomView,
+        epsilon_symbol: Symbol,
+        settings: &VakintSettings,
+    ) -> Result<Self, VakintError> {
+        let epsilon_coeffs = input.coefficient_list(epsilon_symbol);
+
+        let mut epsilon_coeffs_vec = epsilon_coeffs
+            .0
+            .iter()
+            .map(|(eps_atom, coeff)| {
+                if let Some(m) = Pattern::parse(format!("{}^n_", epsilon_symbol).as_str())
+                    .unwrap()
+                    .pattern_match(
+                        eps_atom.as_view(),
+                        &Condition::from((State::get_symbol("n_"), number_condition())),
+                        &MatchSettings::default(),
+                    )
+                    .next()
+                {
+                    (
+                        get_integer_from_match(m.match_stack.get(State::get_symbol("n_")).unwrap())
+                            .unwrap(),
+                        coeff,
+                    )
+                } else if *eps_atom == Atom::new_var(epsilon_symbol) {
+                    (1, coeff)
+                } else {
+                    panic!("Epsilon atom should be of the form {}^n_", epsilon_symbol)
+                }
+            })
+            .collect::<Vec<_>>();
+
+        if !epsilon_coeffs.1.is_zero() {
+            epsilon_coeffs_vec.push((0, &epsilon_coeffs.1));
+        }
+
+        let binary_prec = settings.get_binary_precision();
+        let mut epsilon_coeffs_vec_floats = vec![];
+        for (i64, coeff) in epsilon_coeffs_vec.iter() {
+            epsilon_coeffs_vec_floats.push((
+                *i64,
+                match coeff.evaluate(
+                    &Vakint::get_coeff_map(binary_prec),
+                    &HashMap::default(),
+                    &HashMap::default(),
+                    &mut HashMap::default(),
+                ) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        return Err(VakintError::EvaluationError(format!(
+                            "Coefficients of the Laurent series are not numbers. Expression: '{}' | Error: '{}'",
+                            coeff.to_canonical_string(),
+                            e
+                        )));
+                    }
+                },
+            ));
+        }
+
+        epsilon_coeffs_vec_floats.sort_by(|(i1, _), (i2, _)| i1.cmp(i2));
+        Ok(NumericalEvaluationResult(epsilon_coeffs_vec_floats))
+    }
+
     pub fn from_vec(input: Vec<(i64, (String, String))>, settings: &VakintSettings) -> Self {
         let binary_prec = settings.get_binary_precision();
         NumericalEvaluationResult(
@@ -2448,6 +2574,29 @@ impl NumericalEvaluationResult {
 }
 
 impl Vakint {
+    pub fn params_from_f64(
+        &self,
+        params: &HashMap<String, f64, ahash::RandomState>,
+    ) -> HashMap<String, Complex<Float>, ahash::RandomState> {
+        params_from_f64(params, self.settings.run_time_decimal_precision)
+    }
+
+    pub fn externals_from_f64(
+        &self,
+        externals: &HashMap<usize, (f64, f64, f64, f64), ahash::RandomState>,
+    ) -> HashMap<usize, Momentum, ahash::RandomState> {
+        externals_from_f64(externals, self.settings.run_time_decimal_precision)
+    }
+
+    pub fn numerical_evaluation(
+        &self,
+        expression: AtomView,
+        params: &HashMap<String, Complex<Float>, ahash::RandomState>,
+        externals: Option<&HashMap<usize, Momentum, ahash::RandomState>>,
+    ) -> Result<(NumericalEvaluationResult, Option<NumericalEvaluationResult>), VakintError> {
+        Vakint::full_numerical_evaluation(&self.settings, expression, params, externals)
+    }
+
     pub fn get_coeff_map(prec: u32) -> impl Fn(&Fraction<IntegerRing>) -> Complex<Float> {
         move |x| Complex::new(x.to_multi_prec_float(prec), Float::with_val(prec, 0.))
     }
@@ -3981,6 +4130,8 @@ impl Vakint {
     pub fn evaluate(&self, input: AtomView) -> Result<Atom, VakintError> {
         let mut vakint_expr = VakintExpression::try_from(input)?;
         vakint_expr.canonicalize(self, &self.topologies, false)?;
+        vakint_expr.tensor_reduce(self)?;
+        vakint_expr.evaluate_integral(self)?;
         Ok(vakint_expr.into())
     }
 

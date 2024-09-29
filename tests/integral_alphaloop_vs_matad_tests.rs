@@ -11,7 +11,7 @@ use symbolica::{
 use test_utils::compare_two_evaluations;
 use vakint::{matad::MATAD, EvaluationOrder, NumericalEvaluationResult, Vakint, VakintSettings};
 
-use crate::test_utils::{convert_test_externals, convert_test_params};
+use vakint::{externals_from_f64, params_from_f64};
 
 const N_DIGITS_ANLYTICAL_EVALUATION: u32 = 32;
 const COMPARISON_REL_THRESHOLD: f64 = 1.0e-25;
@@ -22,7 +22,7 @@ const MAX_PULL: f64 = 0.0e0;
 fn test_integrate_3l_no_numerator() {
     #[rustfmt::skip]
     compare_two_evaluations(
-        VakintSettings { n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 4, ..VakintSettings::default()},
+        VakintSettings { run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 4, ..VakintSettings::default()},
         ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only(None) ,true)),
         Atom::parse(
             "( 1 )
@@ -35,9 +35,9 @@ fn test_integrate_3l_no_numerator() {
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
             )",
         ).unwrap().as_view(),
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
         N_DIGITS_ANLYTICAL_EVALUATION),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=2)
             .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
             //.map(|i| (i, (17.0*((0) as f64), 4.0*((0) as f64), 3.0*((0) as f64), 12.0*((0) as f64))))
@@ -52,7 +52,7 @@ fn test_integrate_3l_no_numerator() {
 fn test_integrate_3l_rank_4() {
     #[rustfmt::skip]
     compare_two_evaluations(
-        VakintSettings { n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 4, ..VakintSettings::default()},
+        VakintSettings { run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 4, ..VakintSettings::default()},
         ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only(None) ,true)),
         Atom::parse(
             "(
@@ -69,9 +69,9 @@ fn test_integrate_3l_rank_4() {
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
             )",
         ).unwrap().as_view(),
-        convert_test_params(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
         N_DIGITS_ANLYTICAL_EVALUATION),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=2)
             .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
             //.map(|i| (i, (17.0*((0) as f64), 4.0*((0) as f64), 3.0*((0) as f64), 12.0*((0) as f64))))
@@ -86,7 +86,7 @@ fn test_integrate_3l_rank_4() {
 fn test_integrate_3l_rank_4_different_scales() {
     #[rustfmt::skip]
     compare_two_evaluations(
-        VakintSettings { n_digits_at_evaluation_time: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 4, ..VakintSettings::default()},
+        VakintSettings { run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 4, ..VakintSettings::default()},
         ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only(None) ,true)),
         Atom::parse(
             "(
@@ -103,9 +103,9 @@ fn test_integrate_3l_rank_4_different_scales() {
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
             )",
         ).unwrap().as_view(),
-        convert_test_params(&[("muvsq".into(), 3.0), ("mursq".into(), 5.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 3.0), ("mursq".into(), 5.0)].iter().cloned().collect(),
         N_DIGITS_ANLYTICAL_EVALUATION),
-        convert_test_externals(
+        externals_from_f64(
         &(1..=2)
             .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
             //.map(|i| (i, (17.0*((0) as f64), 4.0*((0) as f64), 3.0*((0) as f64), 12.0*((0) as f64))))
@@ -193,12 +193,12 @@ pub fn evaluate_expression_with_matad(
         None,
     );
 
-    let test_params = convert_test_params(
+    let test_params = params_from_f64(
         &[("muvsq".into(), 1.0), ("mursq".into(), 1.0)]
             .iter()
             .cloned()
             .collect(),
-        vakint.settings.n_digits_at_evaluation_time,
+        vakint.settings.run_time_decimal_precision,
     );
 
     integral = Pattern::parse("ep").unwrap().replace_all(
@@ -221,7 +221,7 @@ pub fn evaluate_expression_with_matad(
 pub fn test_eval_matad_masters() {
     let mut vakint = Vakint::new(Some(VakintSettings {
         evaluation_order: EvaluationOrder::empty(),
-        n_digits_at_evaluation_time: 40,
+        run_time_decimal_precision: 40,
         number_of_terms_in_epsilon_expansion: 4,
         ..VakintSettings::default()
     }))
@@ -388,7 +388,7 @@ pub fn test_eval_matad_masters() {
         let (matches, msg) = res.does_approx_match(
             target,
             None,
-            0.1_f64.powi((vakint.settings.n_digits_at_evaluation_time - 5) as i32),
+            0.1_f64.powi((vakint.settings.run_time_decimal_precision - 5) as i32),
             0.,
         );
         println!(
@@ -404,7 +404,7 @@ pub fn test_eval_matad_masters() {
         let (matches, msg) = res.does_approx_match(
             target,
             None,
-            0.1_f64.powi((vakint.settings.n_digits_at_evaluation_time - 5) as i32),
+            0.1_f64.powi((vakint.settings.run_time_decimal_precision - 5) as i32),
             0.,
         );
         println!(
@@ -419,7 +419,7 @@ pub fn test_eval_matad_masters() {
 pub fn test_eval_matad_one_master_combination() {
     let vakint = Vakint::new(Some(VakintSettings {
         evaluation_order: EvaluationOrder::empty(),
-        n_digits_at_evaluation_time: 40,
+        run_time_decimal_precision: 40,
         number_of_terms_in_epsilon_expansion: 4,
         ..VakintSettings::default()
     }))
@@ -443,7 +443,7 @@ pub fn test_eval_matad_one_master_combination() {
             (  1, ("225.02689067182955254127148271373064571626".into(), "0.0".into()) ),
         ], &vakint.settings),
         None,
-        0.1_f64.powi((vakint.settings.n_digits_at_evaluation_time -2) as i32),
+        0.1_f64.powi((vakint.settings.run_time_decimal_precision -2) as i32),
         0.,
     );
     debug!(
@@ -462,7 +462,7 @@ pub fn test_eval_matad_one_master_combination() {
             (  1, ("225.02689067182955254127148271373064571626".into(), "0.0".into()) ),
         ], &vakint.settings),
         None,
-        0.1_f64.powi((vakint.settings.n_digits_at_evaluation_time -2) as i32),
+        0.1_f64.powi((vakint.settings.run_time_decimal_precision -2) as i32),
         0.,
     );
     debug!(
