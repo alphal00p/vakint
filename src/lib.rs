@@ -1320,8 +1320,8 @@ impl Integral {
 pub struct PySecDecOptions {
     pub quiet: bool,
     pub relative_precision: f64,
-    pub numerical_masses: HashMap<String, f64, ahash::RandomState>,
-    pub numerical_external_momenta: HashMap<String, (f64, f64, f64, f64), ahash::RandomState>,
+    pub numerical_masses: HashMap<String, f64>,
+    pub numerical_external_momenta: HashMap<String, (f64, f64, f64, f64)>,
     pub min_n_evals: u64,
     pub max_n_evals: u64,
     pub reuse_existing_output: Option<String>,
