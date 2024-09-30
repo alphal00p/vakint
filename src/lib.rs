@@ -2670,16 +2670,22 @@ impl Vakint {
 
     pub fn params_from_f64(
         &self,
-        params: &HashMap<String, f64, ahash::RandomState>,
+        params: &HashMap<String, f64>,
     ) -> HashMap<String, Complex<Float>, ahash::RandomState> {
-        params_from_f64(params, self.settings.run_time_decimal_precision)
+        let hm = HashMap::<String, f64, ahash::RandomState>::from_iter(
+            params.iter().map(|(k, v)| (k.clone(), *v)),
+        );
+        params_from_f64(&hm, self.settings.run_time_decimal_precision)
     }
 
     pub fn externals_from_f64(
         &self,
-        externals: &HashMap<usize, (f64, f64, f64, f64), ahash::RandomState>,
+        externals: &HashMap<usize, (f64, f64, f64, f64)>,
     ) -> HashMap<usize, Momentum, ahash::RandomState> {
-        externals_from_f64(externals, self.settings.run_time_decimal_precision)
+        let em = HashMap::<usize, (f64, f64, f64, f64), ahash::RandomState>::from_iter(
+            externals.iter().map(|(k, v)| (*k, *v)),
+        );
+        externals_from_f64(&em, self.settings.run_time_decimal_precision)
     }
 
     pub fn numerical_evaluation(
