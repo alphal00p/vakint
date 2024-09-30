@@ -1660,7 +1660,6 @@ impl EvaluationOrder {
 #[derive(Debug, Clone)]
 pub struct VakintSettings {
     #[allow(unused)]
-    pub use_pysecdec: bool,
     pub epsilon_symbol: String,
     pub mu_r_sq_symbol: String,
     pub form_exe_path: String,
@@ -1884,7 +1883,6 @@ impl TryFrom<&LoopNormalizationFactor> for Atom {
 impl Default for VakintSettings {
     fn default() -> Self {
         VakintSettings {
-            use_pysecdec: false,
             epsilon_symbol: "ε".into(),
             mu_r_sq_symbol: "mursq".into(),
             form_exe_path: env::var("FORM_PATH").unwrap_or("form".into()),
