@@ -2180,7 +2180,7 @@ impl VakintTerm {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct VakintExpression(Vec<VakintTerm>);
+pub struct VakintExpression(pub Vec<VakintTerm>);
 
 impl fmt::Display for VakintExpression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -3834,6 +3834,7 @@ impl Vakint {
 
     pub fn convert_to_dot_notation(atom: AtomView) -> Atom {
         let mut old_expr = atom.to_owned().expand();
+
         loop {
             let mut expr = Pattern::parse("v_(id_,idx_)^n_").unwrap().replace_all(
                 old_expr.as_view(),
@@ -3881,6 +3882,7 @@ impl Vakint {
                     ),
                     None,
                 );
+
             if expr == old_expr {
                 break;
             } else {

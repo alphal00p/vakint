@@ -1,12 +1,14 @@
 use symbolica::{atom::Atom, state::State};
 use vakint::{
-    EvaluationOrder, NumericalEvaluationResult, Vakint, VakintExpression, VakintSettings,
+    EvaluationOrder, LoopNormalizationFactor, NumericalEvaluationResult, Vakint, VakintExpression,
+    VakintSettings,
 };
 
 fn main() {
     // Set vakint parameters
     let vakint = Vakint::new(Some(VakintSettings {
-        evaluation_order: EvaluationOrder::matad_only(None),
+        evaluation_order: EvaluationOrder::alphaloop_only(),
+        integral_normalization_factor: LoopNormalizationFactor::MSbar,
         run_time_decimal_precision: 32,
         ..VakintSettings::default()
     }))
@@ -14,31 +16,33 @@ fn main() {
 
     let mut integral = Atom::parse(
         "(
-                  k(1,11)*k(2,11)*k(1,22)*k(2,22)
-                + p(1,11)*k(3,11)*k(3,22)*p(2,22)
-                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
-             )
-            *topo(\
-                  prop(1,edge(1,2),k(1),muvsq,1)\
-                * prop(2,edge(2,3),k(2),muvsq,1)\
-                * prop(3,edge(3,1),k(3),muvsq,1)\
-                * prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
-                * prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
-                * prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
-            )",
+                k(1,11)*k(2,11)*k(1,22)*k(2,22)
+              + p(1,11)*k(3,11)*k(3,22)*p(2,22)
+              + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+           )
+          *topo(\
+               prop(1,edge(1,2),k(1),muvsq,1)\
+              *prop(2,edge(2,3),k(2),muvsq,1)\
+              *prop(3,edge(3,1),k(3),muvsq,1)\
+              *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
+              *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
+              *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
+          )",
     )
     .unwrap();
-    println!(
-        "\nInput integral:\n{}\n",
-        VakintExpression::try_from(integral.clone()).unwrap()
-    );
+    let mut vakint_expr = VakintExpression::try_from(integral.clone()).unwrap();
+    println!("\nInput integral:\n{}\n", vakint_expr);
+    // Convert the numerator of the first integral to a dot notation
+    vakint_expr.0[0].numerator =
+        Vakint::convert_to_dot_notation(vakint_expr.0[0].numerator.as_view());
+    println!("\nInput integral in dot notation:\n{}\n", vakint_expr);
 
     integral = vakint.evaluate(integral.as_view()).unwrap();
     println!("Evaluated integral:\n{}\n", integral.clone());
 
     // Set some value for the mass parameters
     let params = vakint.params_from_f64(
-        &[("muvsq".into(), 2.0), ("mursq".into(), 3.0)]
+        &[("muvsq".into(), 3.0), ("mursq".into(), 5.0)]
             .iter()
             .cloned()
             .collect(),
@@ -70,10 +74,10 @@ fn main() {
     #[rustfmt::skip]
     let target_eval =  NumericalEvaluationResult::from_vec(
     vec![
-            (-3, ( "7.48999999999990314303310867673e-2".into(),"0.0".into()),),
-            (-2, ("-10.85566719804186267791124506061".into(),  "0.0".into()),),
-            (-1, ("-27.70898883293408751146176885254".into(),  "0.0".into()),),
-            ( 0, ( "87.47075938732425643179631959599".into(),  "0.0".into()),),
+            (-3, ( "0.0".into(),  "-10202.59860843888064555902993586".into()),),
+            (-2, ( "0.0".into(),  "62122.38565651740465978420334366".into()),),
+            (-1, ( "0.0".into(),  "-188670.2193437045050954664088623".into()),),
+            ( 0, ( "0.0".into(),  "148095.4883501202267659938351786".into()),),
         ],
         &vakint.settings);
     let (matches, match_msg) = target_eval.does_approx_match(
