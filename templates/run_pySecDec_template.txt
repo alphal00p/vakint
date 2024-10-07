@@ -57,7 +57,7 @@ class Silence:
         sys.stderr.close()
         sys.stderr = self._original_stderr
 
-def generate(graph_name, quiet=False):
+def generate(graph_name, quiet=False, draw_graph=False):
     
     start_time = time.time()
     old_level = logger.level
@@ -70,7 +70,7 @@ def generate(graph_name, quiet=False):
             logger.setLevel(old_level)
         return
 
-    def draw_graph():
+    def render_graph():
         internal_lines = {drawing_input_internal_lines}
         power_list = {drawing_input_power_list}
         external_lines = {drawing_input_external_lines}
@@ -142,8 +142,9 @@ def generate(graph_name, quiet=False):
             additional_prefactor = loop_additional_prefactor
         )
 
-    logger.info('%s: Drawing graph...'%graph_name)
-    draw_graph()
+    if draw_graph:
+        logger.info('%s: Drawing graph...'%graph_name)
+        render_graph()
 
     logger.info('%s: Generating successfully completed in %.2f h.'%(graph_name, (time.time()-start_time)/3600. ))
 
@@ -300,6 +301,10 @@ if __name__ == '__main__':
         help='Remove existing output.')
 
     parser.add_argument(
+        '-dg', '--draw_graph', action='store_true', dest='draw_graph', default=False,
+        help='Draw the graph of the integral using neato.')
+
+    parser.add_argument(
         '-q', '--quiet', action='store_true', dest='quiet', default=False,
         help='Mute pySecDec output.')
 
@@ -345,7 +350,7 @@ if __name__ == '__main__':
     
     if args.mode in ['generate','generate_and_run']:
 
-        generate(graph_name, quiet=args.quiet)
+        generate(graph_name, quiet=args.quiet, draw_graph=args.draw_graph)
     
     if args.mode in ['run','generate_and_run']:
 
