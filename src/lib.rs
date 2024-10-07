@@ -3010,7 +3010,10 @@ impl Vakint {
                     )))
                     .into(),
                     None,
-                    None,
+                    Some(&MatchSettings {
+                        rhs_cache_size: 0,
+                        ..Default::default()
+                    }),
                 );
 
                 processed_numerator = square_matcher.replace_all(
@@ -3021,7 +3024,10 @@ impl Vakint {
                     )))
                     .into(),
                     None,
-                    None,
+                    Some(&MatchSettings {
+                        rhs_cache_size: 0,
+                        ..Default::default()
+                    }),
                 );
                 lorentz_indices.extend(arc_mutex_lorentz_indices.lock().unwrap().clone());
                 if old_processed_numerator == processed_numerator {
