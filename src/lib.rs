@@ -2136,9 +2136,20 @@ impl VakintTerm {
         let template =
             Template::parse_template(TEMPLATES.get("run_tensor_reduction.txt").unwrap()).unwrap();
         let mut vars: HashMap<String, String> = HashMap::new();
+        // Replace functions with 1 and get all remaining symbols
+        let numerator_symbols = Pattern::parse("f_(args__)").unwrap().replace_all(
+            form_numerator.as_view(),
+            &Atom::parse("1").unwrap().into_pattern().into(),
+            None,
+            None,
+        ).get_all_symbols(false);
         vars.insert(
             "numerator".into(),
             vakint.prepare_expression_for_form(form_numerator)?,
+        );
+        vars.insert(
+            "symbols".into(),
+            numerator_symbols.iter().map(|item| item.to_string()).collect::<Vec<_>>().join(", "),
         );
         let rendered = template
             .render(&RenderOptions {
@@ -3545,10 +3556,21 @@ impl Vakint {
         )
         .unwrap();
         let mut vars: HashMap<String, String> = HashMap::new();
+        // Replace functions with 1 and get all remaining symbols
+        let numerator_symbols = Pattern::parse("f_(args__)").unwrap().replace_all(
+            form_expression.as_view(),
+            &Atom::parse("1").unwrap().into_pattern().into(),
+            None,
+            None,
+        ).get_all_symbols(false);
 
         vars.insert(
             "numerator".into(),
             vakint.prepare_expression_for_form(form_expression)?,
+        );
+        vars.insert(
+            "symbols".into(),
+            numerator_symbols.iter().map(|item| item.to_string()).filter(|item| item != &self.settings.epsilon_symbol).collect::<Vec<_>>().join(", "),
         );
         let rendered = template
             .render(&RenderOptions {
