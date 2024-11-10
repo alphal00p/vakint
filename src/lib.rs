@@ -1887,7 +1887,7 @@ impl Default for VakintSettings {
             mu_r_sq_symbol: "mursq".into(),
             form_exe_path: env::var("FORM_PATH").unwrap_or("form".into()),
             python_exe_path: env::var("PYTHON_BIN_PATH").unwrap_or("python3".into()),
-            verify_numerator_identification: true,
+            verify_numerator_identification: false,
             run_time_decimal_precision: 32,
             integral_normalization_factor: LoopNormalizationFactor::pySecDec,
             allow_unknown_integrals: true,
@@ -2135,22 +2135,41 @@ impl VakintTerm {
 
         let template =
             Template::parse_template(TEMPLATES.get("run_tensor_reduction.txt").unwrap()).unwrap();
-        let mut vars: HashMap<String, String> = HashMap::new();
+
         // Replace functions with 1 and get all remaining symbols
-        let numerator_symbols = Pattern::parse("f_(args__)").unwrap().replace_all(
-            form_numerator.as_view(),
-            &Atom::parse("1").unwrap().into_pattern().into(),
-            None,
-            None,
-        ).get_all_symbols(false);
+        let mut numerator_additional_symbols = Pattern::parse("f_(args__)")
+            .unwrap()
+            .replace_all(
+                form_numerator.as_view(),
+                &Atom::parse("1").unwrap().into_pattern().into(),
+                None,
+                None,
+            )
+            .get_all_symbols(false);
+        let eps_symbol = State::get_symbol(vakint.settings.epsilon_symbol.clone());
+        numerator_additional_symbols.retain(|&s| s != eps_symbol);
+
+        let mut vars: HashMap<String, String> = HashMap::new();
+
         vars.insert(
             "numerator".into(),
             vakint.prepare_expression_for_form(form_numerator)?,
         );
-        vars.insert(
-            "symbols".into(),
-            numerator_symbols.iter().map(|item| item.to_string()).collect::<Vec<_>>().join(", "),
-        );
+        if !numerator_additional_symbols.is_empty() {
+            vars.insert(
+                "additional_symbols".into(),
+                format!(
+                    "Auto S {};",
+                    numerator_additional_symbols
+                        .iter()
+                        .map(|item| item.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                ),
+            );
+        } else {
+            vars.insert("additional_symbols".into(), "".into());
+        }
         let rendered = template
             .render(&RenderOptions {
                 variables: vars,
@@ -3555,23 +3574,42 @@ impl Vakint {
                 .unwrap(),
         )
         .unwrap();
-        let mut vars: HashMap<String, String> = HashMap::new();
+
         // Replace functions with 1 and get all remaining symbols
-        let numerator_symbols = Pattern::parse("f_(args__)").unwrap().replace_all(
-            form_expression.as_view(),
-            &Atom::parse("1").unwrap().into_pattern().into(),
-            None,
-            None,
-        ).get_all_symbols(false);
+        let mut numerator_additional_symbols = Pattern::parse("f_(args__)")
+            .unwrap()
+            .replace_all(
+                form_expression.as_view(),
+                &Atom::parse("1").unwrap().into_pattern().into(),
+                None,
+                None,
+            )
+            .get_all_symbols(false);
+        let eps_symbol = State::get_symbol(vakint.settings.epsilon_symbol.clone());
+        numerator_additional_symbols.retain(|&s| s != eps_symbol);
+
+        let mut vars: HashMap<String, String> = HashMap::new();
+        if !numerator_additional_symbols.is_empty() {
+            vars.insert(
+                "additional_symbols".into(),
+                format!(
+                    "Auto S {};",
+                    numerator_additional_symbols
+                        .iter()
+                        .map(|item| item.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                ),
+            );
+        } else {
+            vars.insert("additional_symbols".into(), "".into());
+        }
 
         vars.insert(
             "numerator".into(),
             vakint.prepare_expression_for_form(form_expression)?,
         );
-        vars.insert(
-            "symbols".into(),
-            numerator_symbols.iter().map(|item| item.to_string()).filter(|item| item != &self.settings.epsilon_symbol).collect::<Vec<_>>().join(", "),
-        );
+
         let rendered = template
             .render(&RenderOptions {
                 variables: vars,

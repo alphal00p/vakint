@@ -330,6 +330,47 @@ fn test_integrate_3l_rank_4() {
 }
 
 #[test_log::test]
+fn test_integrate_3l_rank_4_additional_symbols_numerator() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
+        EvaluationOrder::alphaloop_only(),
+        Atom::parse(
+            "(
+                  A*k(1,11)*k(2,11)*k(1,22)*k(2,22)
+                + B*p(1,11)*k(3,11)*k(3,22)*p(2,22)
+                + C*p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+             )
+            *topo(\
+                 prop(1,edge(1,2),k(1),muvsq,1)\
+                *prop(2,edge(2,3),k(2),muvsq,1)\
+                *prop(3,edge(3,1),k(3),muvsq,1)\
+                *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
+                *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
+                *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
+            )",
+        ).unwrap().as_view(),
+        params_from_f64(&[
+            ("muvsq".into(), 1.0), ("mursq".into(), 2.0),
+            ("A".into(), 5.0), ("B".into(), 7.0), ("C".into(), 11.0)
+            ].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        externals_from_f64(
+        &(1..=2)
+            .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            (-3, ("0.0".into(),   "51891342.24417464772786998080343".into()),),
+            (-2, ("0.0".into(),  "-167769771.6403982559590402103780".into()),),
+            (-1, ("0.0".into(),   "486068084.1087102468110182518293".into()),),
+            ( 0, ("0.0".into(),  "-1237710265.809503746583431557798".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
 fn test_integrate_3l_rank_4_matad() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
