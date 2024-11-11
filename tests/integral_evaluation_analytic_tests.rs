@@ -559,6 +559,44 @@ fn test_integrate_4l_h_rank_4() {
 }
 
 #[test_log::test]
+fn test_integrate_4l_h_rank_4_additional_symbols_numerator() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::MSbar, number_of_terms_in_epsilon_expansion: 5, run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
+        Atom::parse(
+            "(
+                  A*k(1,11)*k(2,11)*k(1,22)*k(2,22)
+                + B*p(1,11)*k(3,11)*k(3,22)*p(2,22)
+                + C*p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+             )*topo(\
+                 prop(1,edge(5,1),k(1),muvsq,1)\
+                *prop(2,edge(2,6),k(2),muvsq,1)\
+                *prop(3,edge(6,5),k(3),muvsq,1)\
+                *prop(4,edge(3,4),k(4),muvsq,1)\
+                *prop(5,edge(4,5),k(1)-k(3),muvsq,1)\
+                *prop(6,edge(6,3),k(2)-k(3),muvsq,1)\
+                *prop(7,edge(4,1),k(3)-k(1)+k(4),muvsq,1)\
+                *prop(8,edge(2,3),k(3)-k(2)+k(4),muvsq,1)\
+                *prop(9,edge(1,2),k(3)+k(4),muvsq,1)\
+            )",
+        ).unwrap().as_view(),
+        // Masses chosen equal on purpose here so as to have a reliable target analytical result
+        params_from_f64(&[("muvsq".into(), 3.0), ("mursq".into(), 5.0), ("A".into(), 5.0), ("B".into(), 7.0), ("C".into(), 11.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        externals_from_f64(
+        &(1..=2)
+            .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            (0,  ("-31550032.79887004633672870512415".into(), "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
 #[allow(non_snake_case)]
 fn test_integrate_4l_PR9d_from_H() {
     #[rustfmt::skip]

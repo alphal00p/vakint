@@ -503,11 +503,39 @@ impl Vakint {
 
         //println!("FMFT input string: {}", format!("({})*({})", numerator_string, integral_string));
 
+        // Replace functions with 1 and get all remaining symbols
+        let mut numerator_additional_symbols = Pattern::parse("f_(args__)")
+            .unwrap()
+            .replace_all(
+                input_numerator,
+                &Atom::parse("1").unwrap().into_pattern().into(),
+                None,
+                None,
+            )
+            .get_all_symbols(false);
+        let eps_symbol = State::get_symbol(vakint.settings.epsilon_symbol.clone());
+        numerator_additional_symbols.retain(|&s| s != eps_symbol);
+
         let template = Template::parse_template(TEMPLATES.get("run_fmft.txt").unwrap()).unwrap();
         let mut vars: HashMap<String, String> = HashMap::new();
         vars.insert("numerator".into(), numerator_string);
         vars.insert("integral".into(), integral_string);
         vars.insert("symbols".into(), muv_sq_symbol.to_string());
+        if !numerator_additional_symbols.is_empty() {
+            vars.insert(
+                "additional_symbols".into(),
+                format!(
+                    "Auto S {};",
+                    numerator_additional_symbols
+                        .iter()
+                        .map(|item| item.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                ),
+            );
+        } else {
+            vars.insert("additional_symbols".into(), "".into());
+        }
         let rendered = template
             .render(&RenderOptions {
                 variables: vars,
