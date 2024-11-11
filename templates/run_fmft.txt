@@ -3,6 +3,7 @@
 
 CF p,vkdot;
 S {symbols};
+{additional_symbols}
 * sim indicates the massive ith denominator and 1/pi.pi the massless counterpart
 L integral = ({numerator})*({integral});
 * Loop evaluation
