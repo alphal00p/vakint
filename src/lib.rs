@@ -2992,6 +2992,34 @@ impl Vakint {
                 format!("PySecDec can only handle scalar numerator. If you have open indices, make sure they are contracted with external momenta: {}",processed_numerator),
             ));
             }
+
+            // Check if numerator contains additional symbols
+            // First, replace functions with 1 and get all remaining symbols
+            let mut numerator_additional_symbols = Pattern::parse("f_(args__)")
+                .unwrap()
+                .replace_all(
+                    input_numerator,
+                    &Atom::parse("1").unwrap().into_pattern().into(),
+                    None,
+                    None,
+                )
+                .get_all_symbols(false);
+            let eps_symbol = State::get_symbol(vakint.settings.epsilon_symbol.clone());
+            numerator_additional_symbols.retain(|&s| s != eps_symbol);
+
+            // Return an error if numerator contains additional symbols
+            if !numerator_additional_symbols.is_empty() {
+                return Err(VakintError::InvalidNumerator(
+                    format!("PySecDec can only handle numerators without additional symbols. Additional symbol(s) {} detected in the numerator: {}", numerator_additional_symbols
+                        .iter()
+                        .map(|item| item.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                        processed_numerator
+                    ),
+                ));
+            }
+
             // Convert back from dot notation
             processed_numerator =
                 Vakint::convert_from_dot_notation(processed_numerator.as_view(), true);
