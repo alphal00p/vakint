@@ -3004,21 +3004,8 @@ impl Vakint {
                     None,
                 )
                 .get_all_symbols(false);
-            let eps_symbol = State::get_symbol(vakint.settings.epsilon_symbol.clone());
+            let eps_symbol: Symbol = State::get_symbol(vakint.settings.epsilon_symbol.clone());
             numerator_additional_symbols.retain(|&s| s != eps_symbol);
-
-            // Return an error if numerator contains additional symbols
-            if !numerator_additional_symbols.is_empty() {
-                return Err(VakintError::InvalidNumerator(
-                    format!("PySecDec can only handle numerators without additional symbols. Additional symbol(s) {} detected in the numerator: {}", numerator_additional_symbols
-                        .iter()
-                        .map(|item| item.to_string())
-                        .collect::<Vec<_>>()
-                        .join(", "),
-                        processed_numerator
-                    ),
-                ));
-            }
 
             // Convert back from dot notation
             processed_numerator =
@@ -3258,9 +3245,21 @@ impl Vakint {
             masses_vec.sort();
             let mut real_parameters = vec![];
             let mut replacement_rules = vec![];
+
+            // Add masses
             for m in masses_vec.iter() {
                 real_parameters.push(format!("'{}'", m.clone()));
             }
+
+            //Potential extra parameters
+            let mut sorted_additional_numerator_symbols =
+                numerator_additional_symbols.iter().collect::<Vec<_>>();
+            sorted_additional_numerator_symbols.sort();
+            for additional_param in sorted_additional_numerator_symbols.iter() {
+                real_parameters.push(format!("'{}'", additional_param));
+            }
+
+            // And the external momenta
             for iv1 in 0..external_momenta.len() {
                 for iv2 in iv1..external_momenta.len() {
                     let v1 = external_momenta[iv1].clone();
@@ -3317,6 +3316,15 @@ impl Vakint {
                     default_masses.push((m, num_m));
                 } else {
                     return Err(VakintError::EvaluationError(format!("Missing specification of numerical value for mass '{}'. Specify it in the PySecDecOptions of Vakint.", m)));
+                }
+            }
+            for additional_param in sorted_additional_numerator_symbols.iter() {
+                if let Some(num_additional_param) =
+                    options.numerical_masses.get(&additional_param.to_string())
+                {
+                    default_masses.push((additional_param.to_string(), num_additional_param));
+                } else {
+                    return Err(VakintError::EvaluationError(format!("Missing specification of numerical value for additional numerator symbol '{}'. Specify it in the PySecDecOptions of Vakint.", additional_param)));
                 }
             }
             vars.insert(
