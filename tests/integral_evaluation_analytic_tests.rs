@@ -197,6 +197,37 @@ fn test_integrate_1l_cross_product() {
 }
 
 #[test_log::test]
+fn test_integrate_1l_cross_product_with_additional_symbols_numerator() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings{number_of_terms_in_epsilon_expansion: 5, integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
+        EvaluationOrder::analytic_only(),
+        Atom::parse(
+            "(A*k(1,11)*p(1,11)*k(1,12)*p(1,12)+B)*topo(\
+                prop(1,edge(1,1),k(1),muvsq,2)\
+            )",
+        )
+        .unwrap()
+        .as_view(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0), ("A".into(), 3.0), ("B".into(), 4.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        externals_from_f64(
+        &(1..=1)
+            .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            (-1, ("0.0".into(), "-6.776470381787957720961284930165".into()),),
+            (0,  ("0.0".into(), "-21.34624897436485396509954629830".into()),),
+            (1,  ("0.0".into(), "72.41426780477804749630966479154".into()),),
+            (2,  ("0.0".into(), "-147.4626326303287005964359960851".into()),),
+            (3,  ("0.0".into(), "211.1788648410998597813244933220".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
 fn test_integrate_1l_dot_product_external() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
