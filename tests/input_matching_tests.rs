@@ -205,6 +205,36 @@ fn test_2l_matching_pinched() {
     );
 }
 
+#[test_log::test]
+fn test_3l_matching_with_zero_powers_in_short_form() {
+    let vakint = get_vakint(VakintSettings {
+        allow_unknown_integrals: false,
+        ..VakintSettings::default()
+    });
+
+    debug!("Topologies:\n{}", vakint.topologies);
+
+    compare_output(
+        vakint
+            .to_canonical(
+                Atom::parse(
+                    "( 1 )*topo(\
+                prop(1,edge(1,2),k(1),muvsq,1)\
+              * prop(2,edge(1,2),k(2),muvsq,1)\
+              * prop(3,edge(1,2),k(3),muvsq,1)\
+              * prop(4,edge(2,1),k(1)+k(2)+k(3),muvsq,2)\
+            )",
+                )
+                .unwrap()
+                .as_view(),
+                true,
+            )
+            .as_ref()
+            .map(|a| a.as_view()),
+        Atom::parse("topo(I3L(muvsq,0,1,1,1,2,0))").unwrap(),
+    );
+}
+
 #[test]
 fn test_unknown_integrals() {
     let vakint = get_vakint(VakintSettings {

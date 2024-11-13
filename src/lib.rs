@@ -17,7 +17,7 @@ use log::{debug, info, warn};
 use regex::Regex;
 use rug::float::Constant;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{hash_map::Entry, HashMap, HashSet},
     env,
     f64::consts::LOG2_10,
     fmt,
@@ -1137,23 +1137,31 @@ impl Integral {
                     self.canonical_expression.as_ref().unwrap().as_view(),
                     prop_id,
                 ) {
-                    if let Some(mtmp) = m1
-                        .match_stack
-                        .get(State::get_symbol(format!("pow{}_", prop_id).as_str()))
-                    {
-                        replacement_rules.canonical_expression_substitutions.insert(
-                            Atom::parse(format!("pow({})", prop_id).as_str()).unwrap(),
-                            mtmp.to_atom(),
-                        );
-                    }
-                    if let Some(mtmp) = m1
-                        .match_stack
-                        .get(State::get_symbol(format!("msq{}_", prop_id)))
-                    {
-                        replacement_rules.canonical_expression_substitutions.insert(
-                            Atom::parse(format!("msq({})", prop_id).as_str()).unwrap(),
-                            mtmp.to_atom(),
-                        );
+                    for var_prop_id in 1..=self.n_props {
+                        if let Some(mtmp) = m1
+                            .match_stack
+                            .get(State::get_symbol(format!("pow{}_", var_prop_id).as_str()))
+                        {
+                            if let Entry::Vacant(e) =
+                                replacement_rules.canonical_expression_substitutions.entry(
+                                    Atom::parse(format!("pow({})", var_prop_id).as_str()).unwrap(),
+                                )
+                            {
+                                e.insert(mtmp.to_atom());
+                            }
+                        }
+                        if let Some(mtmp) = m1
+                            .match_stack
+                            .get(State::get_symbol(format!("msq{}_", var_prop_id)))
+                        {
+                            if let Entry::Vacant(e) =
+                                replacement_rules.canonical_expression_substitutions.entry(
+                                    Atom::parse(format!("msq({})", var_prop_id).as_str()).unwrap(),
+                                )
+                            {
+                                e.insert(mtmp.to_atom());
+                            }
+                        }
                     }
 
                     let input_prop_id = if let Some(i) = get_integer_from_match(
