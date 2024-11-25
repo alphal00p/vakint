@@ -124,7 +124,7 @@ pub fn compare_two_evaluations(
         allow_unknown_integrals: false,
         use_dot_product_notation: true,
         mu_r_sq_symbol: "mursq".into(),
-        integral_normalization_factor: LoopNormalizationFactor::MSbar,
+        integral_normalization_factor: LoopNormalizationFactor::pySecDec,
         evaluation_order: mod_evaluation_order_a.clone(),
         ..vakint_default_settings
     };

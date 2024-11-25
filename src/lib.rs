@@ -43,7 +43,10 @@ use symbolica::{
         rational::{Fraction, Rational},
     },
     fun,
-    id::{Condition, Match, MatchSettings, Pattern, PatternRestriction, WildcardRestriction},
+    id::{
+        Condition, Match, MatchSettings, Pattern, PatternRestriction, Replacement,
+        WildcardRestriction,
+    },
     poly::series::Series,
     printer::{AtomPrinter, PrintOptions},
     state::State,
@@ -2014,20 +2017,36 @@ impl VakintTerm {
 
         let mut new_numerator = self.numerator.clone();
         let mut test = self.numerator.clone();
-        for (source, target) in replacement_rules.numerator_substitutions.iter() {
-            new_numerator = source.into_pattern().replace_all(
-                new_numerator.as_view(),
-                &target.into_pattern().into(),
-                None,
-                None,
-            );
-            test = source.into_pattern().replace_all(
-                test.as_view(),
-                &Atom::parse("1").unwrap().into_pattern().into(),
-                None,
-                None,
-            );
-        }
+
+        // Here we must be careful that substituations can be of the form:
+        // {a-> b, b->c}
+        // so that we must not apply the substitutions to the outcome of the previous substitution.
+        // We will use replace_all_multiple for this
+        let casted_replacement_rules = replacement_rules
+            .numerator_substitutions
+            .iter()
+            .map(|(source, target)| {
+                (
+                    source.clone().into_pattern(),
+                    target.clone().as_view().into_pattern().into(),
+                )
+            })
+            .collect::<Vec<_>>();
+        let one_substitution_pattern = Atom::parse("1").unwrap().into_pattern().into();
+        new_numerator = new_numerator.replace_all_multiple(
+            casted_replacement_rules
+                .iter()
+                .map(|(source, target)| Replacement::new(source, target))
+                .collect::<Vec<_>>()
+                .as_slice(),
+        );
+        test = test.replace_all_multiple(
+            casted_replacement_rules
+                .iter()
+                .map(|(source, _target)| Replacement::new(source, &one_substitution_pattern))
+                .collect::<Vec<_>>()
+                .as_slice(),
+        );
 
         // Make sure to also set all externals to zero for the test
         test = Pattern::parse(format!("{}(momID_,idx_)", EXTERNAL_MOMENTUM_SYMBOL).as_str())

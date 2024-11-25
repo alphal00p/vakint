@@ -476,12 +476,9 @@ impl Vakint {
             if let Some((i_edge, _)) = momenta.iter().find(|(_i_prop, k)| {
                 k.as_view() == fun!(S.k, Atom::new_num(i_loop as i64)).as_view()
             }) {
-                lmb_prop_indices.push(*i_edge);
+                lmb_prop_indices.push(*i_edge as isize);
             } else {
-                return Err(VakintError::InvalidGenericExpression(format!(
-                    "Could not find LMB edge for momentum k({}) in a topology supported by MATAD.",
-                    i_loop
-                )));
+                lmb_prop_indices.push(-1);
             }
         }
 
@@ -491,12 +488,24 @@ impl Vakint {
             .replace_all(
                 numerator.as_view(),
                 &PatternOrMap::Map(Box::new(move |match_in| {
-                    let id1 = get_integer_from_match(match_in.get(S.id1_).unwrap()).unwrap();
-                    let id2 = get_integer_from_match(match_in.get(S.id2_).unwrap()).unwrap();
+                    let id1 = lmb_prop_indices[(get_integer_from_match(match_in.get(S.id1_).unwrap()).unwrap()-1) as usize];
+                    if id1 < 0 {
+                        panic!(
+                            "Could not find LMB edge for momentum k({}) in a topology supported by MATAD and used in numerator.",
+                            get_integer_from_match(match_in.get(S.id1_).unwrap()).unwrap()-1
+                        );
+                    }
+                    let id2 = lmb_prop_indices[(get_integer_from_match(match_in.get(S.id2_).unwrap()).unwrap()-1) as usize];
+                    if id2 < 0 {
+                        panic!(
+                            "Could not find LMB edge for momentum k({}) in a topology supported by MATAD and used in numerator.",
+                            get_integer_from_match(match_in.get(S.id2_).unwrap()).unwrap()-1
+                        );
+                    }
                     let i_edge1 =
-                        vakint_to_matad_edge_map_copy[lmb_prop_indices[(id1 - 1) as usize] - 1];
+                        vakint_to_matad_edge_map_copy[(id1 as usize) - 1];
                     let i_edge2 =
-                        vakint_to_matad_edge_map_copy[lmb_prop_indices[(id2 - 1) as usize] - 1];
+                        vakint_to_matad_edge_map_copy[(id2 as usize) - 1];
                     // in MATAD, the loop momenta dot products need to be written p<i>.p<i>
                     // The outter dot will be converted to an inner dot in the next step
                     // Also keep in mind that in MATAD propagators are euclidean propagators so
@@ -609,7 +618,7 @@ impl Vakint {
             Some(&Condition::from((S.pow_, even_condition()))),
             None,
         );
-        let matad_normalization_correction = Atom::parse(
+        let mut matad_normalization_correction = Atom::parse(
             format!(
                 "( 
                     (𝑖*(𝜋^((4-2*{eps})/2)))\
@@ -622,6 +631,10 @@ impl Vakint {
             .as_str(),
         )
         .unwrap();
+
+        // Since MATAD uses euclidean denominator, we must adjust the overall sign by (-1) per quadratic denominator with power one.
+        matad_normalization_correction = matad_normalization_correction
+            * Atom::parse(format!("((-1)^{})", powers.iter().sum::<i64>()).as_str()).unwrap();
 
         // Adjust normalization factor
         let mut complete_normalization = matad_normalization_correction

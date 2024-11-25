@@ -545,7 +545,7 @@ fn test_integrate_4l_h() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             // This does not have an analytical expression yet (FMFT not implemented yet)
-            (0,  ("-12799.53514305961548130719263292".into(), "0.0".into()),),
+            (0,  ("12799.53514305961548130719263292".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -583,7 +583,7 @@ fn test_integrate_4l_h_rank_4() {
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
-            (0,  ("-900538.9715718440021693147649038".into(), "0.0".into()),),
+            (0,  ("900538.9715718440021693147649038".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -621,7 +621,7 @@ fn test_integrate_4l_h_rank_4_additional_symbols_numerator() {
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
-            (0,  ("-31550032.79887004633672870512415".into(), "0.0".into()),),
+            (0,  ("31550032.79887004633672870512415".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -830,7 +830,7 @@ fn test_integrate_4l_PR11d() {
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
-            (0,  ("-2.906486288643112641819206002127".into(), "0.0".into()),),
+            (0,  ("2.906486288643112641819206002127".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
