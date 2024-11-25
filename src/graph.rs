@@ -2,12 +2,16 @@ use std::fmt;
 
 use ahash::{HashMap, HashSet};
 use symbolica::{
-    atom::{Atom, AtomView},
+    atom::{Atom, AtomView, SliceType},
     graph,
+    id::{Condition, Match, MatchSettings},
     state::State,
 };
 
-use crate::{get_individual_momenta_from_atom, get_node_ids, get_prop_with_id, VakintError};
+use crate::{
+    get_individual_momenta_from_atom, get_node_ids, get_prop_with_id, utils::replace_until_stable,
+    VakintError,
+};
 
 #[derive(Debug, Clone)]
 pub struct Edge {
@@ -336,5 +340,73 @@ impl Graph {
             key_a.partial_cmp(&key_b).unwrap()
         });
         res
+    }
+
+    // See "counting cycles II" of Ben's blog post at: https://symbolica.io/posts/pattern_matching/
+    pub fn get_one_lmb(&self) -> Result<Vec<i64>, VakintError> {
+        let mut atom_graph = Atom::new_num(1);
+        for node in self.nodes.values() {
+            atom_graph = atom_graph
+                * Atom::parse(&format!(
+                    "v(n({}),{})",
+                    node.id,
+                    node.edges
+                        .iter()
+                        .map(|(e, _dir)| format!("{}", e))
+                        .collect::<Vec<_>>()
+                        .join(",")
+                ))
+                .unwrap();
+        }
+
+        atom_graph = replace_until_stable(
+            atom_graph.as_view(),
+            &Atom::parse("v(l1___,x_,r1___)*v(l2___,x_,r2___)")
+                .unwrap()
+                .into_pattern(),
+            &Atom::parse("v(l1___,r1___,l2___,r2___)")
+                .unwrap()
+                .into_pattern()
+                .into(),
+            None,
+            None,
+        );
+
+        let mut remaining_edges: Vec<i64> = vec![];
+        if let Some(m) = Atom::parse("v(args__)")
+            .unwrap()
+            .into_pattern()
+            .pattern_match(
+                atom_graph.as_view(),
+                &Condition::default(),
+                &MatchSettings::default(),
+            )
+            .next()
+        {
+            if let Some(Match::Multiple(SliceType::Arg, aviews)) =
+                m.match_stack.get(State::get_symbol("args__"))
+            {
+                for a_id in aviews {
+                    let remaining_edge: i64 = match a_id.to_owned().try_into() {
+                        Ok(res) => res,
+                        Err(_) => continue,
+                    };
+                    if !remaining_edges.contains(&remaining_edge) {
+                        remaining_edges.push(remaining_edge);
+                    }
+                }
+            } else {
+                return Err(VakintError::MalformedGraph(format!(
+                    "Could not construct an LMB for graph:\n{}",
+                    self
+                )));
+            }
+        } else {
+            return Err(VakintError::MalformedGraph(format!(
+                "Could not construct an LMB for graph:\n{}",
+                self
+            )));
+        }
+        Ok(remaining_edges)
     }
 }

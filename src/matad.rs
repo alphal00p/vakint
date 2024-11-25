@@ -483,6 +483,7 @@ impl Vakint {
         }
 
         let vakint_to_matad_edge_map_copy = vakint_to_matad_edge_map.clone();
+
         numerator = fun!(S.dot, fun!(S.k, S.id1_a), fun!(S.k, S.id2_a))
             .into_pattern()
             .replace_all(
@@ -492,14 +493,14 @@ impl Vakint {
                     if id1 < 0 {
                         panic!(
                             "Could not find LMB edge for momentum k({}) in a topology supported by MATAD and used in numerator.",
-                            get_integer_from_match(match_in.get(S.id1_).unwrap()).unwrap()-1
+                            get_integer_from_match(match_in.get(S.id1_).unwrap()).unwrap()
                         );
                     }
                     let id2 = lmb_prop_indices[(get_integer_from_match(match_in.get(S.id2_).unwrap()).unwrap()-1) as usize];
                     if id2 < 0 {
                         panic!(
                             "Could not find LMB edge for momentum k({}) in a topology supported by MATAD and used in numerator.",
-                            get_integer_from_match(match_in.get(S.id2_).unwrap()).unwrap()-1
+                            get_integer_from_match(match_in.get(S.id2_).unwrap()).unwrap()
                         );
                     }
                     let i_edge1 =

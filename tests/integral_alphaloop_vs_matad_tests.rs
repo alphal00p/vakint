@@ -54,8 +54,8 @@ fn test_integrate_2l_no_numerator() {
         Atom::parse(
             "(1)*topo(\
             prop(1,edge(1,2),k(1),muvsq,1)\
-            *prop(2,edge(1,2),k(2),muvsq,1)\
-            *prop(3,edge(2,1),k(1)+k(2),muvsq,1)\
+            * prop(2,edge(1,2),k(2),muvsq,1)\
+            * prop(3,edge(2,1),k(1)+k(2),muvsq,1)\
         )",
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
@@ -72,13 +72,40 @@ fn test_integrate_2l_no_numerator() {
 }
 
 #[test_log::test]
-fn test_integrate_3l_basketball() {
+fn test_integrate_3l_basketball_a() {
     #[rustfmt::skip]
     compare_two_evaluations(
-        VakintSettings { run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 1, ..VakintSettings::default()},
+        VakintSettings { run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 3, ..VakintSettings::default()},
         ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only(None) ,true)),
         Atom::parse(
             "( k(1, 1)^2 )*topo(
+                prop(1, edge(2, 1), k(1), muvsq, 1)*\
+                prop(2, edge(2, 1), k(2), muvsq, 1)*\
+                prop(3, edge(1, 2), k(3), muvsq, 1)*\
+                prop(4, edge(1, 2), k(1) + k(2) - k(3), muvsq, 1)
+            )",
+        ).unwrap().as_view(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+        N_DIGITS_ANLYTICAL_EVALUATION),
+        externals_from_f64(
+        &(1..=2)
+            .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+            //.map(|i| (i, (17.0*((0) as f64), 4.0*((0) as f64), 3.0*((0) as f64), 12.0*((0) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION),
+            COMPARISON_REL_THRESHOLD, MAX_PULL,
+        true,
+    );
+}
+
+#[test_log::test]
+fn test_integrate_3l_basketball_b() {
+    #[rustfmt::skip]
+    compare_two_evaluations(
+        VakintSettings { run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 3, ..VakintSettings::default()},
+        ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only(None) ,true)),
+        Atom::parse(
+            "( k(3, 1)^2 )*topo(
                 prop(1, edge(2, 1), k(1), muvsq, 1)*\
                 prop(2, edge(2, 1), k(2), muvsq, 1)*\
                 prop(3, edge(1, 2), k(3), muvsq, 1)*\

@@ -1,15 +1,17 @@
-use std::{collections::HashSet, fmt};
+use std::{collections::HashSet, fmt, sync::Arc};
 
 use colored::Colorize;
 use symbolica::{
     atom::{Atom, AtomView},
-    id::{Condition, MatchSettings, Pattern},
+    fun,
+    id::{Condition, MatchSettings, Pattern, PatternOrMap},
     state::State,
 };
 
 use crate::{
-    get_individual_momenta, get_node_ids, get_prop_with_id, symbols::S, EvaluationOrder, Integral,
-    ReplacementRules, VakintError, VakintSettings,
+    get_individual_momenta, get_individual_momenta_from_atom, get_node_ids, get_prop_with_id,
+    graph::Graph, symbols::S, EvaluationOrder, Integral, ReplacementRules, VakintError,
+    VakintSettings,
 };
 pub enum TopologyContractions {
     Custom(Vec<Vec<usize>>),
@@ -408,6 +410,22 @@ impl Topology {
             }
             old_contracted_canonical_expression = contracted_canonical_expression.clone();
         }
+        // let tt: Topology = Integral::new(
+        //     n_tot_props,
+        //     Some(contracted_canonical_expression.clone()),
+        //     Some(contracted_short_expression.clone()),
+        //     applicable_evaluation_methods.clone(),
+        // )?
+        // .into();
+        // println!("tt={}", tt);
+        contracted_canonical_expression =
+            Topology::force_an_lmb(contracted_canonical_expression.as_view(), n_tot_props)?;
+        // if contracted_short_expression.to_canonical_string()
+        //     == String::from("I3L(msq(1),0,pow(2),pow(3),pow(4),pow(5),0)")
+        // {
+        //     println!("after={}", tt);
+        //     panic!("TTTT");
+        // }
 
         Ok(Integral::new(
             n_tot_props,
@@ -416,6 +434,177 @@ impl Topology {
             applicable_evaluation_methods,
         )?
         .into())
+    }
+
+    pub fn force_an_lmb(
+        input_canonical_expression: AtomView,
+        n_props: usize,
+    ) -> Result<Atom, VakintError> {
+        let mut loop_mom_ids: HashSet<i64> = HashSet::new();
+        let mut momenta = vec![];
+        let mut prop_ids = vec![];
+        for prop_id in 1..=n_props {
+            if let Some(m) = get_prop_with_id(input_canonical_expression, prop_id) {
+                prop_ids.push(prop_id);
+                let q = m.get(&State::get_symbol("q_")).unwrap().to_atom();
+                for (_s, (_a_id, mom_id)) in get_individual_momenta_from_atom(q.as_view())?.iter() {
+                    loop_mom_ids.insert(*mom_id);
+                }
+                momenta.push((prop_id, q));
+            }
+        }
+        if loop_mom_ids != HashSet::from_iter(1..=loop_mom_ids.len() as i64) {
+            return Err(VakintError::InvalidIntegralFormat(format!(
+                "Loop momenta must have IDs ranging from 1 to the number of loop momenta: {:?}",
+                loop_mom_ids
+            )));
+        }
+        let n_loops = loop_mom_ids.len();
+
+        let mut need_to_force_lmb = false;
+        for i_loop in 1..=n_loops {
+            if !momenta.iter().any(|(_i_prop, k)| {
+                k.as_view() == fun!(S.k, Atom::new_num(i_loop as i64)).as_view()
+            }) {
+                need_to_force_lmb = true;
+                break;
+            }
+        }
+        // if !need_to_force_lmb && false {
+        if !need_to_force_lmb {
+            return Ok(input_canonical_expression.to_owned());
+        }
+
+        let g = Graph::new_from_atom(input_canonical_expression, n_props)?;
+
+        let lmb = g.get_one_lmb()?;
+        // println!("input_canonical_expression={}", input_canonical_expression);
+        // println!("lmb: {:?}", lmb);
+        if lmb.len() != n_loops {
+            return Err(VakintError::InvalidIntegralFormat(format!(
+                "Loop momentum basis identified does not have the same loop count ({}) as detected for this topology ({}).",
+                lmb.len(), n_loops
+            )));
+        }
+
+        let mom_vecs_to_symbols = Arc::new(
+            (1..=n_loops)
+                .map(|i| {
+                    (
+                        fun!(S.k, Atom::new_num(i as i64)).into_pattern(),
+                        (
+                            Atom::new_var(State::get_symbol(format!("k{}", i))).into_pattern(),
+                            (
+                                State::get_symbol(format!("k{}", i)),
+                                State::get_symbol(format!("krotated{}", i)),
+                            ),
+                        ),
+                    )
+                })
+                .collect::<Vec<_>>(),
+        );
+
+        let mut system = vec![];
+        for (i_lmb, lmb_edge_id) in lmb.iter().enumerate() {
+            if let Some(m) = get_prop_with_id(input_canonical_expression, *lmb_edge_id as usize) {
+                let mut q = m.get(&State::get_symbol("q_")).unwrap().to_atom();
+                for (src, (trgt, (_trgt_symbol, _trgt_rotated_symbol))) in
+                    mom_vecs_to_symbols.iter()
+                {
+                    q = src.replace_all(q.as_view(), &trgt.clone().into(), None, None);
+                }
+                q = q - Atom::new_var(mom_vecs_to_symbols[i_lmb].1 .1 .1);
+                system.push(q);
+            }
+        }
+        // println!(
+        //     "system: {:?}",
+        //     system.iter().map(|a| a.to_string()).collect::<Vec<_>>()
+        // );
+        let variables = mom_vecs_to_symbols
+            .iter()
+            .map(|(_src, (_trgt, (trgt_symbol, _trgt_rotated_symbol)))| *trgt_symbol)
+            .collect::<Vec<_>>();
+        // println!(
+        //     "variables: {:?}",
+        //     variables.iter().map(|a| a.to_string()).collect::<Vec<_>>()
+        // );
+        let basis_change = Arc::new(
+            match Atom::solve_linear_system::<u8>(
+                system
+                    .iter()
+                    .map(|a| a.as_view())
+                    .collect::<Vec<_>>()
+                    .as_slice(),
+                variables.as_slice(),
+            ) {
+                Ok(b) => b,
+                Err(e) => {
+                    return Err(VakintError::InvalidIntegralFormat(format!(
+                        "Could not solve the linear system to force the loop momentum basis: {}",
+                        e
+                    )));
+                }
+            },
+        );
+        // println!(
+        //     "basis_change: {:?}",
+        //     basis_change
+        //         .iter()
+        //         .map(|a| a.to_string())
+        //         .collect::<Vec<_>>()
+        // );
+
+        let mut rotated_result = input_canonical_expression.to_owned();
+        for prop_id in prop_ids {
+            rotated_result =
+                Pattern::parse(format!("prop({},edges_,q_,mUVsq_,pow_)", prop_id).as_str())
+                    .unwrap()
+                    .replace_all(
+                        rotated_result.as_view(),
+                        &PatternOrMap::Map(Box::new({
+                            let mom_vecs_to_symbols = mom_vecs_to_symbols.clone();
+                            let basis_change = basis_change.clone();
+                            move |match_in| {
+                                let mut q =
+                                    match_in.get(State::get_symbol("q_")).unwrap().to_atom();
+                                for ((src, (_trgt, _trgt_symbol)), rotated_expr) in
+                                    mom_vecs_to_symbols.iter().zip(basis_change.iter())
+                                {
+                                    q = src.replace_all(
+                                        q.as_view(),
+                                        &rotated_expr.into_pattern().into(),
+                                        None,
+                                        None,
+                                    );
+                                }
+                                // Map back symbols to k(i) atoms
+                                for (src, (_trgt, (_trgt_symbol, trgt_rotated_symbol))) in
+                                    mom_vecs_to_symbols.iter()
+                                {
+                                    q = Atom::new_var(*trgt_rotated_symbol)
+                                        .into_pattern()
+                                        .replace_all(q.as_view(), &src.clone().into(), None, None);
+                                }
+                                q = q.expand();
+                                fun!(
+                                    State::get_symbol("prop"),
+                                    Atom::new_num(prop_id as i64),
+                                    match_in.get(State::get_symbol("edges_")).unwrap().to_atom(),
+                                    q,
+                                    match_in.get(State::get_symbol("mUVsq_")).unwrap().to_atom(),
+                                    match_in.get(State::get_symbol("pow_")).unwrap().to_atom()
+                                )
+                            }
+                        })),
+                        None,
+                        None,
+                    );
+        }
+
+        // println!("Rotated topology: {}", rotated_result);
+
+        Ok(rotated_result)
     }
 
     pub fn get_integral(&self) -> &Integral {
@@ -590,7 +779,7 @@ impl Topology {
                     t.get_integral().match_integral_to_user_input(input)?
                 {
                     replacement_rule.canonical_topology = t.clone();
-                    // println!("Found a match! ->\n{}", replacement_rule);
+                    println!("Found a match! ->\n{}", replacement_rule);
                     Ok(Some(replacement_rule))
                 } else {
                     Ok(None)
