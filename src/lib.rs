@@ -356,19 +356,29 @@ impl fmt::Display for ReplacementRules {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "ReplacementRules {{")?;
         writeln!(f, "  canonical_topology: {}", self.canonical_topology)?;
+        let mut sorted_edge_ids_canonical_to_input_map = self
+            .edge_ids_canonical_to_input_map
+            .iter()
+            .collect::<Vec<_>>();
+        sorted_edge_ids_canonical_to_input_map.sort_by_key(|k| *k.0);
         writeln!(
             f,
             "  edge_ids_canonical_to_input_map: {{ {} }}",
-            self.edge_ids_canonical_to_input_map
+            sorted_edge_ids_canonical_to_input_map
                 .iter()
                 .map(|(k, v)| format!("{} -> {}", k, v))
                 .collect::<Vec<String>>()
                 .join(", ")
         )?;
+        let mut sorted_canonical_expression_substitutions = self
+            .canonical_expression_substitutions
+            .iter()
+            .collect::<Vec<_>>();
+        sorted_canonical_expression_substitutions.sort_by_key(|k| k.0);
         writeln!(
             f,
             "  canonical_expression_substitutions: {{ {} }}",
-            self.canonical_expression_substitutions
+            sorted_canonical_expression_substitutions
                 .iter()
                 .map(|(k, v)| format!("{} -> {}", k, v))
                 .collect::<Vec<String>>()

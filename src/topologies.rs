@@ -357,7 +357,11 @@ impl Topology {
         for prop_id in contraction.iter() {
             if let Some(m) = get_prop_with_id(contracted_canonical_expression.as_view(), *prop_id) {
                 let (left_node_id, right_node_id) = get_node_ids(&m).unwrap();
-                nodes_to_merge.push((right_node_id, left_node_id));
+                if right_node_id > left_node_id {
+                    nodes_to_merge.push((right_node_id, left_node_id));
+                } else {
+                    nodes_to_merge.push((left_node_id, right_node_id));
+                }
             } else {
                 return Err(VakintError::InvalidIntegralFormat(format!(
                     "Cannot contract propagatore id {} as it is not found in integral: {}",
@@ -410,6 +414,7 @@ impl Topology {
             }
             old_contracted_canonical_expression = contracted_canonical_expression.clone();
         }
+
         // let tt: Topology = Integral::new(
         //     n_tot_props,
         //     Some(contracted_canonical_expression.clone()),
@@ -470,7 +475,7 @@ impl Topology {
                 break;
             }
         }
-        // if !need_to_force_lmb && false {
+        // if !need_to_force_lmb && False {
         if !need_to_force_lmb {
             return Ok(input_canonical_expression.to_owned());
         }
