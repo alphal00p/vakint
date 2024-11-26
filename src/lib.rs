@@ -1974,6 +1974,7 @@ impl VakintTerm {
         };
 
         integral_specs.apply_replacement_rules()?;
+        self.apply_numerator_replacement_rules(&integral_specs, &vakint.settings)?;
 
         let mut could_evaluate_integral = false;
         'eval: for evaluation_approach in vakint.settings.evaluation_order.0.iter() {
@@ -2000,21 +2001,11 @@ impl VakintTerm {
         Ok(())
     }
 
-    pub fn canonicalize(
+    pub fn apply_numerator_replacement_rules(
         &mut self,
-        vakint: &Vakint,
         replacement_rules: &ReplacementRules,
-        short_form: bool,
+        vakint_settings: &VakintSettings,
     ) -> Result<(), VakintError> {
-        self.integral = replacement_rules.canonical_topology.to_canonical(
-            self.integral.as_view(),
-            replacement_rules,
-            short_form,
-        );
-        if matches!(replacement_rules.canonical_topology, Topology::Unknown(_),) {
-            return Ok(()); // No further canonicalization possible
-        }
-
         let mut new_numerator = self.numerator.clone();
         let mut test = self.numerator.clone();
 
@@ -2067,7 +2058,7 @@ impl VakintTerm {
         );
 
         // Substitute epsilon regulator
-        test = Pattern::parse(&vakint.settings.epsilon_symbol)
+        test = Pattern::parse(&vakint_settings.epsilon_symbol)
             .unwrap()
             .replace_all(
                 test.as_view(),
@@ -2076,13 +2067,33 @@ impl VakintTerm {
                 None,
             );
 
-        if vakint.settings.verify_numerator_identification && !matches!(test, Atom::Num(_)) {
+        if vakint_settings.verify_numerator_identification && !matches!(test, Atom::Num(_)) {
             return Err(VakintError::NumeratorNotReplaced(
                 EXTERNAL_MOMENTUM_SYMBOL.into(),
                 test.to_string(),
             ));
         }
         self.numerator = new_numerator;
+
+        Ok(())
+    }
+
+    pub fn canonicalize(
+        &mut self,
+        vakint: &Vakint,
+        replacement_rules: &ReplacementRules,
+        short_form: bool,
+    ) -> Result<(), VakintError> {
+        self.integral = replacement_rules.canonical_topology.to_canonical(
+            self.integral.as_view(),
+            replacement_rules,
+            short_form,
+        );
+        if matches!(replacement_rules.canonical_topology, Topology::Unknown(_),) {
+            return Ok(()); // No further canonicalization possible
+        }
+
+        self.apply_numerator_replacement_rules(replacement_rules, &vakint.settings)?;
 
         Ok(())
     }
