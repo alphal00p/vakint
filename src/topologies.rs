@@ -124,7 +124,7 @@ impl Topologies {
                 .unwrap()
                 .as_view(),
                 TopologyContractions::Custom(vec![vec![]]),
-                EvaluationOrder::fmft_only(None),
+                EvaluationOrder::fmft_and_numerical(None, None),
             )?
             .0,
         );
@@ -154,7 +154,7 @@ impl Topologies {
                 .unwrap()
                 .as_view(),
                 TopologyContractions::Custom(vec![vec![]]),
-                EvaluationOrder::fmft_only(None),
+                EvaluationOrder::fmft_and_numerical(None, None),
             )?
             .0,
         );
@@ -183,7 +183,7 @@ impl Topologies {
                 .unwrap()
                 .as_view(),
                 TopologyContractions::Custom(vec![vec![]]),
-                EvaluationOrder::fmft_only(None),
+                EvaluationOrder::fmft_and_numerical(None, None),
             )?
             .0,
         );
@@ -213,7 +213,7 @@ impl Topologies {
                 .as_view(),
                 // Place all further pinched topologies on that FX one
                 TopologyContractions::Automatic, //TopologyContractions::Custom(vec![vec![], vec![3]]),
-                EvaluationOrder::fmft_only(None),
+                EvaluationOrder::fmft_and_numerical(None, None),
             )?
             .0,
         );

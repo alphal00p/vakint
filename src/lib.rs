@@ -1636,6 +1636,15 @@ impl EvaluationOrder {
             fmft_options.unwrap_or_default(),
         )])
     }
+    pub fn fmft_and_numerical(
+        fmft_options: Option<FMFTOptions>,
+        pysecdec_options: Option<PySecDecOptions>,
+    ) -> Self {
+        EvaluationOrder(vec![
+            EvaluationMethod::FMFT(fmft_options.unwrap_or_default()),
+            EvaluationMethod::PySecDec(pysecdec_options.unwrap_or_default()),
+        ])
+    }
     pub fn pysecdec_only(pysecdec_options: Option<PySecDecOptions>) -> Self {
         EvaluationOrder(vec![EvaluationMethod::PySecDec(
             pysecdec_options.unwrap_or_default(),
