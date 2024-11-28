@@ -2,16 +2,16 @@ use std::{collections::HashSet, fmt, sync::Arc};
 
 use colored::Colorize;
 use symbolica::{
-    atom::{Atom, AtomView},
+    atom::{Atom, AtomView, FunctionArgument, FunctionBuilder, SliceType},
     fun,
-    id::{Condition, MatchSettings, Pattern, PatternOrMap},
+    id::{Condition, Match, MatchSettings, Pattern, PatternOrMap},
     state::State,
 };
 
 use crate::{
-    get_individual_momenta, get_individual_momenta_from_atom, get_node_ids, get_prop_with_id,
-    graph::Graph, symbols::S, EvaluationOrder, Integral, ReplacementRules, VakintError,
-    VakintSettings,
+    function_condition, get_individual_momenta, get_individual_momenta_from_atom, get_node_ids,
+    get_prop_with_id, graph::Graph, symbols::S, EvaluationOrder, Integral, ReplacementRules,
+    VakintError, VakintSettings,
 };
 pub enum TopologyContractions {
     Custom(Vec<Vec<usize>>),
@@ -431,7 +431,51 @@ impl Topology {
         //     println!("after={}", tt);
         //     panic!("TTTT");
         // }
-
+        if !contraction.is_empty() {
+            contracted_short_expression =
+                Pattern::parse("TopoName_(args___)").unwrap().replace_all(
+                    contracted_short_expression.as_view(),
+                    &PatternOrMap::Map(Box::new(move |match_in| {
+                        let topo_name = if let Match::FunctionName(f) =
+                            match_in.get(State::get_symbol("TopoName_")).unwrap()
+                        {
+                            f.to_string()
+                        } else {
+                            panic!("Topology name must correspond to a function name.");
+                        };
+                        let args = if let Match::Multiple(SliceType::Arg, aviews) =
+                            match_in.get(State::get_symbol("args___")).unwrap()
+                        {
+                            aviews
+                        } else {
+                            panic!(
+                                "Topology arguments must be wrapped in Symbolica Arg construction."
+                            );
+                        };
+                        let mut res = FunctionBuilder::new(State::get_symbol(
+                            format!(
+                                "{}_pinch_{}",
+                                topo_name,
+                                contraction
+                                    .iter()
+                                    .map(|i| i.to_string())
+                                    .collect::<Vec<_>>()
+                                    .join("_")
+                            )
+                            .as_str(),
+                        ));
+                        for a in args.iter() {
+                            res = a.to_owned().add_arg_to_function_builder(res);
+                        }
+                        res.finish()
+                    })),
+                    Some(&Condition::from((
+                        State::get_symbol("TopoName_"),
+                        function_condition(),
+                    ))),
+                    None,
+                );
+        }
         Ok(Integral::new(
             n_tot_props,
             Some(contracted_canonical_expression),
@@ -654,7 +698,7 @@ impl Topology {
         input: AtomView,
     ) -> Result<Option<ReplacementRules>, VakintError> {
         match self {
-            Topology::Unknown(_) => {
+            Topology::Unknown(unknown_integral) => {
                 // println!(
                 //     "\n>>>Trying to match with the unknown integral pattern {}\n<<<",
                 //     self
@@ -665,7 +709,6 @@ impl Topology {
                     None,
                     None,
                 );
-                let unknown_integral = self.get_integral();
                 if unknown_integral
                     .generic_pattern
                     .pattern
@@ -754,7 +797,10 @@ impl Topology {
                     }
                     let n_loops = *sorted_loop_momenta_ids.last().unwrap();
                     //println!("Found a match!");
-                    let mut replacement_rules = ReplacementRules::default();
+                    let mut replacement_rules = ReplacementRules {
+                        canonical_topology: Topology::Unknown(unknown_integral.clone()),
+                        ..ReplacementRules::default()
+                    };
                     replacement_rules.canonical_expression_substitutions.insert(
                         Atom::parse("integral").unwrap(),
                         Pattern::parse("UNKNOWN(int_)").unwrap().replace_all(
@@ -784,7 +830,7 @@ impl Topology {
                     t.get_integral().match_integral_to_user_input(input)?
                 {
                     replacement_rule.canonical_topology = t.clone();
-                    println!("Found a match! ->\n{}", replacement_rule);
+                    // println!("Found a match! ->\n{}", replacement_rule);
                     Ok(Some(replacement_rule))
                 } else {
                     Ok(None)

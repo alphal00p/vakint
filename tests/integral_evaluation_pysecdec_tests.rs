@@ -110,7 +110,7 @@ fn test_integrate_1l_cross_product_with_additional_symbols_numerator() {
 fn test_integrate_2l_different_masses() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar, ..VakintSettings::default()},
+        VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar, allow_unknown_integrals: true, ..VakintSettings::default()},
         EvaluationOrder(vec![EvaluationMethod::PySecDec(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/test_integrate_2l_different_masses".into()) ,..PySecDecOptions::default() })]),
         Atom::parse(
             "(1)*topo(\
@@ -249,7 +249,13 @@ fn test_integrate_4l_PR9d_from_FG_pinch() {
             4),
         HashMap::default(),
         vec![
-            (0,  ("-28.31064373017674207211847384976".into(), "0.0".into()),),
+            (-4,  ("8.333333333333333333333333333333e-2".into(), "0.0".into()),),
+            (-3,  ("3.333333333333333333333333333333e-1".into(), "0.0".into()),),
+            (-2,  ("-3.144646082033583725553786166618e-1".into(), "0.0".into()),),
+            (-1,  ("5.421352941798334340259377610275".into(), "0.0".into()),),
+            ( 0,  ("-28.31064373017674207211847384976".into(), "0.0".into()),),
+            // No analytical result for the O(ep) term
+            ( 1,  ("154.6355".into(), "0.0".into()),),
         ],
         4, MAX_PULL
     );

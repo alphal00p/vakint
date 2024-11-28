@@ -334,6 +334,10 @@ fn symbol_condition() -> WildcardRestriction {
     }))
 }
 
+fn function_condition() -> WildcardRestriction {
+    WildcardRestriction::Filter(Box::new(move |m| matches!(m, Match::FunctionName(_))))
+}
+
 fn apply_restriction_to_symbols(
     symbols: Vec<Symbol>,
     restriction: &WildcardRestriction,
@@ -384,10 +388,13 @@ impl fmt::Display for ReplacementRules {
                 .collect::<Vec<String>>()
                 .join(", ")
         )?;
+        let mut sorted_numerator_substitutions =
+            self.numerator_substitutions.iter().collect::<Vec<_>>();
+        sorted_numerator_substitutions.sort_by_key(|k| k.0);
         writeln!(
             f,
             "  numerator_substitutions: {{ {} }}",
-            self.numerator_substitutions
+            sorted_numerator_substitutions
                 .iter()
                 .map(|(k, v)| format!("{} -> {}", k, v))
                 .collect::<Vec<String>>()
@@ -1483,6 +1490,7 @@ impl EvaluationMethod {
                     .iter()
                     .any(|m| matches!(m, EvaluationMethod::MATAD(_)))
                     && topology.get_integral().n_loops <= 3
+                    && vakint.settings.number_of_terms_in_epsilon_expansion <= 5
             }
             EvaluationMethod::FMFT(_) => {
                 topology
@@ -1492,6 +1500,7 @@ impl EvaluationMethod {
                     .iter()
                     .any(|m| matches!(m, EvaluationMethod::FMFT(_)))
                     && topology.get_integral().n_loops == 4
+                    && vakint.settings.number_of_terms_in_epsilon_expansion <= 5
             }
             EvaluationMethod::PySecDec(_) => topology
                 .get_integral()

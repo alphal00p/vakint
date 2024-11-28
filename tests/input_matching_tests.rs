@@ -159,8 +159,8 @@ fn test_2l_matching_pinched() {
             .map(|a| a.as_view()),
         Atom::parse(
             "(k(2,2)^2+k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(\
-                        prop(1,edge(2,2),k(1),mUVsq,2)*\
-                        prop(2,edge(2,2),k(2),mUVsq,1)
+                        prop(1,edge(1,1),k(1),mUVsq,2)*\
+                        prop(2,edge(1,1),k(2),mUVsq,1)
                     )",
         )
         .unwrap(),
@@ -181,7 +181,8 @@ fn test_2l_matching_pinched() {
             )
             .as_ref()
             .map(|a| a.as_view()),
-        Atom::parse("(k(2,2)^2+k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(I2L(mUVsq,2,1,0))").unwrap(),
+        Atom::parse("(k(2,2)^2+k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(I2L_pinch_3(mUVsq,2,1,0))")
+            .unwrap(),
     );
 
     compare_output(
@@ -199,6 +200,27 @@ fn test_2l_matching_pinched() {
                         prop(1,edge(1,2),k(1),mUVsq,2)*\
                         prop(2,edge(1,2),k(2),mUVsq,1)*\
                         prop(3,edge(2,1),k(1)+k(2),mUVsq,0)
+                )",
+        )
+        .unwrap(),
+    );
+
+    compare_output(
+        vakint
+            .to_canonical(
+                Atom::parse(
+                    "(k(2,2)^2+k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(I2L_pinch_3(mUVsq,2,1,0))",
+                )
+                .unwrap()
+                .as_view(),
+                false,
+            )
+            .as_ref()
+            .map(|a| a.as_view()),
+        Atom::parse(
+            "(k(2,2)^2+k(1,33)*p(42,33)+k(1,77)*k(2,77))*topo(\
+                        prop(1,edge(1,1),k(1),mUVsq,2)*\
+                        prop(2,edge(1,1),k(2),mUVsq,1)
                 )",
         )
         .unwrap(),
@@ -231,7 +253,7 @@ fn test_3l_matching_with_zero_powers_in_short_form() {
             )
             .as_ref()
             .map(|a| a.as_view()),
-        Atom::parse("topo(I3L(muvsq,0,1,1,1,2,0))").unwrap(),
+        Atom::parse("topo(I3L_pinch_1_6(muvsq,0,1,1,1,2,0))").unwrap(),
     );
 }
 

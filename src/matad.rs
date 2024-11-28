@@ -426,7 +426,8 @@ impl Vakint {
         };
 
         // Here we map the propagators in the correct order for the definition of the topology in MATAD
-        let vakint_to_matad_edge_map = match integral_name.as_str() {
+        let vakint_to_matad_edge_map = match integral_name.as_str().split("_pinch_").next().unwrap()
+        {
             "I1L" => vec![1],
             "I2L" => vec![2, 3, 1],
             "I3L" => vec![4, 5, 6, 1, 2, 3],

@@ -45,6 +45,15 @@ impl FMFT {
             None,
             None,
         );
+        // Temporarily work with the variable "ep" instead of the UTF-8 symbol for epsilon
+        res = Atom::new_var(State::get_symbol(self.settings.epsilon_symbol.as_str()))
+            .into_pattern()
+            .replace_all(
+                res.as_view(),
+                &Pattern::parse("ep").unwrap().into(),
+                None,
+                None,
+            );
         res = fun!(S.vkdot, fun!(S.p, S.id1_a), fun!(S.p, S.id2_a))
             .into_pattern()
             .replace_all(
@@ -107,7 +116,7 @@ impl FMFT {
             .next()
         {
             return Err(VakintError::FMFTError(
-            format!("MATAD result contains a Gamma function whose numerical evaluation is not implemented in vakint: Gamma({}+{}*{})",
+            format!("FMFT result contains a Gamma function whose numerical evaluation is not implemented in vakint: Gamma({}+{}*{})",
                 m.match_stack.get(S.x_).unwrap().to_atom(),
                 m.match_stack.get(S.y_).unwrap().to_atom(),
                 self.settings.epsilon_symbol
@@ -311,7 +320,8 @@ impl Vakint {
         };
 
         // Here we map the propagators in the correct order for the definition of the topology in FMFT
-        let vakint_to_fmft_edge_map = match integral_name.as_str() {
+        let vakint_to_fmft_edge_map = match integral_name.as_str().split("_pinch_").next().unwrap()
+        {
             "I4L_H" => vec![2, 3, 4, 5, 6, 7, 8, 9, 1],
             "I4L_X" => vec![2, 3, 4, 5, 6, 7, 8, 9, 10],
             "I4L_BMW" => vec![3, 4, 5, 6, 7, 8, 9, 10],
@@ -585,7 +595,7 @@ impl Vakint {
         )
         .unwrap();
 
-        // Since MATAD uses euclidean denominator, we must adjust the overall sign by (-1) per quadratic denominator with power one.
+        // Since FMFT uses euclidean denominator, we must adjust the overall sign by (-1) per quadratic denominator with power one.
         fmft_normalization_correction = fmft_normalization_correction
             * Atom::parse(format!("((-1)^{})", powers.iter().sum::<i64>()).as_str()).unwrap();
 
@@ -623,6 +633,7 @@ impl Vakint {
                 expansion_depth
             );
             evaluated_integral = fmft.expand_masters(evaluated_integral.as_view())?;
+
             debug!(
                 "{}: Series expansion of the result up to and including terms of order {}^{} ...",
                 "FMFT".green(),
