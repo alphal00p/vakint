@@ -336,71 +336,6 @@ impl Vakint {
 
         let mut numerator = Vakint::convert_to_dot_notation(input_numerator);
 
-        let mut numerator_for_scaling_analysis = numerator.clone();
-        // Rescale dot products
-        numerator_for_scaling_analysis = fun!(S.dot, fun!(S.x_, S.id1_a), fun!(S.y_, S.id2_a))
-            .into_pattern()
-            .replace_all(
-                numerator_for_scaling_analysis.as_view(),
-                &(&S.lambda_a * fun!(S.vkdot, fun!(S.x_, S.id1_a), fun!(S.y_, S.id2_a)))
-                    .into_pattern()
-                    .into(),
-                Some(
-                    &(Condition::from((S.id1_, number_condition()))
-                        & Condition::from((S.id2_, number_condition()))),
-                ),
-                None,
-            );
-        // Rescale the UV mass
-        numerator_for_scaling_analysis = Atom::new_var(muv_sq_symbol).into_pattern().replace_all(
-            numerator_for_scaling_analysis.as_view(),
-            &(&S.lambda_a * Atom::new_var(muv_sq_symbol))
-                .into_pattern()
-                .into(),
-            Some(
-                &(Condition::from((S.id1_, number_condition()))
-                    & Condition::from((S.id2_, number_condition()))),
-            ),
-            None,
-        );
-        let (scaling_coefficients, remainder) =
-            numerator_for_scaling_analysis.coefficient_list(S.lambda);
-
-        let mut muv_sq_dimension = if remainder.is_zero() && scaling_coefficients.len() == 1 {
-            let (coef, _) = scaling_coefficients[0].clone();
-            if let Some(m) = Pattern::parse(format!("{}^{}", S.lambda, S.pow_).as_str())
-                .unwrap()
-                .pattern_match(
-                    coef.as_view(),
-                    &Condition::default(),
-                    &MatchSettings::default(),
-                )
-                .next()
-            {
-                get_integer_from_match(m.match_stack.get(S.pow_).unwrap()).unwrap()
-            } else {
-                return Err(VakintError::FMFTError(format!(
-                    "The numerator does not appear to have uniform dimensionality: {}",
-                    numerator_for_scaling_analysis
-                )));
-            }
-        } else if scaling_coefficients.is_empty() {
-            0
-        } else {
-            return Err(VakintError::FMFTError(format!(
-                "The numerator does not appear to have uniform dimensionality: {}",
-                numerator_for_scaling_analysis
-            )));
-        };
-
-        // Set the numerator to one and restore it using uniform dimensionality later
-        numerator = Atom::new_var(muv_sq_symbol).into_pattern().replace_all(
-            numerator.as_view(),
-            &Pattern::parse("1").unwrap().into(),
-            None,
-            None,
-        );
-
         if utils::could_match(
             &fun!(S.dot, fun!(S.p, S.id1_a), fun!(S.k, S.id2_a)).into_pattern(),
             numerator.as_view(),
@@ -416,10 +351,9 @@ impl Vakint {
             .into_pattern()
             .replace_all(
                 numerator.as_view(),
-                &(fun!(S.vkdot, fun!(S.p, S.id1_a), fun!(S.p, S.id2_a))
-                    / (Atom::new_var(muv_sq_symbol)))
-                .into_pattern()
-                .into(),
+                &fun!(S.vkdot, fun!(S.p, S.id1_a), fun!(S.p, S.id2_a))
+                    .into_pattern()
+                    .into(),
                 Some(
                     &(Condition::from((S.id1_, number_condition()))
                         & Condition::from((S.id2_, number_condition()))),
@@ -428,7 +362,7 @@ impl Vakint {
             );
 
         // And finally map all interior products into the form p<i>.p<i> expected by fmft, where <i> is the edge id carrying momentum k<i>.
-        let momenta = integral_specs.get_propagator_property_list("q_");
+        let momenta: HashMap<usize, Atom> = integral_specs.get_propagator_property_list("q_");
         let mut lmb_prop_indices = vec![];
         for i_loop in 1..=integral.n_loops {
             if let Some((i_edge, _)) = momenta.iter().find(|(_i_prop, k)| {
@@ -468,7 +402,7 @@ impl Vakint {
                     // The outter dot will be converted to an inner dot in the next step
                     // Again we must normalize by the dimensionality muv^2
                     Atom::parse(format!("dot(p{},p{})", i_edge1, i_edge2).as_str()).unwrap()
-                        / (Atom::new_var(muv_sq_symbol))
+                        * (Atom::new_var(muv_sq_symbol))
                 })),
                 Some(
                     &(Condition::from((S.id1_, number_condition()))
@@ -509,18 +443,6 @@ impl Vakint {
             .map(|(pwr, fmft_edge_index)| format!("d{}^{}", fmft_edge_index, -pwr))
             .collect::<Vec<_>>()
             .join("*");
-
-        // Offset dimensionality by the denominators
-        muv_sq_dimension -= powers.iter().sum::<i64>();
-        // Include the scaling of the measure
-        muv_sq_dimension += 2 * integral.n_loops as i64;
-        debug!(
-            "{}: The integral was detected to be of overall dimension GeV^{} ...",
-            "FMFT".green(),
-            2 * muv_sq_dimension
-        );
-
-        //println!("FMFT input string: {}", format!("({})*({})", numerator_string, integral_string));
 
         // Replace functions with 1 and get all remaining symbols
         let mut numerator_additional_symbols = Pattern::parse("f_(args__)")
@@ -577,11 +499,16 @@ impl Vakint {
             "FMFT".green(),
             evaluated_integral
         );
+
         // Restore dimensionality now
+
+        // Offset dimensionality by the denominators
+        let muv_sq_dimension = 2 * (integral.n_loops as i64) - powers.iter().sum::<i64>();
+
         evaluated_integral = evaluated_integral
             * Atom::parse(format!("{}^{}", muv_sq_symbol, muv_sq_dimension).as_str()).unwrap();
 
-        let mut fmft_normalization_correction = Atom::parse(
+        let fmft_normalization_correction = Atom::parse(
             format!(
                 "( 
                     (𝑖*(𝜋^((4-2*{eps})/2)))\
@@ -594,10 +521,6 @@ impl Vakint {
             .as_str(),
         )
         .unwrap();
-
-        // Since FMFT uses euclidean denominator, we must adjust the overall sign by (-1) per quadratic denominator with power one.
-        fmft_normalization_correction = fmft_normalization_correction
-            * Atom::parse(format!("((-1)^{})", powers.iter().sum::<i64>()).as_str()).unwrap();
 
         // Adjust normalization factor
         let mut complete_normalization = fmft_normalization_correction

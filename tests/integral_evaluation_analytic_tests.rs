@@ -545,7 +545,7 @@ fn test_integrate_4l_h() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             // This does not have an analytical expression yet (FMFT not implemented yet)
-            (0,  ("12799.53514305961548130719263292".into(), "0.0".into()),),
+            (0,  ("-12799.53514305961548130719263292".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -583,11 +583,11 @@ fn test_integrate_4l_h_rank_4() {
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
-            (-4,  ("-1186.066377008821750891071937988".into(), "0.0".into()),),
-            (-3,  ("+5230.213550573493109971875189821".into(), "0.0".into()),),
-            (-2,  ("+8305.289108629098073289943186440".into(), "0.0".into()),),
-            (-1,  ("-344540.1718444189434507056576835".into(), "0.0".into()),),
-            ( 0,  ("-8237565.915322277715297935403078".into(), "0.0".into()),),
+            (-4,  ("+10674.59739307939575801964744189".into(), "0.0".into()),),
+            (-3,  ("-47071.92195516143798974687670839".into(), "0.0".into()),),
+            (-2,  ("+61389.19910667747809242280299166".into(), "0.0".into()),),
+            (-1,  ("+928571.7264940044122518812620547".into(), "0.0".into()),),
+            ( 0,  ("+29325841.99455641744844958694905".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -625,11 +625,11 @@ fn test_integrate_4l_h_rank_4_additional_symbols_numerator() {
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
-            (-4,  ("-5930.331885044108754455359689941".into(), "0.0".into()),),
-            (-3,  ("+26151.06775286746554985937594911".into(), "0.0".into()),),
-            (-2,  ("+177663.2466274848511184820076018".into(), "0.0".into()),),
-            (-1,  ("-3960232.565580285146720711515790".into(), "0.0".into()),),
-            ( 0,  ("-84699534.02942421638293180676593".into(), "0.0".into()),),
+            (-4,  ("+53372.98696539697879009823720947".into(), "0.0".into()),),
+            (-3,  ("-235359.6097758071899487343835420".into(), "0.0".into()),),
+            (-2,  ("-101464.4077196306917939828600505".into(), "0.0".into()),),
+            (-1,  ("+11355453.75154459334966095599239".into(), "0.0".into()),),
+            ( 0,  ("+277164323.3312205706615743239968".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -858,7 +858,153 @@ fn test_integrate_4l_PR11d() {
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
-            (0,  ("2.906486288643112641819206002127".into(), "0.0".into()),),
+            (0,  ("-2.906486288643112641819206002127".into(), "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
+#[allow(non_snake_case)]
+fn test_integrate_4l_clover() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings { 
+            integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD,
+            number_of_terms_in_epsilon_expansion: 5, run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
+        Atom::parse(
+            "( 1 )*topo(
+                prop(1, edge(1, 1), k(1), muvsq, 1)*\
+                prop(2, edge(1, 1), k(2), muvsq, 1)*\
+                prop(3, edge(1, 1), k(3), muvsq, 1)*\
+                prop(4, edge(1, 1), k(4), muvsq, 1)
+            )",
+        ).unwrap().as_view(),
+        // Masses chosen equal on purpose here so as to have a reliable target analytical result
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        externals_from_f64(
+        &(1..=2)
+            .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            (-4,  ("1.000000000000000000000000000000".into(), "0.0".into()),),
+            (-3,  ("4.000000000000000000000000000000".into(), "0.0".into()),),
+            (-2,  ("13.28986813369645287294483033329".into(), "0.0".into()),),
+            (-1,  ("31.55672999723968577791300378449".into(), "0.0".into()),),
+            (0,   ("67.98165058904685502307905531744".into(), "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
+#[allow(non_snake_case)]
+fn test_integrate_4l_clover_with_non_unit_scales() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings { number_of_terms_in_epsilon_expansion: 5, run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
+        Atom::parse(
+            "( 1 )*topo(
+                prop(1, edge(1, 1), k(1), muvsq, 1)*\
+                prop(2, edge(1, 1), k(2), muvsq, 1)*\
+                prop(3, edge(1, 1), k(3), muvsq, 1)*\
+                prop(4, edge(1, 1), k(4), muvsq, 1)
+            )",
+        ).unwrap().as_view(),
+        // Masses chosen equal on purpose here so as to have a reliable target analytical result
+        params_from_f64(&[("muvsq".into(), 3.0), ("mursq".into(), 7.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        externals_from_f64(
+        &(1..=2)
+            .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            (-4,  ("81.00000000000000000000000000000".into(), "0.0".into()),),
+            (-3,  ("-218.9682569565641868485693739496".into(), "0.0".into()),),
+            (-2,  ("724.4490568207455247307151297051".into(), "0.0".into()),),
+            (-1,  ("-1446.834846767122729283863130264".into(), "0.0".into()),),
+            (0,   ("3106.843653546628093141699453745".into(), "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
+#[allow(non_snake_case)]
+fn test_integrate_4l_dotted_clover() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings { number_of_terms_in_epsilon_expansion: 5, run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
+        Atom::parse(
+            "( 1 )*topo(
+                prop(1, edge(1, 1), k(1), muvsq, 2)*\
+                prop(2, edge(1, 1), k(2), muvsq, 1)*\
+                prop(3, edge(1, 1), k(3), muvsq, 1)*\
+                prop(4, edge(1, 1), k(4), muvsq, 1)
+            )",
+        ).unwrap().as_view(),
+        // Masses chosen equal on purpose here so as to have a reliable target analytical result
+        params_from_f64(&[("muvsq".into(), 3.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        externals_from_f64(
+        &(1..=2)
+            .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            (-4,  ("27.00000000000000000000000000000".into(), "0.0".into()),),
+            (-3,  ("-99.98941898552139561618979131653".into(), "0.0".into()),),
+            (-2,  ("314.4724379257699038597615012182".into(), "0.0".into()),),
+            (-1,  ("-723.7613011959560846715260866565".into(), "0.0".into()),),
+            (0,   ("1517.892833437916940808520861336".into(), "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
+#[allow(non_snake_case)]
+fn test_integrate_4l_clover_with_numerator() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings { 
+            number_of_terms_in_epsilon_expansion: 5, 
+            run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS,
+            integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, 
+            ..VakintSettings::default() },
+        EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
+        Atom::parse(
+            "( 
+                  A * k(1,11)*k(2,11)*k(1,22)*k(2,22)
+                + B * p(1,11)*k(3,11)*k(3,22)*p(2,22)
+                + C * p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+             )*topo(
+                prop(1, edge(1, 1), k(1), muvsq, 2)*\
+                prop(2, edge(1, 1), k(2), muvsq, 1)*\
+                prop(3, edge(1, 1), k(3), muvsq, 1)*\
+                prop(4, edge(1, 1), k(4), muvsq, 1)
+            )",
+        ).unwrap().as_view(),
+        // Masses chosen equal on purpose here so as to have a reliable target analytical result
+        params_from_f64(&[("muvsq".into(), 0.3), ("mursq".into(), 0.7), ("A".into(), 3.0), ("B".into(), 4.0), ("C".into(), 5.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        externals_from_f64(
+        &(1..=2)
+            .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            (-4,  ("-1.897149599999999855007182247846e-1".into(), "0.0".into()),),
+            (-3,  ("-1.495259819655131009380566817668".into(), "0.0".into()),),
+            (-2,  ("-6.805240907875078933713325181389".into(), "0.0".into()),),
+            (-1,  ("-22.56027900679456203938234477552".into(), "0.0".into()),),
+            (0,   ("-60.49337040949871593265194938449".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );

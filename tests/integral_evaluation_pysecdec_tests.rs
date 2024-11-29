@@ -299,3 +299,89 @@ fn test_integrate_4l_PR11d() {
         4, MAX_PULL
     );
 }
+
+#[ignore]
+#[test_log::test]
+#[allow(non_snake_case)]
+fn test_integrate_4l_clover() {
+    let vakint_default_settings = VakintSettings {
+        integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD,
+        number_of_terms_in_epsilon_expansion: 5,
+        ..VakintSettings::default()
+    };
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        vakint_default_settings,
+        EvaluationOrder(vec![EvaluationMethod::PySecDec(
+            PySecDecOptions{ relative_precision: 1e-8, min_n_evals: 10_000_000, max_n_evals: 100_000_000, reuse_existing_output: Some("./tests_workspace/test_integrate_4l_clover".into()), ..PySecDecOptions::default()} )]),
+        Atom::parse(
+            "( 1 )*topo(
+              prop(1, edge(1, 1), k(1), muvsq, 1)*\
+              prop(2, edge(1, 1), k(2), muvsq, 1)*\
+              prop(3, edge(1, 1), k(3), muvsq, 1)*\
+              prop(4, edge(1, 1), k(4), muvsq, 1)
+          )",
+        )
+        .unwrap()
+        .as_view(),
+        // Masses chosen equal on purpose here so as to have a reliable target analytical result
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            4),
+        HashMap::default(),
+        vec![
+            (-4,  ("1.000000000000000000000000000000".into(), "0.0".into()),),
+            (-3,  ("4.000000000000000000000000000000".into(), "0.0".into()),),
+            (-2,  ("13.28986813369645287294483033329".into(), "0.0".into()),),
+            (-1,  ("31.55672999723968577791300378449".into(), "0.0".into()),),
+            (0,   ("67.98165058904685502307905531744".into(), "0.0".into()),),
+        ],
+        4, MAX_PULL
+    );
+}
+
+#[ignore]
+#[test_log::test]
+#[allow(non_snake_case)]
+fn test_integrate_4l_clover_with_numerator() {
+    let vakint_default_settings = VakintSettings {
+        integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD,
+        number_of_terms_in_epsilon_expansion: 5,
+        ..VakintSettings::default()
+    };
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        vakint_default_settings,
+        EvaluationOrder(vec![EvaluationMethod::PySecDec(
+            PySecDecOptions{ relative_precision: 1e-8, min_n_evals: 10_000_000, max_n_evals: 100_000_000, reuse_existing_output: Some("./tests_workspace/test_integrate_4l_clover_with_numerator".into()), ..PySecDecOptions::default()} )]),
+        Atom::parse(
+            "( 
+                A * k(1,11)*k(2,11)*k(1,22)*k(2,22)
+              + B * p(1,11)*k(3,11)*k(3,22)*p(2,22)
+              + C * p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+           )*topo(
+              prop(1, edge(1, 1), k(1), muvsq, 2)*\
+              prop(2, edge(1, 1), k(2), muvsq, 1)*\
+              prop(3, edge(1, 1), k(3), muvsq, 1)*\
+              prop(4, edge(1, 1), k(4), muvsq, 1)
+          )",
+        )
+        .unwrap()
+        .as_view(),
+        // Masses chosen equal on purpose here so as to have a reliable target analytical result
+        params_from_f64(&[("muvsq".into(), 0.3), ("mursq".into(), 0.7), ("A".into(), 3.0), ("B".into(), 4.0), ("C".into(), 5.0)].iter().cloned().collect(),
+            4),
+        externals_from_f64(
+            &(1..=2)
+                .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+                .collect(),
+                N_DIGITS_PYSECDEC_EVALUATION_FOR_TESTS),
+        vec![
+            (-4,  ("-1.897149599999999855007182247846e-1".into(), "0.0".into()),),
+            (-3,  ("-1.495259819655131009380566817668".into(), "0.0".into()),),
+            (-2,  ("-6.805240907875078933713325181389".into(), "0.0".into()),),
+            (-1,  ("-22.56027900679456203938234477552".into(), "0.0".into()),),
+            (0,   ("-60.49337040949871593265194938449".into(), "0.0".into()),),
+        ],
+        4, MAX_PULL
+    );
+}
