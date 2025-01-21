@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-symbolica = "0.13.0"
-#symbolica = { git = "https://github.com/benruijl/symbolica.git", branch = "main" }
+#symbolica = "0.14.0"
+symbolica = { git = "https://github.com/benruijl/symbolica.git", rev = "c10688d92271dd061fc71bfe81eb3157e59830d6" }
+#symbolica = { git = "https://github.com/benruijl/symbolica.git", branch = "main", rev = "c10688d92271dd061fc71bfe81eb3157e59830d6" }
 #symbolica = { path = "../gammaloop_main/python/gammaloop/dependencies/symbolica" }
 anyhow = "1.0.86"
 thiserror = "1.0.63"

@@ -171,8 +171,8 @@ fn test_integrate_2l_pysecdec_pinched() {
         (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_2l_pysecdec_pinched".into()),..PySecDecOptions::default() })) ,false)),
         Atom::parse(
             "(1)*topo(\
-                prop(1,edge(1,2),k(1),muvsq,1)\
-                *prop(2,edge(1,2),k(2),muvsq,1)
+                prop(1,edge(1,1),k(1),muvsq,1)\
+                *prop(2,edge(1,1),k(2),muvsq,1)
             )",
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
@@ -197,8 +197,8 @@ fn test_integrate_2l_pysecdec_pinched_other_lmb() {
         (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_2l_pysecdec_pinched_other_lmb".into()),..PySecDecOptions::default() })) ,false)),
         Atom::parse(
             "(1)*topo(\
-                prop(1,edge(1,2),k(1),muvsq,1)\
-                *prop(3,edge(2,1),k(1)+k(2),muvsq,1)
+                prop(1,edge(1,1),k(1),muvsq,1)\
+                *prop(3,edge(1,1),k(1)+k(2),muvsq,1)
             )",
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
@@ -279,6 +279,8 @@ fn test_integrate_3l_pysecdec() {
 #[ignore]
 #[test_log::test]
 fn test_integrate_3l_rank_4() {
+    // pySecDec is not so great for such higher rank cases, so we need to set a very high threshold
+    const ADJUSTED_THRESHOLD: f64 = 1.0e-2;
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
@@ -307,7 +309,7 @@ fn test_integrate_3l_rank_4() {
             .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
-        1.0e-3, MAX_PULL,
+            ADJUSTED_THRESHOLD, MAX_PULL,
         true,
     );
 }
@@ -315,6 +317,8 @@ fn test_integrate_3l_rank_4() {
 #[ignore]
 #[test_log::test]
 fn test_integrate_3l_rank_4_matad() {
+    // pySecDec is not so great for such higher rank cases, so we need to set a very high threshold
+    const ADJUSTED_THRESHOLD: f64 = 1.0e-2;
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings {number_of_terms_in_epsilon_expansion: 5,..VakintSettings::default()},
@@ -345,7 +349,7 @@ fn test_integrate_3l_rank_4_matad() {
             .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
             .collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
-        1.0e-3, MAX_PULL,
+            ADJUSTED_THRESHOLD, MAX_PULL,
         true,
     );
 }

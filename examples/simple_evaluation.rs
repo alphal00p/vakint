@@ -1,4 +1,4 @@
-use symbolica::{atom::Atom, state::State};
+use symbolica::{atom::Atom, symb};
 use vakint::{
     EvaluationOrder, LoopNormalizationFactor, NumericalEvaluationResult, Vakint, VakintExpression,
     VakintSettings,
@@ -69,7 +69,7 @@ fn main() {
         .numerical_evaluation(integral.as_view(), &params, Some(&externals))
         .unwrap();
     println!("Numerical evaluation:\n{}\n", eval);
-    let eval_atom = eval.to_atom(State::get_symbol(vakint.settings.epsilon_symbol.clone()));
+    let eval_atom = eval.to_atom(symb!(vakint.settings.epsilon_symbol.clone()));
     println!("Numerical evaluation as atom:\n{}\n", eval_atom);
     #[rustfmt::skip]
     let target_eval =  NumericalEvaluationResult::from_vec(

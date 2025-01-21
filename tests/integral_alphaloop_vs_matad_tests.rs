@@ -2,11 +2,11 @@ mod test_utils;
 
 use log::debug;
 use symbolica::{
-    atom::{Atom, AtomView},
+    atom::{Atom, AtomCore, AtomView},
     domains::rational::Rational,
     fun,
     id::Pattern,
-    state::State,
+    symb,
 };
 use test_utils::compare_two_evaluations;
 use vakint::{matad::MATAD, EvaluationOrder, NumericalEvaluationResult, Vakint, VakintSettings};
@@ -250,7 +250,7 @@ pub fn evaluate_expression_with_matad(
     // );
     integral = integral
         .series(
-            State::get_symbol("ep"),
+            symb!("ep"),
             Atom::Zero.as_view(),
             Rational::from(vakint.settings.number_of_terms_in_epsilon_expansion - 3),
             true,
@@ -275,27 +275,27 @@ pub fn evaluate_expression_with_matad(
             .substitute_additional_constants(integral.as_view())
             .unwrap();
     }
-    let muv_sq_symbol = State::get_symbol("muvsq");
+    let muv_sq_symbol = symb!("muvsq");
     let log_muv_mu_sq = fun!(
-        State::LOG,
+        Atom::LOG,
         Atom::new_var(muv_sq_symbol)
-            / Atom::new_var(State::get_symbol(vakint.settings.mu_r_sq_symbol.as_str()))
+            / Atom::new_var(symb!(vakint.settings.mu_r_sq_symbol.as_str()))
     );
 
     let log_mu_sq = fun!(
-        State::LOG,
-        Atom::new_var(State::get_symbol(vakint.settings.mu_r_sq_symbol.as_str()))
+        Atom::LOG,
+        Atom::new_var(symb!(vakint.settings.mu_r_sq_symbol.as_str()))
     );
 
-    integral = Pattern::parse("logmUVmu").unwrap().replace_all(
-        integral.as_view(),
-        &(log_muv_mu_sq).into_pattern().into(),
+    integral = integral.replace_all(
+        &Pattern::parse("logmUVmu").unwrap(),
+        (log_muv_mu_sq).to_pattern(),
         None,
         None,
     );
-    integral = Pattern::parse("log_mu_sq").unwrap().replace_all(
-        integral.as_view(),
-        &(log_mu_sq).into_pattern().into(),
+    integral = integral.replace_all(
+        &Pattern::parse("log_mu_sq").unwrap(),
+        (log_mu_sq).to_pattern(),
         None,
         None,
     );
@@ -308,11 +308,9 @@ pub fn evaluate_expression_with_matad(
         vakint.settings.run_time_decimal_precision,
     );
 
-    integral = Pattern::parse("ep").unwrap().replace_all(
-        integral.as_view(),
-        &Atom::new_var(State::get_symbol(vakint.settings.epsilon_symbol.as_str()))
-            .into_pattern()
-            .into(),
+    integral = integral.replace_all(
+        &Pattern::parse("ep").unwrap(),
+        Atom::new_var(symb!(vakint.settings.epsilon_symbol.as_str())).to_pattern(),
         None,
         None,
     );
@@ -533,9 +531,9 @@ pub fn test_eval_matad_one_master_combination() {
     .unwrap();
 
     let mut input = Atom::parse("M^2*miD6+16*M^2*(1736*(-2*ep+4)^2-718*(-2*ep+4)^3+165*(-2*ep+4)^4-20*(-2*ep+4)^5+(-2*ep+4)^6-2208*(-2*ep+4)+1152)^-1*Gam(1,1)^3+4*M^2*miT111*((-2*ep+4)^2-7*(-2*ep+4)+12)^-1*Gam(1,1)+M^2*miD5*(2*(-2*ep+4)-6)^-1*(3*(-2*ep+4)-12)+M^2*miBN*(-3*(-2*ep+4)+8)*(8*(-2*ep+4)-24)^-1").unwrap();
-    input = Pattern::parse("M").unwrap().replace_all(
-        input.as_view(),
-        &Pattern::parse("muvsq^(1/2)").unwrap().into(),
+    input = input.replace_all(
+        &Pattern::parse("M").unwrap(),
+        Pattern::parse("muvsq^(1/2)").unwrap(),
         None,
         None,
     );

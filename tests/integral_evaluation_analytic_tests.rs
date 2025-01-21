@@ -9,7 +9,7 @@ use std::vec;
 use log::debug;
 use std::collections::HashMap;
 use symbolica::{
-    atom::Atom,
+    atom::{Atom, AtomCore},
     domains::{float::NumericalFloatLike, rational::Fraction},
 };
 use test_utils::{compare_numerical_output, compare_output, get_vakint};
@@ -79,10 +79,6 @@ fn test_integrate_1l_a() {
         evaluated_integral.as_view(),
         &params,
         None,
-    );
-    debug!(
-        "Partial eval: {}",
-        numerical_partial_eval.to_canonical_string()
     );
 
     // This test is too unstable as the printout at fixed precision is not accurate enough

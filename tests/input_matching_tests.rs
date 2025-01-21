@@ -297,3 +297,26 @@ fn test_unknown_integrals() {
         .unwrap(),
     );
 }
+
+#[test]
+fn test_2l_pinched_matching() {
+    let vakint = get_vakint(VakintSettings {
+        allow_unknown_integrals: false,
+        ..VakintSettings::default()
+    });
+
+    // println!("Topologies:\n{}", vakint_with_unknown_integrals.topologies);
+
+    compare_output(
+        vakint
+            .to_canonical(
+                Atom::parse("topo(prop(1,edge(1,1),k(1),muvsq,1)*prop(2,edge(1,1),k(2),muvsq,1))")
+                    .unwrap()
+                    .as_view(),
+                true,
+            )
+            .as_ref()
+            .map(|a| a.as_view()),
+        Atom::parse("topo(I2L_pinch_3(muvsq,1,1,0))").unwrap(),
+    );
+}
