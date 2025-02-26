@@ -9,14 +9,14 @@ use std::vec;
 use log::debug;
 use std::collections::HashMap;
 use symbolica::{
-    atom::{Atom, AtomCore},
+    atom::AtomCore,
     domains::{float::NumericalFloatLike, rational::Fraction},
 };
 use test_utils::{compare_numerical_output, compare_output, get_vakint};
 use vakint::{Vakint, VakintSettings};
 
 use crate::test_utils::compare_vakint_evaluation_vs_reference;
-use vakint::{externals_from_f64, params_from_f64};
+use vakint::{externals_from_f64, params_from_f64, vakint_parse};
 
 const N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS: u32 = 32;
 
@@ -33,10 +33,10 @@ fn test_integrate_1l_a() {
 
     let mut integral = vakint
         .to_canonical(
-            Atom::parse(
+            vakint_parse!(
                 "(k(1,1)*k(1,2)+k(1,3)*p(1,3))*topo(\
                 prop(1,edge(1,1),k(1),muvsq,1)\
-            )",
+            )"
             )
             .unwrap()
             .as_view(),
@@ -58,13 +58,13 @@ fn test_integrate_1l_a() {
     // println!("ε^0: {}", coefs.1);
     let evaluated_integral = compare_output(
         evaluated_integral_res_ref.map(|a| a.as_view()),
-        simplify_real(Atom::parse(
+        simplify_real(vakint_parse!(
             "(\
         + ε^-1 * (1/4*𝑖*𝜋^2*muvsq^2*g(1,2))\
         + ε^-0 * (1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2)+1/4*𝑖*𝜋^2*muvsq^2*log(muvsq^-1)*g(1,2)+1/4*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))*g(1,2))\
         + ε    * ((1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2))*log(exp(-EulerGamma))+(1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2)+1/4*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))*g(1,2))*log(muvsq^-1)+𝑖*𝜋^2*(7/16*muvsq^2*g(1,2)+1/48*𝜋^2*muvsq^2*g(1,2))+3/8*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/4*muvsq^2*(1/2*𝑖*𝜋^2*log(𝜋)^2+1/2*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2-𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/8*𝑖*𝜋^2*muvsq^2*log(muvsq^-1)^2*g(1,2)+1/8*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))^2*g(1,2))\
         + ε^2  * ((7/16*muvsq^2*g(1,2)+1/48*𝜋^2*muvsq^2*g(1,2))*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))+1/2*(1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2))*log(exp(-EulerGamma))^2+(𝑖*𝜋^2*(7/16*muvsq^2*g(1,2)+1/48*𝜋^2*muvsq^2*g(1,2))+3/8*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/4*muvsq^2*(1/2*𝑖*𝜋^2*log(𝜋)^2+1/2*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2-𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2))*log(exp(-EulerGamma))+1/2*(1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2)+1/4*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))*g(1,2))*log(muvsq^-1)^2+((1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2))*log(exp(-EulerGamma))+𝑖*𝜋^2*(7/16*muvsq^2*g(1,2)+1/48*𝜋^2*muvsq^2*g(1,2))+3/8*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/4*muvsq^2*(1/2*𝑖*𝜋^2*log(𝜋)^2+1/2*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2-𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/8*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))^2*g(1,2))*log(muvsq^-1)+𝑖*𝜋^2*(151190863202516241/410199796539607264*muvsq^2*g(1,2)+1/32*𝜋^2*muvsq^2*g(1,2))+3/8*muvsq^2*(1/2*𝑖*𝜋^2*log(𝜋)^2+1/2*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2-𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/4*muvsq^2*(-1/6*𝑖*𝜋^2*log(𝜋)^3+1/6*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^3+1/2*𝑖*𝜋^2*log(𝜋)^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)-1/2*𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2)*g(1,2)+1/24*𝑖*𝜋^2*muvsq^2*log(muvsq^-1)^3*g(1,2)+1/24*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))^3*g(1,2))\
-        )",
+        )"
         )
         .unwrap().as_view()),
     );
@@ -91,7 +91,7 @@ fn test_integrate_1l_a() {
         numerical_partial_eval.rationalize_coefficients(&Fraction::from(
             0.1_f64.powi((vakint.settings.run_time_decimal_precision - 4) as i32)
         )),
-        Atom::parse("-2879700/536411*𝑖*g(1,2)+3726809/395976*𝑖*ε*g(1,2)+1075967/436073*𝑖*ε^-1*g(1,2)-4041047/334810*𝑖*ε^2*g(1,2)").unwrap()
+        vakint_parse!("-2879700/536411*𝑖*g(1,2)+3726809/395976*𝑖*ε*g(1,2)+1075967/436073*𝑖*ε^-1*g(1,2)-4041047/334810*𝑖*ε^2*g(1,2)").unwrap()
     );
 
     let prec = Fraction::from(0.1.pow((vakint.settings.run_time_decimal_precision - 4) as u64));
@@ -99,16 +99,14 @@ fn test_integrate_1l_a() {
         Ok(numerical_partial_eval
             .rationalize_coefficients(&prec)
             .as_view()),
-        Atom::parse(
-            format!(
-                "-5.36845814123893`{prec}*𝑖*g(1,2)\
+        vakint_parse!(format!(
+            "-5.36845814123893`{prec}*𝑖*g(1,2)\
                 +9.4117042447109682`{prec}*𝑖*ε*g(1,2)\
                 +2.46740110027234`{prec}*𝑖*ε^-1*g(1,2)\
                 -12.0696723514860`{prec}*𝑖*ε^2*g(1,2)",
-                prec = vakint.settings.run_time_decimal_precision - 1
-            )
-            .as_str(),
+            prec = vakint.settings.run_time_decimal_precision - 1
         )
+        .as_str())
         .unwrap()
         .rationalize_coefficients(&prec),
     );
@@ -143,10 +141,10 @@ fn test_integrate_1l_simple() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{number_of_terms_in_epsilon_expansion: 2, integral_normalization_factor: LoopNormalizationFactor::pySecDec,..VakintSettings::default()},
         EvaluationOrder::analytic_only(),
-        Atom::parse(
+        vakint_parse!(
             "( 1 )*topo(\
                 prop(1,edge(1,1),k(1),muvsq,1)\
-            )",
+            )"
         )
         .unwrap()
         .as_view(),
@@ -167,10 +165,10 @@ fn test_integrate_1l_cross_product() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{number_of_terms_in_epsilon_expansion: 5, integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::analytic_only(),
-        Atom::parse(
+        vakint_parse!(
             "(k(1,11)*p(1,11)*k(1,12)*p(1,12))*topo(\
                 prop(1,edge(1,1),k(1),muvsq,2)\
-            )",
+            )"
         )
         .unwrap()
         .as_view(),
@@ -198,10 +196,10 @@ fn test_integrate_1l_cross_product_with_additional_symbols_numerator() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{number_of_terms_in_epsilon_expansion: 5, integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::analytic_only(),
-        Atom::parse(
+        vakint_parse!(
             "(A*k(1,11)*p(1,11)*k(1,12)*p(1,12)+B)*topo(\
                 prop(1,edge(1,1),k(1),muvsq,2)\
-            )",
+            )"
         )
         .unwrap()
         .as_view(),
@@ -229,10 +227,10 @@ fn test_integrate_1l_dot_product_external() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::analytic_only(),
-        Atom::parse(
+        vakint_parse!(
             "(k(1,1)*p(1,1)*k(1,2)*p(2,2))*topo(\
                 prop(1,edge(1,1),k(1),muvsq,1)\
-            )",
+            )"
         )
         .unwrap()
         .as_view(),
@@ -259,12 +257,12 @@ fn test_integrate_2l() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::analytic_only(),
-        Atom::parse(
+        vakint_parse!(
             "(1)*topo(\
                 prop(1,edge(1,2),k(1),muvsq,1)\
                 *prop(2,edge(1,2),k(2),muvsq,1)\
                 *prop(3,edge(2,1),k(1)+k(2),muvsq,1)\
-            )",
+            )"
         )
         .unwrap()
         .as_view(),
@@ -291,7 +289,7 @@ fn test_integrate_3l() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::alphaloop_only(),
-        Atom::parse(
+        vakint_parse!(
             "(1)*topo(\
                  prop(1,edge(1,2),k(1),muvsq,1)\
                 *prop(2,edge(2,3),k(2),muvsq,1)\
@@ -299,7 +297,7 @@ fn test_integrate_3l() {
                 *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
                 *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
-            )",
+            )"
         )
         .unwrap()
         .as_view(),
@@ -324,7 +322,7 @@ fn test_integrate_3l_rank_4() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::alphaloop_only(),
-        Atom::parse(
+        vakint_parse!(
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + p(1,11)*k(3,11)*k(3,22)*p(2,22)
@@ -337,7 +335,7 @@ fn test_integrate_3l_rank_4() {
                 *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
                 *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
@@ -362,7 +360,7 @@ fn test_integrate_3l_rank_4_additional_symbols_numerator() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::alphaloop_only(),
-        Atom::parse(
+        vakint_parse!(
             "(
                   A*k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + B*p(1,11)*k(3,11)*k(3,22)*p(2,22)
@@ -375,7 +373,7 @@ fn test_integrate_3l_rank_4_additional_symbols_numerator() {
                 *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
                 *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[
             ("muvsq".into(), 1.0), ("mursq".into(), 2.0),
@@ -403,7 +401,7 @@ fn test_integrate_3l_rank_4_matad() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar, number_of_terms_in_epsilon_expansion: 5,..VakintSettings::default()},
         EvaluationOrder::matad_only(Some(MATADOptions {direct_numerical_substition: true,..MATADOptions::default()})),
-        Atom::parse(
+        vakint_parse!(
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + p(1,11)*k(3,11)*k(3,22)*p(2,22)
@@ -416,7 +414,7 @@ fn test_integrate_3l_rank_4_matad() {
                 *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
                 *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
@@ -442,7 +440,7 @@ fn test_integrate_3l_rank_4_matad_additional_symbols_numerator() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar, number_of_terms_in_epsilon_expansion: 5,..VakintSettings::default()},
         EvaluationOrder::matad_only(Some(MATADOptions {direct_numerical_substition: true,..MATADOptions::default()})),
-        Atom::parse(
+        vakint_parse!(
             "(
                   A*k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + B*p(1,11)*k(3,11)*k(3,22)*p(2,22)
@@ -455,7 +453,7 @@ fn test_integrate_3l_rank_4_matad_additional_symbols_numerator() {
                 *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
                 *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[
             ("muvsq".into(), 1.0), ("mursq".into(), 2.0),
@@ -484,7 +482,7 @@ fn test_integrate_3l_matad() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar, number_of_terms_in_epsilon_expansion: 5,..VakintSettings::default()},
         EvaluationOrder::matad_only(None),
-        Atom::parse(
+        vakint_parse!(
             "(1)*topo(\
                  prop(1,edge(1,2),k(1),muvsq,1)\
                 *prop(2,edge(2,3),k(2),muvsq,1)\
@@ -492,7 +490,7 @@ fn test_integrate_3l_matad() {
                 *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
                 *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
-            )",
+            )"
         )
         .unwrap()
         .as_view(),
@@ -518,7 +516,7 @@ fn test_integrate_4l_h() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings { integral_normalization_factor: LoopNormalizationFactor::MSbar, number_of_terms_in_epsilon_expansion: 5, run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "(1)*topo(\
                  prop(1,edge(5,1),k(1),muvsq,1)\
                 *prop(2,edge(2,6),k(2),muvsq,1)\
@@ -529,7 +527,7 @@ fn test_integrate_4l_h() {
                 *prop(7,edge(4,1),k(3)-k(1)+k(4),muvsq,1)\
                 *prop(8,edge(2,3),k(3)-k(2)+k(4),muvsq,1)\
                 *prop(9,edge(1,2),k(3)+k(4),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
@@ -553,7 +551,7 @@ fn test_integrate_4l_h_rank_4() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings { integral_normalization_factor: LoopNormalizationFactor::MSbar, number_of_terms_in_epsilon_expansion: 5, run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + p(1,11)*k(3,11)*k(3,22)*p(2,22)
@@ -568,7 +566,7 @@ fn test_integrate_4l_h_rank_4() {
                 *prop(7,edge(4,1),k(3)-k(1)+k(4),muvsq,1)\
                 *prop(8,edge(2,3),k(3)-k(2)+k(4),muvsq,1)\
                 *prop(9,edge(1,2),k(3)+k(4),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
         params_from_f64(&[("muvsq".into(), 3.0), ("mursq".into(), 5.0)].iter().cloned().collect(),
@@ -595,7 +593,7 @@ fn test_integrate_4l_h_rank_4_additional_symbols_numerator() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings { integral_normalization_factor: LoopNormalizationFactor::MSbar, number_of_terms_in_epsilon_expansion: 5, run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "(
                   A*k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + B*p(1,11)*k(3,11)*k(3,22)*p(2,22)
@@ -610,7 +608,7 @@ fn test_integrate_4l_h_rank_4_additional_symbols_numerator() {
                 *prop(7,edge(4,1),k(3)-k(1)+k(4),muvsq,1)\
                 *prop(8,edge(2,3),k(3)-k(2)+k(4),muvsq,1)\
                 *prop(9,edge(1,2),k(3)+k(4),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
         params_from_f64(&[("muvsq".into(), 3.0), ("mursq".into(), 5.0), ("A".into(), 5.0), ("B".into(), 7.0), ("C".into(), 11.0)].iter().cloned().collect(),
@@ -639,7 +637,7 @@ fn test_integrate_4l_PR9d_from_H() {
         VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5, 
             run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "( 1 )*topo(\
                  prop(1,edge(5,1),k(1),muvsq,1)\
                 *prop(2,edge(2,6),k(2),muvsq,1)\
@@ -650,7 +648,7 @@ fn test_integrate_4l_PR9d_from_H() {
                 *prop(7,edge(4,1),k(3)-k(1)+k(4),muvsq,1)\
                 *prop(8,edge(2,3),k(3)-k(2)+k(4),muvsq,1)\
                 *prop(9,edge(1,2),k(3)+k(4),muvsq,0)\
-            )",
+            )"
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
@@ -679,7 +677,7 @@ fn test_integrate_4l_PR9d_from_X() {
         VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5, 
             run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "( 1 )*topo(\
                 prop(1,edge(5,1),k(1),muvsq,1)\
                 *prop(2,edge(2,6),k(2),muvsq,1)\
@@ -690,7 +688,7 @@ fn test_integrate_4l_PR9d_from_X() {
                 *prop(7,edge(3,2),k(3)-k(1)+k(4),muvsq,1)\
                 *prop(8,edge(1,4),k(3)-k(2)+k(4),muvsq,1)\
                 *prop(9,edge(2,1),k(3)-k(1)-k(2)+k(4),muvsq,0)\
-            )",
+            )"
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
@@ -719,7 +717,7 @@ fn test_integrate_4l_PR9d_from_H_pinch() {
         VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5, 
             run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "( 1 )*topo(\
                  prop(1,edge(5,2),k(1),muvsq,1)\
                 *prop(2,edge(2,5),k(2),muvsq,1)\
@@ -728,7 +726,7 @@ fn test_integrate_4l_PR9d_from_H_pinch() {
                 *prop(6,edge(5,3),k(4)+k(2)-k(1),muvsq,1)\
                 *prop(7,edge(4,2),k(3)-k(4),muvsq,1)\
                 *prop(8,edge(2,3),k(1)-k(2)+k(3)-k(4),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
@@ -757,7 +755,7 @@ fn test_integrate_4l_PR9d_from_FG() {
         VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5, 
             run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "( 1 )*topo(\
                  prop(1,edge(5,3),k(1),muvsq,1)\
                 *prop(2,edge(3,4),k(2),muvsq,2)\
@@ -767,7 +765,7 @@ fn test_integrate_4l_PR9d_from_FG() {
                 *prop(6,edge(4,2),k(2)-k(3),muvsq,1)\
                 *prop(7,edge(1,5),k(1)-k(3)+k(4),muvsq,1)\
                 *prop(8,edge(3,2),k(1)-k(2),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
@@ -796,7 +794,7 @@ fn test_integrate_4l_PR9d_from_FG_pinch() {
         VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5, 
                          run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "( 1 )*topo(\
                  prop(1,edge(5,3),k(1),muvsq,1)\
                 *prop(2,edge(3,4),k(2),muvsq,2)\
@@ -805,7 +803,7 @@ fn test_integrate_4l_PR9d_from_FG_pinch() {
                 *prop(6,edge(4,1),k(2)-k(3),muvsq,1)\
                 *prop(7,edge(1,5),k(1)-k(3)+k(4),muvsq,1)\
                 *prop(8,edge(3,1),k(1)-k(2),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
@@ -833,7 +831,7 @@ fn test_integrate_4l_PR11d() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings { number_of_terms_in_epsilon_expansion: 5, run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "( 1 )*topo(\
                  prop(1,edge(1,2),k(1),muvsq,2)\
                 *prop(2,edge(2,5),k(2),muvsq,1)\
@@ -843,7 +841,7 @@ fn test_integrate_4l_PR11d() {
                 *prop(6,edge(4,1),k(3)-k(4),muvsq,1)\
                 *prop(7,edge(5,3),k(2)+k(3)-k(1),muvsq,1)\
                 *prop(8,edge(1,5),k(3)-k(4)-k(1),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
@@ -869,13 +867,13 @@ fn test_integrate_4l_clover() {
             integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD,
             number_of_terms_in_epsilon_expansion: 5, run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "( 1 )*topo(
                 prop(1, edge(1, 1), k(1), muvsq, 1)*\
                 prop(2, edge(1, 1), k(2), muvsq, 1)*\
                 prop(3, edge(1, 1), k(3), muvsq, 1)*\
                 prop(4, edge(1, 1), k(4), muvsq, 1)
-            )",
+            )"
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
@@ -903,13 +901,13 @@ fn test_integrate_4l_clover_with_non_unit_scales() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings { number_of_terms_in_epsilon_expansion: 5, run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "( 1 )*topo(
                 prop(1, edge(1, 1), k(1), muvsq, 1)*\
                 prop(2, edge(1, 1), k(2), muvsq, 1)*\
                 prop(3, edge(1, 1), k(3), muvsq, 1)*\
                 prop(4, edge(1, 1), k(4), muvsq, 1)
-            )",
+            )"
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
         params_from_f64(&[("muvsq".into(), 3.0), ("mursq".into(), 7.0)].iter().cloned().collect(),
@@ -937,13 +935,13 @@ fn test_integrate_4l_dotted_clover() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings { number_of_terms_in_epsilon_expansion: 5, run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "( 1 )*topo(
                 prop(1, edge(1, 1), k(1), muvsq, 2)*\
                 prop(2, edge(1, 1), k(2), muvsq, 1)*\
                 prop(3, edge(1, 1), k(3), muvsq, 1)*\
                 prop(4, edge(1, 1), k(4), muvsq, 1)
-            )",
+            )"
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
         params_from_f64(&[("muvsq".into(), 3.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
@@ -975,7 +973,7 @@ fn test_integrate_4l_clover_with_numerator() {
             integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, 
             ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "( 
                   A * k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + B * p(1,11)*k(3,11)*k(3,22)*p(2,22)
@@ -985,7 +983,7 @@ fn test_integrate_4l_clover_with_numerator() {
                 prop(2, edge(1, 1), k(2), muvsq, 1)*\
                 prop(3, edge(1, 1), k(3), muvsq, 1)*\
                 prop(4, edge(1, 1), k(4), muvsq, 1)
-            )",
+            )"
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
         params_from_f64(&[("muvsq".into(), 0.3), ("mursq".into(), 0.7), ("A".into(), 3.0), ("B".into(), 4.0), ("C".into(), 5.0)].iter().cloned().collect(),

@@ -1,11 +1,11 @@
 mod test_utils;
 use vakint::{
-    EvaluationMethod, EvaluationOrder, LoopNormalizationFactor, PySecDecOptions, VakintSettings,
+    vakint_parse, EvaluationMethod, EvaluationOrder, LoopNormalizationFactor, PySecDecOptions,
+    VakintSettings,
 };
 
 use std::{collections::HashMap, vec};
 
-use symbolica::atom::Atom;
 use vakint::{externals_from_f64, params_from_f64};
 
 use crate::test_utils::compare_vakint_evaluation_vs_reference;
@@ -20,10 +20,10 @@ fn test_integrate_1l_simple() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{ number_of_terms_in_epsilon_expansion: 2, integral_normalization_factor: LoopNormalizationFactor::pySecDec, ..VakintSettings::default()},
         EvaluationOrder(vec![EvaluationMethod::PySecDec(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_test_integrate_1l_simple".into()) ,..PySecDecOptions::default() })]),
-        Atom::parse(
+        vakint_parse!(
             "( 1 )*topo(\
                 prop(1,edge(1,1),k(1),muvsq,1)\
-             )",
+             )"
         )
         .unwrap()
         .as_view(),
@@ -46,10 +46,10 @@ fn test_integrate_1l_cross_product() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{number_of_terms_in_epsilon_expansion: 5, integral_normalization_factor: LoopNormalizationFactor::MSbar, ..VakintSettings::default()},
         EvaluationOrder(vec![EvaluationMethod::PySecDec(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/test_integrate_1l_cross_product".into()) ,..PySecDecOptions::default() })]),
-        Atom::parse(
+        vakint_parse!(
             "(k(1,11)*p(1,11)*k(1,12)*p(1,12))*topo(\
                 prop(1,edge(1,1),k(1),muvsq,2)\
-             )",
+             )"
         )
         .unwrap()
         .as_view(),
@@ -79,10 +79,10 @@ fn test_integrate_1l_cross_product_with_additional_symbols_numerator() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{number_of_terms_in_epsilon_expansion: 5, integral_normalization_factor: LoopNormalizationFactor::MSbar, ..VakintSettings::default()},
         EvaluationOrder(vec![EvaluationMethod::PySecDec(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/test_integrate_1l_cross_product_additional_symbols_numerator".into()) ,..PySecDecOptions::default() })]),
-        Atom::parse(
+        vakint_parse!(
             "(A*k(1,11)*p(1,11)*k(1,12)*p(1,12)+B)*topo(\
                 prop(1,edge(1,1),k(1),muvsq,2)\
-             )",
+             )"
         )
         .unwrap()
         .as_view(),
@@ -112,12 +112,12 @@ fn test_integrate_2l_different_masses() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar, allow_unknown_integrals: true, ..VakintSettings::default()},
         EvaluationOrder(vec![EvaluationMethod::PySecDec(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/test_integrate_2l_different_masses".into()) ,..PySecDecOptions::default() })]),
-        Atom::parse(
+        vakint_parse!(
             "(1)*topo(\
                 prop(1,edge(1,2),k(1),muvsqA,1)\
                 *prop(2,edge(1,2),k(2),muvsqB,1)\
                 *prop(3,edge(2,1),k(1)+k(2),muvsqC,1)\
-            )",
+            )"
         )
         .unwrap()
         .as_view(),
@@ -146,7 +146,7 @@ fn test_integrate_3l_o_eps() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings { integral_normalization_factor: LoopNormalizationFactor::MSbar, number_of_terms_in_epsilon_expansion: 5, ..VakintSettings::default()},
         EvaluationOrder(vec![EvaluationMethod::PySecDec(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/test_integrate_3l_o_eps".into()) ,..PySecDecOptions::default() })]),
-        Atom::parse(
+        vakint_parse!(
             "(1)*topo(\
                  prop(1,edge(1,2),k(1),muvsq,1)\
                 *prop(2,edge(2,3),k(2),muvsq,1)\
@@ -154,7 +154,7 @@ fn test_integrate_3l_o_eps() {
                 *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
                 *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
-            )",
+            )"
         )
         .unwrap()
         .as_view(),
@@ -191,7 +191,7 @@ fn test_integrate_4l_h() {
         vakint_default_settings,
         EvaluationOrder(vec![EvaluationMethod::PySecDec(
             PySecDecOptions{ min_n_evals: 100_000, max_n_evals: 1_000_000, reuse_existing_output: Some("./tests_workspace/test_integrate_4l_h".into()), ..PySecDecOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "(1)*topo(\
                  prop(1,edge(5,1),k(1),muvsq,1)\
                 *prop(2,edge(2,6),k(2),muvsq,1)\
@@ -202,7 +202,7 @@ fn test_integrate_4l_h() {
                 *prop(7,edge(4,1),k(3)-k(1)+k(4),muvsq,1)\
                 *prop(8,edge(2,3),k(3)-k(2)+k(4),muvsq,1)\
                 *prop(9,edge(1,2),k(3)+k(4),muvsq,1)\
-            )",
+            )"
         )
         .unwrap()
         .as_view(),
@@ -231,7 +231,7 @@ fn test_integrate_4l_PR9d_from_FG_pinch() {
         vakint_default_settings,
         EvaluationOrder(vec![EvaluationMethod::PySecDec(
             PySecDecOptions{ min_n_evals: 100_000, max_n_evals: 1_000_000, reuse_existing_output: Some("./tests_workspace/test_integrate_4l_PR9d_from_FG_pinch".into()), ..PySecDecOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
                 "( 1 )*topo(\
                     prop(1,edge(5,3),k(1),muvsq,1)\
                     *prop(2,edge(3,4),k(2),muvsq,2)\
@@ -240,7 +240,7 @@ fn test_integrate_4l_PR9d_from_FG_pinch() {
                     *prop(6,edge(4,1),k(2)-k(3),muvsq,1)\
                     *prop(7,edge(1,5),k(1)-k(3)+k(4),muvsq,1)\
                     *prop(8,edge(3,1),k(1)-k(2),muvsq,1)\
-                )",
+                )"
         )
         .unwrap()
         .as_view(),
@@ -275,7 +275,7 @@ fn test_integrate_4l_PR11d() {
         vakint_default_settings,
         EvaluationOrder(vec![EvaluationMethod::PySecDec(
             PySecDecOptions{ min_n_evals: 100_000, max_n_evals: 1_000_000, reuse_existing_output: Some("./tests_workspace/test_integrate_4l_PR11d".into()), ..PySecDecOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "( 1 )*topo(\
                  prop(1,edge(1,2),k(1),muvsq,2)\
                 *prop(2,edge(2,5),k(2),muvsq,1)\
@@ -285,7 +285,7 @@ fn test_integrate_4l_PR11d() {
                 *prop(6,edge(4,1),k(3)-k(4),muvsq,1)\
                 *prop(7,edge(5,3),k(2)+k(3)-k(1),muvsq,1)\
                 *prop(8,edge(1,5),k(3)-k(4)-k(1),muvsq,1)\
-            )",
+            )"
         )
         .unwrap()
         .as_view(),
@@ -314,13 +314,13 @@ fn test_integrate_4l_clover() {
         vakint_default_settings,
         EvaluationOrder(vec![EvaluationMethod::PySecDec(
             PySecDecOptions{ relative_precision: 1e-8, min_n_evals: 10_000_000, max_n_evals: 100_000_000, reuse_existing_output: Some("./tests_workspace/test_integrate_4l_clover".into()), ..PySecDecOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "( 1 )*topo(
               prop(1, edge(1, 1), k(1), muvsq, 1)*\
               prop(2, edge(1, 1), k(2), muvsq, 1)*\
               prop(3, edge(1, 1), k(3), muvsq, 1)*\
               prop(4, edge(1, 1), k(4), muvsq, 1)
-          )",
+          )"
         )
         .unwrap()
         .as_view(),
@@ -353,7 +353,7 @@ fn test_integrate_4l_clover_with_numerator() {
         vakint_default_settings,
         EvaluationOrder(vec![EvaluationMethod::PySecDec(
             PySecDecOptions{ relative_precision: 1e-8, min_n_evals: 10_000_000, max_n_evals: 100_000_000, reuse_existing_output: Some("./tests_workspace/test_integrate_4l_clover_with_numerator".into()), ..PySecDecOptions::default()} )]),
-        Atom::parse(
+        vakint_parse!(
             "( 
                 A * k(1,11)*k(2,11)*k(1,22)*k(2,22)
               + B * p(1,11)*k(3,11)*k(3,22)*p(2,22)
@@ -363,7 +363,7 @@ fn test_integrate_4l_clover_with_numerator() {
               prop(2, edge(1, 1), k(2), muvsq, 1)*\
               prop(3, edge(1, 1), k(3), muvsq, 1)*\
               prop(4, edge(1, 1), k(4), muvsq, 1)
-          )",
+          )"
         )
         .unwrap()
         .as_view(),

@@ -1,6 +1,6 @@
 mod test_utils;
-use symbolica::atom::Atom;
 use test_utils::{compare_output, get_vakint};
+use vakint::vakint_parse;
 use vakint::VakintSettings;
 
 #[test_log::test]
@@ -13,10 +13,10 @@ fn test_reduction_1l_a() {
 
     let integral = vakint
         .to_canonical(
-            Atom::parse(
+            vakint_parse!(
                 "(k(1,1)*k(1,2)+k(1,3)*p(1,3))*topo(\
                 prop(1,edge(1,1),k(1),muvsq,1)\
-            )",
+            )"
             )
             .unwrap()
             .as_view(),
@@ -29,10 +29,10 @@ fn test_reduction_1l_a() {
             .tensor_reduce(integral.as_view())
             .as_ref()
             .map(|a| a.as_view()),
-        Atom::parse(
+        vakint_parse!(
             "(\
                 -(2*ε-4)^-1*dot(k(1),k(1))*g(1,2)\
-            )*topo(I1L(muvsq,1))",
+            )*topo(I1L(muvsq,1))"
         )
         .unwrap(),
     );
@@ -48,10 +48,10 @@ fn test_reduction_1l_b() {
 
     let integral = vakint
         .to_canonical(
-            Atom::parse(
+            vakint_parse!(
                 "((k(1,1)*k(1,2))^2*g(1,2)+k(1,3)*p(1,3)+k(1,1)*k(1,2)*p(2,1)*p(3,2))*topo(\
                 prop(1,edge(1,1),k(1),muvsq,1)\
-            )",
+            )"
             )
             .unwrap()
             .as_view(),
@@ -64,10 +64,10 @@ fn test_reduction_1l_b() {
             .tensor_reduce(integral.as_view())
             .as_ref()
             .map(|a| a.as_view()),
-        Atom::parse(
+        vakint_parse!(
             "(\
                 dot(k(1),k(1))^2*g(1,2)-(2*ε-4)^-1*dot(p(2),p(3))*dot(k(1),k(1))\
-            )*topo(I1L(muvsq,1))",
+            )*topo(I1L(muvsq,1))"
         )
         .unwrap(),
     );
@@ -83,10 +83,10 @@ fn test_reduction_2l_a() {
 
     let integral = vakint
         .to_canonical(
-            Atom::parse(
+            vakint_parse!(
                 "(\
                     (k(1,1)*k(2,2))^2*g(1,2)+k(2,3)*p(1,3)+k(1,1)*k(2,2)*p(2,1)*p(3,2)\
-                )*topo(I2L(mUVsq,1,2,1))",
+                )*topo(I2L(mUVsq,1,2,1))"
             )
             .unwrap()
             .as_view(),
@@ -99,10 +99,10 @@ fn test_reduction_2l_a() {
             .tensor_reduce(integral.as_view())
             .as_ref()
             .map(|a| a.as_view()),
-        Atom::parse(
+        vakint_parse!(
             "(\
                 -(2*ε-4)^-1*dot(p(2),p(3))*dot(k(1),k(2))+dot(k(1),k(1))*dot(k(2),k(2))*g(1,2)\
-            )*topo(I2L(mUVsq,1,2,1))",
+            )*topo(I2L(mUVsq,1,2,1))"
         )
         .unwrap(),
     );

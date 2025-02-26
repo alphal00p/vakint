@@ -1,11 +1,11 @@
 use std::{collections::HashSet, fmt, sync::Arc};
 
+use crate::utils::vakint_macros::{vk_parse, vk_symbol};
 use colored::Colorize;
 use symbolica::{
-    atom::{Atom, AtomCore, AtomView, FunctionArgument, FunctionBuilder, SliceType, Symbol},
-    fun,
-    id::{Condition, Match, Pattern, PatternOrMap},
-    symb,
+    atom::{Atom, AtomCore, AtomView, FunctionArgument, FunctionBuilder, SliceType},
+    function,
+    id::{Condition, Match, PatternOrMap},
 };
 
 use crate::{
@@ -43,8 +43,8 @@ impl Topologies {
         // ==
         let mut topologies = Topologies(vec![Integral::new(
             1,
-            Some(Atom::parse("topo(prop(1,edge(1,1),k(1),msq(1),pow(1)))").unwrap()),
-            Some(Atom::parse("I1L(msq(1),pow(1))").unwrap()),
+            Some(vk_parse!("topo(prop(1,edge(1,1),k(1),msq(1),pow(1)))").unwrap()),
+            Some(vk_parse!("I1L(msq(1),pow(1))").unwrap()),
             EvaluationOrder::all_but_fmft(),
         )?
         .into()]);
@@ -53,16 +53,16 @@ impl Topologies {
         // ==
         topologies.0.extend(
             Topologies::generate_topologies_with_contractions(
-                Atom::parse(
+                vk_parse!(
                     "topo(\
                          prop(1,edge(1,2),k(1),msq(1),pow(1))\
                         *prop(2,edge(1,2),k(2),msq(1),pow(2))\
                         *prop(3,edge(2,1),k(1)+k(2),msq(1),pow(3))\
-                    )",
+                    )"
                 )
                 .unwrap()
                 .as_view(),
-                Atom::parse("I2L(msq(1),pow(1),pow(2),pow(3))")
+                vk_parse!("I2L(msq(1),pow(1),pow(2),pow(3))")
                     .unwrap()
                     .as_view(),
                 TopologyContractions::Custom(vec![vec![], vec![3]]),
@@ -75,7 +75,7 @@ impl Topologies {
         // ==
         topologies.0.extend(
             Topologies::generate_topologies_with_contractions(
-                Atom::parse(
+                vk_parse!(
                     "topo(\
                          prop(1,edge(1,2),k(1),msq(1),pow(1))\
                         *prop(2,edge(2,3),k(2),msq(1),pow(2))\
@@ -83,11 +83,11 @@ impl Topologies {
                         *prop(4,edge(1,4),k(3)-k(1),msq(1),pow(4))\
                         *prop(5,edge(2,4),k(1)-k(2),msq(1),pow(5))\
                         *prop(6,edge(3,4),k(2)-k(3),msq(1),pow(6))\
-                    )",
+                    )"
                 )
                 .unwrap()
                 .as_view(),
-                Atom::parse("I3L(msq(1),pow(1),pow(2),pow(3),pow(4),pow(5),pow(6))")
+                vk_parse!("I3L(msq(1),pow(1),pow(2),pow(3),pow(4),pow(5),pow(6))")
                     .unwrap()
                     .as_view(),
                 TopologyContractions::Automatic,
@@ -103,7 +103,7 @@ impl Topologies {
         // (FMFT -> Vakint) : (1->9, 2->1, 3->2, 4->3, 5->4, 6->5, 7->6, 8->7, 9->8)
         topologies.0.extend(
             Topologies::generate_topologies_with_contractions(
-                Atom::parse(
+                vk_parse!(
                     "topo(\
                          prop(1,edge(5,1),k(1),msq(1),pow(1))\
                         *prop(2,edge(2,6),k(2),msq(1),pow(2))\
@@ -114,12 +114,12 @@ impl Topologies {
                         *prop(7,edge(4,1),k(3)-k(1)+k(4),msq(1),pow(7))\
                         *prop(8,edge(2,3),k(3)-k(2)+k(4),msq(1),pow(8))\
                         *prop(9,edge(1,2),k(3)+k(4),msq(1),pow(9))\
-                    )",
+                    )"
                 )
                 .unwrap()
                 .as_view(),
-                Atom::parse(
-                    "I4L_H(msq(1),pow(1),pow(2),pow(3),pow(4),pow(5),pow(6),pow(7),pow(8),pow(9))",
+                vk_parse!(
+                    "I4L_H(msq(1),pow(1),pow(2),pow(3),pow(4),pow(5),pow(6),pow(7),pow(8),pow(9))"
                 )
                 .unwrap()
                 .as_view(),
@@ -133,7 +133,7 @@ impl Topologies {
         // (FMFT -> Vakint) : (2->1, 3->2, 4->3, 5->4, 6->5, 7->6, 8->7, 9->8, 10->9)
         topologies.0.extend(
             Topologies::generate_topologies_with_contractions(
-                Atom::parse(
+                vk_parse!(
                     "topo(\
                          prop(1,edge(5,1),k(1),msq(1),pow(1))\
                         *prop(2,edge(2,6),k(2),msq(1),pow(2))\
@@ -144,12 +144,12 @@ impl Topologies {
                         *prop(7,edge(3,2),k(3)-k(1)+k(4),msq(1),pow(7))\
                         *prop(8,edge(1,4),k(3)-k(2)+k(4),msq(1),pow(8))\
                         *prop(9,edge(2,1),k(3)-k(1)-k(2)+k(4),msq(1),pow(9))\
-                    )",
+                    )"
                 )
                 .unwrap()
                 .as_view(),
-                Atom::parse(
-                    "I4L_X(msq(1),pow(1),pow(2),pow(3),pow(4),pow(5),pow(6),pow(7),pow(8),pow(9))",
+                vk_parse!(
+                    "I4L_X(msq(1),pow(1),pow(2),pow(3),pow(4),pow(5),pow(6),pow(7),pow(8),pow(9))"
                 )
                 .unwrap()
                 .as_view(),
@@ -163,7 +163,7 @@ impl Topologies {
         // (FMFT -> Vakint) : (3->1, 4->2, 5->3, 6->4, 7->5, 8->6, 9->7, 10->8)
         topologies.0.extend(
             Topologies::generate_topologies_with_contractions(
-                Atom::parse(
+                vk_parse!(
                     "topo(\
                          prop(1,edge(1,2),k(1),msq(1),pow(1))\
                         *prop(2,edge(2,5),k(2),msq(1),pow(2))\
@@ -173,12 +173,12 @@ impl Topologies {
                         *prop(6,edge(4,1),k(3)-k(4),msq(1),pow(6))\
                         *prop(7,edge(5,3),k(2)+k(3)-k(1),msq(1),pow(7))\
                         *prop(8,edge(1,5),k(3)-k(4)-k(1),msq(1),pow(8))\
-                    )",
+                    )"
                 )
                 .unwrap()
                 .as_view(),
-                Atom::parse(
-                    "I4L_BMW(msq(1),pow(1),pow(2),pow(3),pow(4),pow(5),pow(6),pow(7),pow(8))",
+                vk_parse!(
+                    "I4L_BMW(msq(1),pow(1),pow(2),pow(3),pow(4),pow(5),pow(6),pow(7),pow(8))"
                 )
                 .unwrap()
                 .as_view(),
@@ -192,7 +192,7 @@ impl Topologies {
         // (FMFT -> Vakint) : (1->1, 3->2, 4->3, 5->4, 6->5, 7->6, 8->7, 9->8)
         topologies.0.extend(
             Topologies::generate_topologies_with_contractions(
-                Atom::parse(
+                vk_parse!(
                     "topo(\
                          prop(1,edge(5,3),k(1),msq(1),pow(1))\
                         *prop(2,edge(3,4),k(2),msq(1),pow(2))\
@@ -202,15 +202,13 @@ impl Topologies {
                         *prop(6,edge(4,2),k(2)-k(3),msq(1),pow(6))\
                         *prop(7,edge(1,5),k(1)-k(3)+k(4),msq(1),pow(7))\
                         *prop(8,edge(3,2),k(1)-k(2),msq(1),pow(8))\
-                    )",
+                    )"
                 )
                 .unwrap()
                 .as_view(),
-                Atom::parse(
-                    "I4L_FG(msq(1),pow(1),pow(2),pow(3),pow(4),pow(5),pow(6),pow(7),pow(8))",
-                )
-                .unwrap()
-                .as_view(),
+                vk_parse!("I4L_FG(msq(1),pow(1),pow(2),pow(3),pow(4),pow(5),pow(6),pow(7),pow(8))")
+                    .unwrap()
+                    .as_view(),
                 // Place all further pinched topologies on that FX one
                 TopologyContractions::Automatic, //TopologyContractions::Custom(vec![vec![], vec![3]]),
                 EvaluationOrder::fmft_and_numerical(None, None),
@@ -232,7 +230,7 @@ impl Topologies {
 
     pub fn count_propagators_in_integral(integral: AtomView) -> usize {
         let mut n_props: usize = 0;
-        let p = Pattern::parse("prop(args__)").unwrap();
+        let p = vk_parse!("prop(args__)").unwrap().to_pattern();
         let rhs_p = S.one.to_pattern();
         let mut match_iter = integral.replace_iter(&p, &rhs_p, None, None);
         while match_iter.next().is_some() {
@@ -361,7 +359,9 @@ impl Topology {
                 )));
             }
             contracted_canonical_expression = contracted_canonical_expression.replace_all(
-                &Pattern::parse(format!("prop({},args__)", prop_id).as_str()).unwrap(),
+                &vk_parse!(format!("prop({},args__)", prop_id).as_str())
+                    .unwrap()
+                    .to_pattern(),
                 S.one.to_pattern(),
                 None,
                 None,
@@ -370,7 +370,9 @@ impl Topology {
             for a in [&mut contracted_short_expression] {
                 if !a.is_zero() {
                     *a = a.replace_all(
-                        &Pattern::parse(format!("pow({})", prop_id).as_str()).unwrap(),
+                        &vk_parse!(format!("pow({})", prop_id).as_str())
+                            .unwrap()
+                            .to_pattern(),
                         S.zero.to_pattern(),
                         None,
                         None,
@@ -393,8 +395,8 @@ impl Topology {
                     ),
                 ] {
                     contracted_canonical_expression = contracted_canonical_expression.replace_all(
-                        &Pattern::parse(lhs.as_str()).unwrap(),
-                        Pattern::parse(rhs.as_str()).unwrap(),
+                        &vk_parse!(lhs.as_str()).unwrap().to_pattern(),
+                        vk_parse!(rhs.as_str()).unwrap().to_pattern(),
                         None,
                         None,
                     );
@@ -424,39 +426,41 @@ impl Topology {
         // }
         if !contraction.is_empty() {
             contracted_short_expression = contracted_short_expression.replace_all(
-                &Pattern::parse("TopoName_(args___)").unwrap(),
+                &vk_parse!("TopoName_(args___)").unwrap().to_pattern(),
                 PatternOrMap::Map(Box::new(move |match_in| {
-                    let topo_name =
-                        if let Match::FunctionName(f) = match_in.get(symb!("TopoName_")).unwrap() {
-                            f.to_string()
-                        } else {
-                            panic!("Topology name must correspond to a function name.");
-                        };
+                    let topo_name = if let Match::FunctionName(f) =
+                        match_in.get(vk_symbol!("TopoName_")).unwrap()
+                    {
+                        f.to_string()
+                    } else {
+                        panic!("Topology name must correspond to a function name.");
+                    };
                     let args = if let Match::Multiple(SliceType::Arg, aviews) =
-                        match_in.get(symb!("args___")).unwrap()
+                        match_in.get(vk_symbol!("args___")).unwrap()
                     {
                         aviews
                     } else {
                         panic!("Topology arguments must be wrapped in Symbolica Arg construction.");
                     };
-                    let mut res = FunctionBuilder::new(Symbol::new(
-                        format!(
-                            "{}_pinch_{}",
-                            topo_name,
-                            contraction
-                                .iter()
-                                .map(|i| i.to_string())
-                                .collect::<Vec<_>>()
-                                .join("_")
-                        )
-                        .as_str(),
-                    ));
+                    let mut res = FunctionBuilder::new(vk_symbol!(format!(
+                        "{}_pinch_{}",
+                        topo_name,
+                        contraction
+                            .iter()
+                            .map(|i| i.to_string())
+                            .collect::<Vec<_>>()
+                            .join("_")
+                    )
+                    .as_str()));
                     for a in args.iter() {
                         res = a.to_owned().add_arg_to_function_builder(res);
                     }
                     res.finish()
                 })),
-                Some(&Condition::from((symb!("TopoName_"), function_condition()))),
+                Some(&Condition::from((
+                    vk_symbol!("TopoName_"),
+                    function_condition(),
+                ))),
                 None,
             );
         }
@@ -479,7 +483,7 @@ impl Topology {
         for prop_id in 1..=n_props {
             if let Some(m) = get_prop_with_id(input_canonical_expression, prop_id) {
                 prop_ids.push(prop_id);
-                let q = m.get(&symb!("q_")).unwrap().to_owned();
+                let q = m.get(&vk_symbol!("q_")).unwrap().to_owned();
                 for (_s, (_a_id, mom_id)) in get_individual_momenta_from_atom(q.as_view())?.iter() {
                     loop_mom_ids.insert(*mom_id);
                 }
@@ -497,7 +501,7 @@ impl Topology {
         let mut need_to_force_lmb = false;
         for i_loop in 1..=n_loops {
             if !momenta.iter().any(|(_i_prop, k)| {
-                k.as_view() == fun!(S.k, Atom::new_num(i_loop as i64)).as_view()
+                k.as_view() == function!(S.k, Atom::new_num(i_loop as i64)).as_view()
             }) {
                 need_to_force_lmb = true;
                 break;
@@ -524,10 +528,13 @@ impl Topology {
             (1..=n_loops)
                 .map(|i| {
                     (
-                        fun!(S.k, Atom::new_num(i as i64)).to_pattern(),
+                        function!(S.k, Atom::new_num(i as i64)).to_pattern(),
                         (
-                            Atom::new_var(symb!(format!("k{}", i))).to_pattern(),
-                            (symb!(format!("k{}", i)), symb!(format!("krotated{}", i))),
+                            Atom::new_var(vk_symbol!(format!("k{}", i))).to_pattern(),
+                            (
+                                vk_symbol!(format!("k{}", i)),
+                                vk_symbol!(format!("krotated{}", i)),
+                            ),
                         ),
                     )
                 })
@@ -537,7 +544,7 @@ impl Topology {
         let mut system = vec![];
         for (i_lmb, lmb_edge_id) in lmb.iter().enumerate() {
             if let Some(m) = get_prop_with_id(input_canonical_expression, *lmb_edge_id as usize) {
-                let mut q = m.get(&symb!("q_")).unwrap().to_owned();
+                let mut q = m.get(&vk_symbol!("q_")).unwrap().to_owned();
                 for (src, (trgt, (_trgt_symbol, _trgt_rotated_symbol))) in
                     mom_vecs_to_symbols.iter()
                 {
@@ -588,13 +595,14 @@ impl Topology {
         let mut rotated_result = input_canonical_expression.to_owned();
         for prop_id in prop_ids {
             rotated_result = rotated_result.replace_all(
-                &Pattern::parse(format!("prop({},edges_,q_,mUVsq_,pow_)", prop_id).as_str())
-                    .unwrap(),
+                &vk_parse!(format!("prop({},edges_,q_,mUVsq_,pow_)", prop_id).as_str())
+                    .unwrap()
+                    .to_pattern(),
                 PatternOrMap::Map(Box::new({
                     let mom_vecs_to_symbols = mom_vecs_to_symbols.clone();
                     let basis_change = basis_change.clone();
                     move |match_in| {
-                        let mut q = match_in.get(symb!("q_")).unwrap().to_atom();
+                        let mut q = match_in.get(vk_symbol!("q_")).unwrap().to_atom();
                         for ((src, (_trgt, _trgt_symbol)), rotated_expr) in
                             mom_vecs_to_symbols.iter().zip(basis_change.iter())
                         {
@@ -612,13 +620,13 @@ impl Topology {
                             );
                         }
                         q = q.expand();
-                        fun!(
-                            symb!("prop"),
+                        function!(
+                            vk_symbol!("prop"),
                             Atom::new_num(prop_id as i64),
-                            match_in.get(symb!("edges_")).unwrap().to_atom(),
+                            match_in.get(vk_symbol!("edges_")).unwrap().to_atom(),
                             q,
-                            match_in.get(symb!("mUVsq_")).unwrap().to_atom(),
-                            match_in.get(symb!("pow_")).unwrap().to_atom()
+                            match_in.get(vk_symbol!("mUVsq_")).unwrap().to_atom(),
+                            match_in.get(vk_symbol!("pow_")).unwrap().to_atom()
                         )
                     }
                 })),
@@ -660,8 +668,8 @@ impl Topology {
     ) -> Atom {
         match self {
             Topology::Unknown(_) => integral.replace_all(
-                &Pattern::parse("topo(props_)").unwrap(),
-                Pattern::parse("topo(UNKNOWN(props_))").unwrap(),
+                &vk_parse!("topo(props_)").unwrap().to_pattern(),
+                vk_parse!("topo(UNKNOWN(props_))").unwrap().to_pattern(),
                 None,
                 None,
             ),
@@ -680,8 +688,8 @@ impl Topology {
                 //     self
                 // );
                 let undirected_input = input.replace_all(
-                    &Pattern::parse("edge(x_,y_)").unwrap(),
-                    Pattern::parse("uedge(x_,y_)").unwrap(),
+                    &vk_parse!("edge(x_,y_)").unwrap().to_pattern(),
+                    vk_parse!("uedge(x_,y_)").unwrap().to_pattern(),
                     None,
                     None,
                 );
@@ -697,8 +705,9 @@ impl Topology {
                     // Make sure all propagators have IDs starting at 1 until n_props
                     let mut test_input = input.to_owned();
                     let mut prop_id = 1;
-                    let mut prop_pattern =
-                        Pattern::parse(format!("prop({},args__)", prop_id).as_str()).unwrap();
+                    let mut prop_pattern = vk_parse!(format!("prop({},args__)", prop_id).as_str())
+                        .unwrap()
+                        .to_pattern();
                     while test_input
                         .pattern_match(&prop_pattern, Some(&Condition::default()), None)
                         .next()
@@ -711,16 +720,17 @@ impl Topology {
                             None,
                         );
                         prop_id += 1;
-                        prop_pattern =
-                            Pattern::parse(format!("prop({},args__)", prop_id).as_str()).unwrap();
+                        prop_pattern = vk_parse!(format!("prop({},args__)", prop_id).as_str())
+                            .unwrap()
+                            .to_pattern();
                     }
                     test_input = test_input.replace_all(
-                        &Pattern::parse("UNKNOWN(args__)").unwrap(),
-                        Pattern::parse("args__").unwrap(),
+                        &vk_parse!("UNKNOWN(args__)").unwrap().to_pattern(),
+                        vk_parse!("args__").unwrap().to_pattern(),
                         None,
                         None,
                     );
-                    if test_input != Atom::parse("topo(1)").unwrap() {
+                    if test_input != vk_parse!("topo(1)").unwrap() {
                         return Err(VakintError::InvalidIntegralFormat(format!(
                             "UNKNOWN integrals must have propagator ids ranging from 1 to their maximal number of propagators: {}",
                             test_input
@@ -732,7 +742,7 @@ impl Topology {
                         for (mom_symbol, (_, mom_id)) in get_individual_momenta(
                             get_prop_with_id(input, i_prop)
                                 .unwrap()
-                                .get(&symb!("q_"))
+                                .get(&vk_symbol!("q_"))
                                 .unwrap()
                                 .as_view(),
                         )?
@@ -773,22 +783,21 @@ impl Topology {
                         ..ReplacementRules::default()
                     };
                     replacement_rules.canonical_expression_substitutions.insert(
-                        Atom::parse("integral").unwrap(),
+                        vk_parse!("integral").unwrap(),
                         input.replace_all(
-                            &Pattern::parse("UNKNOWN(int_)").unwrap(),
-                            Pattern::parse("int_").unwrap(),
+                            &vk_parse!("UNKNOWN(int_)").unwrap().to_pattern(),
+                            vk_parse!("int_").unwrap().to_pattern(),
                             None,
                             None,
                         ),
                     );
                     replacement_rules.canonical_expression_substitutions.insert(
-                        Atom::parse("n_props").unwrap(),
+                        vk_parse!("n_props").unwrap(),
                         Atom::new_num((prop_id - 1) as i64),
                     );
-                    replacement_rules.canonical_expression_substitutions.insert(
-                        Atom::parse("n_loops").unwrap(),
-                        Atom::new_num(n_loops as i64),
-                    );
+                    replacement_rules
+                        .canonical_expression_substitutions
+                        .insert(vk_parse!("n_loops").unwrap(), Atom::new_num(n_loops as i64));
                     Ok(Some(replacement_rules))
                 } else {
                     //println!("Does not match!");

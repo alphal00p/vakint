@@ -3,10 +3,45 @@ use symbolica::{
     atom::{Atom, AtomCore, AtomView, Symbol},
     coefficient::CoefficientView,
     id::{Condition, MatchSettings, Pattern, PatternOrMap, PatternRestriction},
-    symb,
 };
+use vakint_macros::vk_parse;
 
 use crate::{eq_condition, VakintSettings};
+
+pub(crate) mod vakint_macros {
+    macro_rules! vk_parse {
+        ($s: expr) => {{
+            symbolica::parse!($s, crate::NAMESPACE)
+        }};
+        ($s: expr, $ns: expr) => {{
+            symbolica::parse!($sm, $ns)
+        }};
+    }
+    macro_rules! vk_symbol {
+        ($s: expr) => {{
+            symbolica::symbol!(format!("{}::{}", crate::NAMESPACE, $s))
+        }};
+    }
+
+    pub(crate) use {vk_parse, vk_symbol};
+}
+
+#[macro_export]
+macro_rules! vakint_parse {
+    ($s: expr) => {{
+        symbolica::parse!($s, $crate::NAMESPACE)
+    }};
+    ($s: expr, $ns: expr) => {{
+        symbolica::parse!($sm, $ns)
+    }};
+}
+
+#[macro_export]
+macro_rules! vakint_symbol {
+    ($s: expr) => {{
+        symbolica::symbol!(format!("{}::{}", $crate::NAMESPACE, $s))
+    }};
+}
 
 pub fn replace_until_stable(
     target: AtomView<'_>,
@@ -29,36 +64,36 @@ pub fn replace_until_stable(
 pub fn simplify_real(input: AtomView) -> Atom {
     let mut res = replace_until_stable(
         input,
-        &Pattern::parse("x_^y_").unwrap(),
-        &Pattern::parse("1").unwrap().into(),
-        Some(&Condition::from((symb!("y_"), eq_condition(0)))),
+        &vk_parse!("x_^y_").unwrap().to_pattern(),
+        &vk_parse!("1").unwrap().to_pattern().into(),
+        Some(&Condition::from((crate::vk_symbol!("y_"), eq_condition(0)))),
         None,
     );
     res = replace_until_stable(
         res.as_view(),
-        &Pattern::parse("log(exp(x_))").unwrap(),
-        &Pattern::parse("x_").unwrap().into(),
-        None,
-        None,
-    );
-    res = replace_until_stable(
-        res.as_view(),
-        &Pattern::parse("exp(log(x_))").unwrap(),
-        &Pattern::parse("x_").unwrap().into(),
+        &vk_parse!("log(exp(x_))").unwrap().to_pattern(),
+        &vk_parse!("x_").unwrap().to_pattern().into(),
         None,
         None,
     );
     res = replace_until_stable(
         res.as_view(),
-        &Pattern::parse("log(x_^p_)").unwrap(),
-        &Pattern::parse("p_*log(x_)").unwrap().into(),
+        &vk_parse!("exp(log(x_))").unwrap().to_pattern(),
+        &vk_parse!("x_").unwrap().to_pattern().into(),
         None,
         None,
     );
     res = replace_until_stable(
         res.as_view(),
-        &Pattern::parse("exp(x_)*exp(y_)").unwrap(),
-        &Pattern::parse("exp(x_*y_)").unwrap().into(),
+        &vk_parse!("log(x_^p_)").unwrap().to_pattern(),
+        &vk_parse!("p_*log(x_)").unwrap().to_pattern().into(),
+        None,
+        None,
+    );
+    res = replace_until_stable(
+        res.as_view(),
+        &vk_parse!("exp(x_)*exp(y_)").unwrap().to_pattern(),
+        &vk_parse!("exp(x_*y_)").unwrap().to_pattern().into(),
         None,
         None,
     );
@@ -137,7 +172,7 @@ fn test_set_precision_in_float_atom() {
     println!(
         "Res={}",
         set_precision_in_float_atom(
-            Atom::parse("1.23456789113245423`100").unwrap().as_view(),
+            vk_parse!("1.23456789113245423`100").unwrap().as_view(),
             &VakintSettings {
                 run_time_decimal_precision: 30,
                 ..VakintSettings::default()

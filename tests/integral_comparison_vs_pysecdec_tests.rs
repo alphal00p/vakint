@@ -1,10 +1,9 @@
 mod test_utils;
 
-use symbolica::atom::Atom;
 use test_utils::compare_two_evaluations;
 use vakint::{EvaluationMethod, EvaluationOrder, PySecDecOptions, VakintSettings};
 
-use vakint::{externals_from_f64, params_from_f64};
+use vakint::{externals_from_f64, params_from_f64, vakint_parse};
 
 const N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC: u32 = 16;
 const COMPARISON_WITH_PYSECDEC_REL_THRESHOLD: f64 = 1.0e-7;
@@ -18,10 +17,10 @@ fn test_integrate_1l_pysecdec() {
         VakintSettings::default(),
         ((&EvaluationOrder::analytic_only() ,true),
         (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_1l_pysecdec".into()),..PySecDecOptions::default() })) ,false)),
-        Atom::parse(
+        vakint_parse!(
             "(1)*topo(\
             prop(1,edge(1,1),k(1),muvsq,1)\
-        )",
+        )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
@@ -43,10 +42,10 @@ fn test_integrate_1l_pysecdec_non_unit_mass() {
         VakintSettings::default(),
         ((&EvaluationOrder::analytic_only() ,true),
         (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_1l_pysecdec_non_unit_mass".into()),..PySecDecOptions::default() })) ,false)),
-        Atom::parse(
+        vakint_parse!(
             "(1)*topo(\
             prop(1,edge(1,1),k(1),muvsq,1)\
-        )",
+        )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 2.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
@@ -68,10 +67,10 @@ fn test_integrate_1l_pysecdec_non_unit_scale() {
         VakintSettings::default(),
         ((&EvaluationOrder::analytic_only() ,true),
         (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_1l_pysecdec_non_unit_scale".into()),..PySecDecOptions::default() })) ,false)),
-        Atom::parse(
+        vakint_parse!(
             "(1)*topo(\
             prop(1,edge(1,1),k(1),muvsq,1)\
-        )",
+        )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
@@ -93,10 +92,10 @@ fn test_integrate_1l_pysecdec_num_rank_two() {
         VakintSettings::default(),
         ((&EvaluationOrder::analytic_only() ,true),
         (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_1l_pysecdec_num_rank_two".into()),..PySecDecOptions::default() })) ,false)),
-        Atom::parse(
+        vakint_parse!(
             "((k(1,33)*k(1,33))^2+k(1,55)*p(1,55))*topo(\
             prop(1,edge(1,1),k(1),muvsq,1)\
-        )",
+        )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
@@ -118,10 +117,10 @@ fn test_integrate_1l_pysecdec_dot_product_external() {
         VakintSettings::default(),
         ((&EvaluationOrder::analytic_only() ,true),
         (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_1l_pysecdec_dot_product_external".into()),..PySecDecOptions::default() })) ,false)),
-        Atom::parse(
+        vakint_parse!(
             "(k(1,1)*p(1,1)*k(1,2)*p(2,2))*topo(\
                 prop(1,edge(1,1),k(1),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
@@ -142,12 +141,12 @@ fn test_integrate_2l_pysecdec() {
         VakintSettings::default(),
         ((&EvaluationOrder::analytic_only() ,true),
         (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_2l_pysecdec".into()),..PySecDecOptions::default() })) ,false)),
-        Atom::parse(
+        vakint_parse!(
             "(1)*topo(\
                 prop(1,edge(1,2),k(1),muvsq,1)\
                 *prop(2,edge(1,2),k(2),muvsq,1)\
                 *prop(3,edge(2,1),k(1)+k(2),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
@@ -169,11 +168,11 @@ fn test_integrate_2l_pysecdec_pinched() {
         VakintSettings::default(),
         ((&EvaluationOrder::analytic_only() ,true),
         (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_2l_pysecdec_pinched".into()),..PySecDecOptions::default() })) ,false)),
-        Atom::parse(
+        vakint_parse!(
             "(1)*topo(\
                 prop(1,edge(1,1),k(1),muvsq,1)\
                 *prop(2,edge(1,1),k(2),muvsq,1)
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
@@ -195,11 +194,11 @@ fn test_integrate_2l_pysecdec_pinched_other_lmb() {
         VakintSettings::default(),
         ((&EvaluationOrder::analytic_only() ,true),
         (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_2l_pysecdec_pinched_other_lmb".into()),..PySecDecOptions::default() })) ,false)),
-        Atom::parse(
+        vakint_parse!(
             "(1)*topo(\
                 prop(1,edge(1,1),k(1),muvsq,1)\
                 *prop(3,edge(1,1),k(1)+k(2),muvsq,1)
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
@@ -221,7 +220,7 @@ fn test_integrate_2l_pysecdec_rank_four_num() {
         VakintSettings::default(),
         ((&EvaluationOrder::analytic_only() ,true),
         (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_2l_pysecdec_rank_four_num".into()),..PySecDecOptions::default() })) ,false)),
-        Atom::parse(
+        vakint_parse!(
             "(
                   k(1,11)*k(2,22)*k(1,11)*k(2,22)
                 + p(1,11)*k(1,11)*k(1,22)*p(1,22)
@@ -231,7 +230,7 @@ fn test_integrate_2l_pysecdec_rank_four_num() {
                   prop(1,edge(1,2),k(1),muvsq,1)\
                 * prop(2,edge(1,2),k(2),muvsq,1)\
                 * prop(3,edge(2,1),k(1)+k(2),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
@@ -253,7 +252,7 @@ fn test_integrate_3l_pysecdec() {
         VakintSettings::default(),
         ((&EvaluationOrder::analytic_only() ,true),
         (&EvaluationOrder::pysecdec_only(Some(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_3l_pysecdec".into()),..PySecDecOptions::default() })) ,false)),
-        Atom::parse(
+        vakint_parse!(
             "( 1 )
             *topo(\
                  prop(1,edge(1,2),k(1),muvsq,1)\
@@ -262,7 +261,7 @@ fn test_integrate_3l_pysecdec() {
                 *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
                 *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
@@ -287,7 +286,7 @@ fn test_integrate_3l_rank_4() {
         ((&EvaluationOrder::analytic_only() ,true),
          (&EvaluationOrder(vec![EvaluationMethod::PySecDec(
             PySecDecOptions{ min_n_evals: 100_000, max_n_evals: 10_000_000, reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_integrate_3l_rank_4".into()),..PySecDecOptions::default()} )]) ,true)),
-        Atom::parse(
+        vakint_parse!(
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + p(1,11)*k(3,11)*k(3,22)*p(2,22)
@@ -300,7 +299,7 @@ fn test_integrate_3l_rank_4() {
                 *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
                 *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),
@@ -327,7 +326,7 @@ fn test_integrate_3l_rank_4_matad() {
             PySecDecOptions{ 
                 // reuse_existing_output: Some("./SAVED_PYSECDEC_OUTPUTS/test_integrate_3l_rank_4_matad".into()),
                 min_n_evals: 100_000, max_n_evals: 10_000_000, reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_3l_rank_4_matad".into()), ..PySecDecOptions::default()} )]) ,true)),
-        Atom::parse(
+        vakint_parse!(
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + p(1,11)*k(3,11)*k(3,22)*p(2,22)
@@ -340,7 +339,7 @@ fn test_integrate_3l_rank_4_matad() {
                 *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
                 *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_COMPARISON_WITH_PYSECDEC),

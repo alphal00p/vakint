@@ -1,8 +1,9 @@
 use std::sync::LazyLock;
 
+use crate::utils::vakint_macros::vk_symbol;
 use symbolica::{
-    atom::{Atom, FunctionAttribute, Symbol},
-    symb,
+    atom::{Atom, Symbol},
+    symbol,
 };
 
 pub static METRIC_SYMBOL: &str = "g";
@@ -48,46 +49,44 @@ pub struct VakintSymbols {
 }
 
 pub static S: LazyLock<VakintSymbols> = LazyLock::new(|| VakintSymbols {
-    uedge: Symbol::new_with_attributes("uedge", &[FunctionAttribute::Symmetric]).unwrap(),
-    dot: Symbol::new_with_attributes(
-        "dot",
-        &[FunctionAttribute::Symmetric, FunctionAttribute::Linear],
+    uedge: symbol!(format!("{}::uedge",crate::NAMESPACE); Symmetric).unwrap(),
+    dot: symbol!(
+        format!("{}::dot",crate::NAMESPACE); Symmetric,Linear
     )
     .unwrap(),
-    vkdot: Symbol::new_with_attributes(
-        "vkdot",
-        &[FunctionAttribute::Symmetric, FunctionAttribute::Linear],
+    vkdot: symbol!(
+        format!("{}::vkdot",crate::NAMESPACE);  Symmetric, Linear
     )
     .unwrap(),
-    g: Symbol::new_with_attributes("METRIC_SYMBOL", &[FunctionAttribute::Symmetric]).unwrap(),
-    x: symb!("x"),
-    y: symb!("y"),
-    xa: Atom::new_var(symb!("xa")),
-    ya: Atom::new_var(symb!("ya")),
-    x_: symb!("x_"),
-    y_: symb!("y_"),
-    x_a: Atom::new_var(symb!("x_")),
-    y_a: Atom::new_var(symb!("y_")),
+    g: symbol!(format!("{}::METRIC_SYMBOL",crate::NAMESPACE); Symmetric).unwrap(),
+    x: vk_symbol!("x"),
+    y: vk_symbol!("y"),
+    xa: Atom::new_var(vk_symbol!("xa")),
+    ya: Atom::new_var(vk_symbol!("ya")),
+    x_: vk_symbol!("x_"),
+    y_: vk_symbol!("y_"),
+    x_a: Atom::new_var(vk_symbol!("x_")),
+    y_a: Atom::new_var(vk_symbol!("y_")),
     one: Atom::new_num(1),
     zero: Atom::Zero,
-    error_flag_symbol: symb!("ERROR"),
-    error_flag: Atom::new_var(symb!("ERROR")),
-    n_loops: Atom::new_var(symb!("n_loops")),
-    p: symb!(EXTERNAL_MOMENTUM_SYMBOL),
-    k: symb!(LOOP_MOMENTUM_SYMBOL),
-    id1_: symb!("id1_"),
-    id2_: symb!("id2_"),
-    id1_a: Atom::new_var(symb!("id1_")),
-    id2_a: Atom::new_var(symb!("id2_")),
-    pow: symb!("pow"),
-    pow_: symb!("pow_"),
-    fun_: symb!("fun_"),
-    fun_a: Atom::new_var(symb!("fun_")),
-    any___: symb!("any___"),
-    any_a___: Atom::new_var(symb!("any___")),
-    n_: symb!("n_"),
-    a_: symb!("a_"),
-    b_: symb!("b_"),
-    lambda: symb!("VakintLambdaScalingAnalysis"),
-    lambda_a: Atom::new_var(symb!("VakintLambdaScalingAnalysis")),
+    error_flag_symbol: vk_symbol!("ERROR"),
+    error_flag: Atom::new_var(vk_symbol!("ERROR")),
+    n_loops: Atom::new_var(vk_symbol!("n_loops")),
+    p: vk_symbol!(EXTERNAL_MOMENTUM_SYMBOL),
+    k: vk_symbol!(LOOP_MOMENTUM_SYMBOL),
+    id1_: vk_symbol!("id1_"),
+    id2_: vk_symbol!("id2_"),
+    id1_a: Atom::new_var(vk_symbol!("id1_")),
+    id2_a: Atom::new_var(vk_symbol!("id2_")),
+    pow: vk_symbol!("pow"),
+    pow_: vk_symbol!("pow_"),
+    fun_: vk_symbol!("fun_"),
+    fun_a: Atom::new_var(vk_symbol!("fun_")),
+    any___: vk_symbol!("any___"),
+    any_a___: Atom::new_var(vk_symbol!("any___")),
+    n_: vk_symbol!("n_"),
+    a_: vk_symbol!("a_"),
+    b_: vk_symbol!("b_"),
+    lambda: vk_symbol!("VakintLambdaScalingAnalysis"),
+    lambda_a: Atom::new_var(vk_symbol!("VakintLambdaScalingAnalysis")),
 });

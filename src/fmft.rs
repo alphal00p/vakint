@@ -11,12 +11,13 @@ use colored::Colorize;
 use log::debug;
 use regex::Regex;
 use string_template_plus::{Render, RenderOptions, Template};
-use symbolica::symb;
+use symbolica::printer::{AtomPrinter, PrintOptions};
+use crate::utils::vakint_macros::{vk_parse, vk_symbol};
 use symbolica::{
     atom::{Atom, AtomCore, AtomView},
     domains::{integer::Integer, rational::Rational},
-    fun,
-    id::{Condition, Pattern, PatternOrMap},
+    function,
+    id::{Condition, PatternOrMap},
 };
 
 use crate::{
@@ -40,21 +41,21 @@ impl FMFT {
     ) -> Result<Atom, VakintError> {
         let mut res = processed_form_output.to_owned();
         res = res.replace_all(
-            &Pattern::parse("d").unwrap(),
-            Pattern::parse("4-2*ep").unwrap(),
+            &vk_parse!("d").unwrap().to_pattern(),
+            vk_parse!("4-2*ep").unwrap().to_pattern(),
             None,
             None,
         );
         // Temporarily work with the variable "ep" instead of the UTF-8 symbol for epsilon
         res = res.replace_all(
-            &Atom::new_var(symb!(self.settings.epsilon_symbol.as_str())).to_pattern(),
-            Pattern::parse("ep").unwrap(),
+            &Atom::new_var(vk_symbol!(self.settings.epsilon_symbol.as_str())).to_pattern(),
+            vk_parse!("ep").unwrap().to_pattern(),
             None,
             None,
         );
         res = res.replace_all(
-            &fun!(S.vkdot, fun!(S.p, S.id1_a), fun!(S.p, S.id2_a)).to_pattern(),
-            fun!(S.dot, fun!(S.p, S.id1_a), fun!(S.p, S.id2_a)).to_pattern(),
+            &function!(S.vkdot, function!(S.p, S.id1_a), function!(S.p, S.id2_a)).to_pattern(),
+            function!(S.dot, function!(S.p, S.id1_a), function!(S.p, S.id2_a)).to_pattern(),
             Some(
                 &(Condition::from((S.id1_, number_condition()))
                     & Condition::from((S.id2_, number_condition()))),
@@ -67,14 +68,14 @@ impl FMFT {
     pub fn substitute_gam_functions(&self, result: AtomView) -> Atom {
         let mut res = result.to_owned();
         res = res.replace_all(
-            &Pattern::parse("Gam(x_,y_)").unwrap(),
-            Pattern::parse("exp(ep*y_*EulerGamma)*Gamma(x_+ep*y_)").unwrap(),
+            &vk_parse!("Gam(x_,y_)").unwrap().to_pattern(),
+            vk_parse!("exp(ep*y_*EulerGamma)*Gamma(x_+ep*y_)").unwrap().to_pattern(),
             None,
             None,
         );
         res = res.replace_all(
-            &Pattern::parse("iGam(x_,y_)").unwrap(),
-            Pattern::parse("exp(-ep*y_*EulerGamma)/Gamma(x_+ep*y_)").unwrap(),
+            &vk_parse!("iGam(x_,y_)").unwrap().to_pattern(),
+            vk_parse!("exp(-ep*y_*EulerGamma)/Gamma(x_+ep*y_)").unwrap().to_pattern(),
             None,
             None,
         );
@@ -97,7 +98,7 @@ impl FMFT {
             res
         }));
         if let Some(m) = r
-            .pattern_match(&Pattern::parse("GammaArgs(x_,y_)").unwrap(), None, None)
+            .pattern_match(&vk_parse!("GammaArgs(x_,y_)").unwrap().into(), None, None)
             .next()
         {
             return Err(VakintError::FMFTError(
@@ -120,7 +121,7 @@ impl FMFT {
                     (
                         set_precision_in_polynomial_atom(
                             trgt.as_view(),
-                            symb!("ep"),
+                            vk_symbol!("ep"),
                             &self.settings,
                         ),
                         condition.clone(),
@@ -161,7 +162,7 @@ impl FMFT {
         let mut r = result.to_owned();
 
         r = r.replace_all(
-            &Pattern::parse("Gamma(n_)").unwrap(),
+            &vk_parse!("Gamma(n_)").unwrap().into(),
             PatternOrMap::Map(Box::new(move |match_in| {
                 let n = get_integer_from_atom(match_in.get(S.n_).unwrap().to_atom().as_view())
                     .unwrap() as u32;
@@ -179,7 +180,7 @@ impl FMFT {
         }));
 
         if let Some(m) = r
-            .pattern_match(&Pattern::parse("PolyGamma(x_,y_)").unwrap(), None, None)
+            .pattern_match(&vk_parse!("PolyGamma(x_,y_)").unwrap().into(), None, None)
             .next()
         {
             return Err(VakintError::FMFTError(
@@ -245,13 +246,13 @@ impl Vakint {
         let integral_name = if let Some(short_expression) = integral.short_expression.as_ref() {
             if let Some(m) = short_expression
                 .pattern_match(
-                    &fun!(S.fun_, S.any_a___).to_pattern(),
+                    &function!(S.fun_, S.any_a___).to_pattern(),
                     Some(&Condition::from((S.fun_, symbol_condition()))),
                     None,
                 )
                 .next()
             {
-                m.get(&S.fun_).unwrap().to_canonical_string()
+                AtomPrinter::new_with_options(m.get(&S.fun_).unwrap().as_atom_view(), PrintOptions::file_no_namespace()).to_string()
             } else {
                 return err;
             }
@@ -264,7 +265,7 @@ impl Vakint {
             .as_ref()
             .unwrap()
             .pattern_match(
-                &fun!(S.fun_, S.x_a, S.any_a___).to_pattern(),
+                &function!(S.fun_, S.x_a, S.any_a___).to_pattern(),
                 Some(
                     &(Condition::from((S.x_, symbol_condition()))
                         & Condition::from((S.fun_, symbol_condition()))),
@@ -307,7 +308,7 @@ impl Vakint {
         let mut numerator = Vakint::convert_to_dot_notation(input_numerator);
 
         if utils::could_match(
-            &fun!(S.dot, fun!(S.p, S.id1_a), fun!(S.k, S.id2_a)).to_pattern(),
+            &function!(S.dot, function!(S.p, S.id1_a), function!(S.k, S.id2_a)).to_pattern(),
             numerator.as_view(),
         ) {
             return Err(VakintError::InvalidNumerator(
@@ -318,8 +319,8 @@ impl Vakint {
         // Now map all exterior dot products into a special function `vkdot` so that it does not interfere with FMFT
         // Do not forget to normalize by the dimensionality, which is muv^2 in this case.
         numerator = numerator.replace_all(
-            &fun!(S.dot, fun!(S.p, S.id1_a), fun!(S.p, S.id2_a)).to_pattern(),
-            fun!(S.vkdot, fun!(S.p, S.id1_a), fun!(S.p, S.id2_a)).to_pattern(),
+            &function!(S.dot, function!(S.p, S.id1_a), function!(S.p, S.id2_a)).to_pattern(),
+            function!(S.vkdot, function!(S.p, S.id1_a), function!(S.p, S.id2_a)).to_pattern(),
             Some(
                 &(Condition::from((S.id1_, number_condition()))
                     & Condition::from((S.id2_, number_condition()))),
@@ -332,7 +333,7 @@ impl Vakint {
         let mut lmb_prop_indices = vec![];
         for i_loop in 1..=integral.n_loops {
             if let Some((i_edge, _)) = momenta.iter().find(|(_i_prop, k)| {
-                k.as_view() == fun!(S.k, Atom::new_num(i_loop as i64)).as_view()
+                k.as_view() == function!(S.k, Atom::new_num(i_loop as i64)).as_view()
             }) {
                 lmb_prop_indices.push(*i_edge as isize);
             } else {
@@ -343,7 +344,7 @@ impl Vakint {
         let vakint_to_fmft_edge_map_copy = vakint_to_fmft_edge_map.clone();
         numerator = 
         numerator.replace_all(
-                &fun!(S.dot, fun!(S.k, S.id1_a), fun!(S.k, S.id2_a))
+                &function!(S.dot, function!(S.k, S.id1_a), function!(S.k, S.id2_a))
             .to_pattern(),
                 PatternOrMap::Map(Box::new(move |match_in| {
                     let id1 = lmb_prop_indices[(get_integer_from_atom(match_in.get(S.id1_).unwrap().to_atom().as_view()).unwrap()-1) as usize];
@@ -367,7 +368,7 @@ impl Vakint {
                     // in FMFT, the loop momenta dot products need to be written p<i>.p<i>
                     // The outter dot will be converted to an inner dot in the next step
                     // Again we must normalize by the dimensionality muv^2
-                    Atom::parse(format!("dot(p{},p{})", i_edge1, i_edge2).as_str()).unwrap()
+                    vk_parse!(format!("dot(p{},p{})", i_edge1, i_edge2).as_str()).unwrap()
                         * (Atom::new_var(muv_sq_symbol))
                 })),
                 Some(
@@ -380,8 +381,8 @@ impl Vakint {
         // Substitute eps by (4-d)/2
         numerator = 
         numerator.replace_all(
-                &Pattern::parse(&vakint.settings.epsilon_symbol).unwrap(),
-                Pattern::parse("(4-d)/2").unwrap(),
+                &vk_parse!(&vakint.settings.epsilon_symbol).unwrap().into(),
+                vk_parse!("(4-d)/2").unwrap().to_pattern(),
                 None,
                 None,
             );
@@ -389,14 +390,19 @@ impl Vakint {
         let dot_produce_replacer =
             Regex::new(r"dot\((?<vecA>[\w|\d]+),(?<vecB>[\w|\d]+)\)").unwrap();
         let numerator_string = dot_produce_replacer
-            .replace_all(&numerator.to_canonical_string(), "($vecA.$vecB)")
+            .replace_all(
+                &AtomPrinter::new_with_options(
+                    numerator.as_view(),
+                    PrintOptions::file_no_namespace(),
+                )
+                .to_string(), "($vecA.$vecB)")
             .to_string();
 
         let powers = (1..=integral.n_props)
             .map(|i_prop| {
                 integral_specs
                     .canonical_expression_substitutions
-                    .get(&fun!(S.pow, Atom::new_num(i_prop as i64)))
+                    .get(&function!(S.pow, Atom::new_num(i_prop as i64)))
                     .map(|a| a.try_into().unwrap())
                     .unwrap_or(0)
             })
@@ -412,13 +418,13 @@ impl Vakint {
         // Replace functions with 1 and get all remaining symbols
         let mut numerator_additional_symbols = 
             input_numerator.replace_all(
-                &Pattern::parse("f_(args__)").unwrap(),
-                Atom::parse("1").unwrap().to_pattern(),
+                &vk_parse!("f_(args__)").unwrap().into(),
+                vk_parse!("1").unwrap().to_pattern(),
                 None,
                 None,
             )
             .get_all_symbols(false);
-        let eps_symbol = symb!(vakint.settings.epsilon_symbol.clone());
+        let eps_symbol = vk_symbol!(vakint.settings.epsilon_symbol.clone());
         numerator_additional_symbols.retain(|&s| s != eps_symbol);
 
         let template = Template::parse_template(TEMPLATES.get("run_fmft.txt").unwrap()).unwrap();
@@ -433,7 +439,7 @@ impl Vakint {
                     "Auto S {};",
                     numerator_additional_symbols
                         .iter()
-                        .map(|item| item.to_string())
+                        .map(|item| item.get_stripped_name())
                         .collect::<Vec<_>>()
                         .join(", "),
                 ),
@@ -470,20 +476,18 @@ impl Vakint {
         let muv_sq_dimension = 2 * (integral.n_loops as i64) - powers.iter().sum::<i64>();
 
         evaluated_integral = evaluated_integral
-            * Atom::parse(format!("{}^{}", muv_sq_symbol, muv_sq_dimension).as_str()).unwrap();
+            * vk_parse!(format!("{}^{}", muv_sq_symbol, muv_sq_dimension).as_str()).unwrap();
 
-        let fmft_normalization_correction = Atom::parse(
-            format!(
-                "( 
-                    (𝑖*(𝜋^((4-2*{eps})/2)))\
-                  * (exp(-EulerGamma))^({eps})\
-                  * (exp(-logmUVmu-log_mu_sq))^({eps})\
-                 )^{n_loops}",
-                eps = self.settings.epsilon_symbol,
-                n_loops = integral.n_loops
-            )
-            .as_str(),
+        let fmft_normalization_correction = vk_parse!(format!(
+            "( 
+                (𝑖*(𝜋^((4-2*{eps})/2)))\
+              * (exp(-EulerGamma))^({eps})\
+              * (exp(-logmUVmu-log_mu_sq))^({eps})\
+             )^{n_loops}",
+            eps = self.settings.epsilon_symbol,
+            n_loops = integral.n_loops
         )
+        .as_str())
         .unwrap();
 
         // Adjust normalization factor
@@ -498,9 +502,9 @@ impl Vakint {
             );
         complete_normalization = 
         complete_normalization.replace_all(
-                &Atom::new_var(symb!(self.settings.epsilon_symbol.as_str()))
+                &Atom::new_var(vk_symbol!(self.settings.epsilon_symbol.as_str()))
             .to_pattern(),
-                Pattern::parse("ep").unwrap(),
+                vk_parse!("ep").unwrap().to_pattern(),
                 None,
                 None,
             );
@@ -526,7 +530,7 @@ impl Vakint {
                 expansion_depth
             );
             evaluated_integral = match evaluated_integral.series(
-                symb!("ep"),
+                vk_symbol!("ep"),
                 Atom::Zero.as_view(),
                 Rational::from(expansion_depth),
                 true,
@@ -539,8 +543,8 @@ impl Vakint {
             // Sanity check
             if let Some(m) = 
                 evaluated_integral.pattern_match(
-                    &Pattern::parse("Oep(x_,y_)")
-                    .unwrap(),
+                    &vk_parse!("Oep(x_,y_)")
+                    .unwrap().to_pattern(),
                     None,
                     None,
                 )
@@ -567,8 +571,8 @@ impl Vakint {
                 // Sanity check
                 if let Some(m) = 
                     evaluated_integral.pattern_match(
-                        &Pattern::parse("Oep(x_,y_)")
-                        .unwrap(),
+                        &vk_parse!("Oep(x_,y_)")
+                        .unwrap().to_pattern(),
                         None,
                         None,
                     )
@@ -584,8 +588,8 @@ impl Vakint {
         }
 
         evaluated_integral = evaluated_integral.replace_all(
-            &Pattern::parse("ep").unwrap(),
-            Atom::new_var(symb!(self.settings.epsilon_symbol.as_str()))
+            &vk_parse!("ep").unwrap().into(),
+            Atom::new_var(vk_symbol!(self.settings.epsilon_symbol.as_str()))
                 .to_pattern(),
             None,
             None,
@@ -596,25 +600,25 @@ impl Vakint {
                 Vakint::convert_from_dot_notation(evaluated_integral.as_view(), false);
         }
 
-        let log_muv_mu_sq = fun!(
+        let log_muv_mu_sq = function!(
             Atom::LOG,
             Atom::new_var(muv_sq_symbol)
-                / Atom::new_var(symb!(vakint.settings.mu_r_sq_symbol.as_str()))
+                / Atom::new_var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
-        let log_mu_sq = fun!(
+        let log_mu_sq = function!(
             Atom::LOG,
-            Atom::new_var(symb!(vakint.settings.mu_r_sq_symbol.as_str()))
+            Atom::new_var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         evaluated_integral = evaluated_integral.replace_all(
-            &Pattern::parse("logmUVmu").unwrap(),
+            &vk_parse!("logmUVmu").unwrap().into(),
             (log_muv_mu_sq).to_pattern(),
             None,
             None,
         );
         evaluated_integral = evaluated_integral.replace_all(
-            &Pattern::parse("log_mu_sq").unwrap(),
+            &vk_parse!("log_mu_sq").unwrap().into(),
             (log_mu_sq).to_pattern(),
             None,
             None,

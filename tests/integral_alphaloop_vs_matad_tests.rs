@@ -4,12 +4,13 @@ use log::debug;
 use symbolica::{
     atom::{Atom, AtomCore, AtomView},
     domains::rational::Rational,
-    fun,
-    id::Pattern,
-    symb,
+    function,
 };
 use test_utils::compare_two_evaluations;
-use vakint::{matad::MATAD, EvaluationOrder, NumericalEvaluationResult, Vakint, VakintSettings};
+use vakint::{
+    matad::MATAD, vakint_parse, vakint_symbol, EvaluationOrder, NumericalEvaluationResult, Vakint,
+    VakintSettings,
+};
 
 use vakint::{externals_from_f64, params_from_f64};
 
@@ -25,11 +26,11 @@ fn test_integrate_1l_no_numerator() {
         compare_two_evaluations(
             VakintSettings { run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 4, ..VakintSettings::default()},
             ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only(None) ,true)),
-            Atom::parse(
+            vakint_parse!(
                 format!("( 1 )
                 *topo(\
                     prop(1,edge(1,1),k(1),muvsq,{})
-                )",pow).as_str(),
+                )",pow).as_str()
             ).unwrap().as_view(),
             params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION),
@@ -51,12 +52,12 @@ fn test_integrate_2l_no_numerator() {
     compare_two_evaluations(
         VakintSettings { run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 4, ..VakintSettings::default()},
         ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only(None) ,true)),
-        Atom::parse(
+        vakint_parse!(
             "(1)*topo(\
             prop(1,edge(1,2),k(1),muvsq,1)\
             * prop(2,edge(1,2),k(2),muvsq,1)\
             * prop(3,edge(2,1),k(1)+k(2),muvsq,1)\
-        )",
+        )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
         N_DIGITS_ANLYTICAL_EVALUATION),
@@ -77,13 +78,13 @@ fn test_integrate_3l_basketball_a() {
     compare_two_evaluations(
         VakintSettings { run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 3, ..VakintSettings::default()},
         ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only(None) ,true)),
-        Atom::parse(
+        vakint_parse!(
             "( k(1, 1)^2 )*topo(
                 prop(1, edge(2, 1), k(1), muvsq, 1)*\
                 prop(2, edge(2, 1), k(2), muvsq, 1)*\
                 prop(3, edge(1, 2), k(3), muvsq, 1)*\
                 prop(4, edge(1, 2), k(1) + k(2) - k(3), muvsq, 1)
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
         N_DIGITS_ANLYTICAL_EVALUATION),
@@ -104,13 +105,13 @@ fn test_integrate_3l_basketball_b() {
     compare_two_evaluations(
         VakintSettings { run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 3, ..VakintSettings::default()},
         ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only(None) ,true)),
-        Atom::parse(
+        vakint_parse!(
             "( k(3, 1)^2 )*topo(
                 prop(1, edge(2, 1), k(1), muvsq, 1)*\
                 prop(2, edge(2, 1), k(2), muvsq, 1)*\
                 prop(3, edge(1, 2), k(3), muvsq, 1)*\
                 prop(4, edge(1, 2), k(1) + k(2) - k(3), muvsq, 1)
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
         N_DIGITS_ANLYTICAL_EVALUATION),
@@ -131,7 +132,7 @@ fn test_integrate_3l_no_numerator() {
     compare_two_evaluations(
         VakintSettings { run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 4, ..VakintSettings::default()},
         ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only(None) ,true)),
-        Atom::parse(
+        vakint_parse!(
             "( 1 )
             *topo(\
                  prop(1,edge(1,2),k(1),muvsq,1)\
@@ -140,7 +141,7 @@ fn test_integrate_3l_no_numerator() {
                 *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
                 *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
         N_DIGITS_ANLYTICAL_EVALUATION),
@@ -161,7 +162,7 @@ fn test_integrate_3l_rank_4() {
     compare_two_evaluations(
         VakintSettings { run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 4, ..VakintSettings::default()},
         ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only(None) ,true)),
-        Atom::parse(
+        vakint_parse!(
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + p(1,11)*k(3,11)*k(3,22)*p(2,22)
@@ -174,7 +175,7 @@ fn test_integrate_3l_rank_4() {
                 *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
                 *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 2.0)].iter().cloned().collect(),
         N_DIGITS_ANLYTICAL_EVALUATION),
@@ -195,7 +196,7 @@ fn test_integrate_3l_rank_4_different_scales() {
     compare_two_evaluations(
         VakintSettings { run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 4, ..VakintSettings::default()},
         ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only(None) ,true)),
-        Atom::parse(
+        vakint_parse!(
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + p(1,11)*k(3,11)*k(3,22)*p(2,22)
@@ -208,7 +209,7 @@ fn test_integrate_3l_rank_4_different_scales() {
                 *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
                 *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
                 *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
-            )",
+            )"
         ).unwrap().as_view(),
         params_from_f64(&[("muvsq".into(), 3.0), ("mursq".into(), 5.0)].iter().cloned().collect(),
         N_DIGITS_ANLYTICAL_EVALUATION),
@@ -239,18 +240,9 @@ pub fn evaluate_expression_with_matad(
         integral = matad.expand_matad_masters(integral.as_view()).unwrap();
     }
 
-    // Temporary work around for series bug in Symbolica
-    // integral = Pattern::parse("(any___)^-1").unwrap().replace_all(
-    //     integral.as_view(),
-    //     &PatternOrMap::Map(Box::new(move |match_in| {
-    //         Atom::new_num(1) / match_in.get(S.any___).unwrap().to_atom().expand()
-    //     })),
-    //     None,
-    //     None,
-    // );
     integral = integral
         .series(
-            symb!("ep"),
+            vakint_symbol!("ep"),
             Atom::Zero.as_view(),
             Rational::from(vakint.settings.number_of_terms_in_epsilon_expansion - 3),
             true,
@@ -275,26 +267,26 @@ pub fn evaluate_expression_with_matad(
             .substitute_additional_constants(integral.as_view())
             .unwrap();
     }
-    let muv_sq_symbol = symb!("muvsq");
-    let log_muv_mu_sq = fun!(
+    let muv_sq_symbol = vakint_symbol!("muvsq");
+    let log_muv_mu_sq = function!(
         Atom::LOG,
         Atom::new_var(muv_sq_symbol)
-            / Atom::new_var(symb!(vakint.settings.mu_r_sq_symbol.as_str()))
+            / Atom::new_var(vakint_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
     );
 
-    let log_mu_sq = fun!(
+    let log_mu_sq = function!(
         Atom::LOG,
-        Atom::new_var(symb!(vakint.settings.mu_r_sq_symbol.as_str()))
+        Atom::new_var(vakint_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
     );
 
     integral = integral.replace_all(
-        &Pattern::parse("logmUVmu").unwrap(),
+        &vakint_parse!("logmUVmu").unwrap().to_pattern(),
         (log_muv_mu_sq).to_pattern(),
         None,
         None,
     );
     integral = integral.replace_all(
-        &Pattern::parse("log_mu_sq").unwrap(),
+        &vakint_parse!("log_mu_sq").unwrap().to_pattern(),
         (log_mu_sq).to_pattern(),
         None,
         None,
@@ -309,8 +301,8 @@ pub fn evaluate_expression_with_matad(
     );
 
     integral = integral.replace_all(
-        &Pattern::parse("ep").unwrap(),
-        Atom::new_var(symb!(vakint.settings.epsilon_symbol.as_str())).to_pattern(),
+        &vakint_parse!("ep").unwrap().to_pattern(),
+        Atom::new_var(vakint_symbol!(vakint.settings.epsilon_symbol.as_str())).to_pattern(),
         None,
         None,
     );
@@ -335,7 +327,7 @@ pub fn test_eval_matad_masters() {
     #[rustfmt::skip]
     let expression_to_tests = vec![
         (
-            Atom::parse("miD6").unwrap(),
+            vakint_parse!("miD6").unwrap(),
             NumericalEvaluationResult::from_vec(vec![
                 ( -1, ("  2.40411380631918857079947632302289998153".into(), "0.0".into()) ),
                 (  0, ("-10.03527847976878917191470068515890023865".into(), "0.0".into()) ),
@@ -345,7 +337,7 @@ pub fn test_eval_matad_masters() {
             5
         ),
         (
-            Atom::parse("miT111").unwrap(),
+            vakint_parse!("miT111").unwrap(),
             NumericalEvaluationResult::from_vec(vec![
                 ( -2, ("-1.5".into(), "0.0".into()) ),
                 ( -1, ("-4.5".into(), "0.0".into()) ),
@@ -357,7 +349,7 @@ pub fn test_eval_matad_masters() {
             6
         ),
         (
-            Atom::parse("miD5").unwrap(),
+            vakint_parse!("miD5").unwrap(),
             NumericalEvaluationResult::from_vec(vec![
                 ( -1, ("2.404113806319188570799476323022899981530".into(), "0.0".into()) ),
                 (  0, ("-8.216859817508738062913398338601085824970".into(), "0.0".into()) ),
@@ -367,7 +359,7 @@ pub fn test_eval_matad_masters() {
             5
         ),
         (
-            Atom::parse("miBN").unwrap(),
+            vakint_parse!("miBN").unwrap(),
             NumericalEvaluationResult::from_vec(vec![
                 ( -3, ("2.0".into(), "0.0".into()) ),
                 ( -2, ("7.666666666666666666666666666666666666667".into(), "0.0".into()) ),
@@ -379,7 +371,7 @@ pub fn test_eval_matad_masters() {
             5
         ),
         (
-            Atom::parse("Gam(1,1)").unwrap(),
+            vakint_parse!("Gam(1,1)").unwrap(),
             NumericalEvaluationResult::from_vec(vec![
                 (  0, ("1.0".into(), "0.0".into()) ),
                 (  1, ("0.0".into(), "0.0".into()) ),
@@ -390,7 +382,7 @@ pub fn test_eval_matad_masters() {
             7
         ),
         (
-            Atom::parse("iGam(1,1)").unwrap(),
+            vakint_parse!("iGam(1,1)").unwrap(),
             NumericalEvaluationResult::from_vec(vec![
                 (  0, ("1.0".into(), "0.0".into()) ),
                 (  1, ("0.0".into(), "0.0".into()) ),
@@ -401,7 +393,7 @@ pub fn test_eval_matad_masters() {
             7
         ),
         (
-            Atom::parse("Gam(1,2)").unwrap(),
+            vakint_parse!("Gam(1,2)").unwrap(),
             NumericalEvaluationResult::from_vec(vec![
                 (  0, ("1.0".into(), "0.0".into()) ),
                 (  1, ("0.0".into(), "0.0".into()) ),
@@ -412,7 +404,7 @@ pub fn test_eval_matad_masters() {
             7
         ),
         (
-            Atom::parse("iGam(1,2)").unwrap(),
+            vakint_parse!("iGam(1,2)").unwrap(),
             NumericalEvaluationResult::from_vec(vec![
                 (  0, ("1.0".into(), "0.0".into()) ),
                 (  1, ("0.0".into(), "0.0".into()) ),
@@ -423,7 +415,7 @@ pub fn test_eval_matad_masters() {
             7
         ),
         (
-            Atom::parse("miD4").unwrap(),
+            vakint_parse!("miD4").unwrap(),
             NumericalEvaluationResult::from_vec(vec![
                 ( -1, ("2.404113806319188570799476323022899981530".into(), "0.0".into()) ),
                 (  0, ("-5.913204783884020530495717892535405026883".into(), "0.0".into()) ),
@@ -433,7 +425,7 @@ pub fn test_eval_matad_masters() {
             5
         ),
         (
-            Atom::parse("miD3").unwrap(),
+            vakint_parse!("miD3").unwrap(),
             NumericalEvaluationResult::from_vec(vec![
                 ( -1, ("2.404113806319188570799476323022899981530".into(), "0.0".into()) ),
                 (  0, ("-3.027009493987652019786374701758957286151".into(), "0.0".into()) ),
@@ -443,7 +435,7 @@ pub fn test_eval_matad_masters() {
             5
         ),
         (
-            Atom::parse("miDM").unwrap(),
+            vakint_parse!("miDM").unwrap(),
             NumericalEvaluationResult::from_vec(vec![
                 ( -1, ("2.404113806319188570799476323022899981530".into(), "0.0".into()) ),
                 (  0, ("-2.860862224139327350272784567773241917561".into(), "0.0".into()) ),
@@ -453,7 +445,7 @@ pub fn test_eval_matad_masters() {
             5
         ),
         (
-            Atom::parse("miDN").unwrap(),
+            vakint_parse!("miDN").unwrap(),
             NumericalEvaluationResult::from_vec(vec![
                 ( -1, ("2.404113806319188570799476323022899981530".into(), "0.0".into()) ),
                 (  0, ("1.120248397039242082272516548224209526276".into(), "0.0".into()) ),
@@ -463,7 +455,7 @@ pub fn test_eval_matad_masters() {
             5
         ),
         (
-            Atom::parse("miE3").unwrap(),
+            vakint_parse!("miE3").unwrap(),
             NumericalEvaluationResult::from_vec(vec![
                 ( -3, ("-0.6666666666666666666666666666666666666667".into(), "0.0".into()) ),
                 ( -2, ("-3.666666666666666666666666666666666666667".into(), "0.0".into()) ),
@@ -475,7 +467,7 @@ pub fn test_eval_matad_masters() {
             5
         ),
         (
-            Atom::parse("miBN1").unwrap(),
+            vakint_parse!("miBN1").unwrap(),
             NumericalEvaluationResult::from_vec(vec![
                 ( -3, ("1.0".into(), "0.0".into()) ),
                 ( -2, ("3.75".into(), "0.0".into()) ),
@@ -530,10 +522,10 @@ pub fn test_eval_matad_one_master_combination() {
     }))
     .unwrap();
 
-    let mut input = Atom::parse("M^2*miD6+16*M^2*(1736*(-2*ep+4)^2-718*(-2*ep+4)^3+165*(-2*ep+4)^4-20*(-2*ep+4)^5+(-2*ep+4)^6-2208*(-2*ep+4)+1152)^-1*Gam(1,1)^3+4*M^2*miT111*((-2*ep+4)^2-7*(-2*ep+4)+12)^-1*Gam(1,1)+M^2*miD5*(2*(-2*ep+4)-6)^-1*(3*(-2*ep+4)-12)+M^2*miBN*(-3*(-2*ep+4)+8)*(8*(-2*ep+4)-24)^-1").unwrap();
+    let mut input = vakint_parse!("M^2*miD6+16*M^2*(1736*(-2*ep+4)^2-718*(-2*ep+4)^3+165*(-2*ep+4)^4-20*(-2*ep+4)^5+(-2*ep+4)^6-2208*(-2*ep+4)+1152)^-1*Gam(1,1)^3+4*M^2*miT111*((-2*ep+4)^2-7*(-2*ep+4)+12)^-1*Gam(1,1)+M^2*miD5*(2*(-2*ep+4)-6)^-1*(3*(-2*ep+4)-12)+M^2*miBN*(-3*(-2*ep+4)+8)*(8*(-2*ep+4)-24)^-1").unwrap();
     input = input.replace_all(
-        &Pattern::parse("M").unwrap(),
-        Pattern::parse("muvsq^(1/2)").unwrap(),
+        &vakint_parse!("M").unwrap().to_pattern(),
+        vakint_parse!("muvsq^(1/2)").unwrap().to_pattern(),
         None,
         None,
     );

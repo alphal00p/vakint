@@ -5,6 +5,7 @@ use log::{debug, info};
 use symbolica::{
     atom::{Atom, AtomView},
     domains::float::{Complex, Float},
+    parse,
     printer::{AtomPrinter, PrintOptions},
 };
 
@@ -23,18 +24,33 @@ pub fn get_vakint(vakint_settings: VakintSettings) -> Vakint {
 pub fn compare_output(output: Result<AtomView, &VakintError>, expected_output: Atom) -> Atom {
     match output {
         Ok(r) => {
-            let r_processed = Atom::parse(
-                AtomPrinter::new_with_options(r, PrintOptions::file())
-                    .to_string()
-                    .as_str(),
+            let r_processed = parse!(AtomPrinter::new_with_options(
+                r,
+                PrintOptions {
+                    hide_namespace: Some("tests"),
+                    ..PrintOptions::file()
+                }
             )
+            .to_string()
+            .as_str())
             .unwrap();
             let r_processed_view = r_processed.as_view();
             if r != expected_output.as_view() {
                 println!(
                     "Output does not match expected output:\n{}\n!=\n{}",
-                    format!("{}", r_processed_view).red(),
-                    format!("{}", expected_output).green()
+                    format!(
+                        "{}",
+                        AtomPrinter::new_with_options(r_processed_view, PrintOptions::file())
+                    )
+                    .red(),
+                    format!(
+                        "{}",
+                        AtomPrinter::new_with_options(
+                            expected_output.as_view(),
+                            PrintOptions::file()
+                        )
+                    )
+                    .green()
                 );
             }
             assert_eq!(r, expected_output.as_view());

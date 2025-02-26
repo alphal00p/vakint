@@ -1,11 +1,11 @@
 use std::fmt;
 
+use crate::utils::vakint_macros::{vk_parse, vk_symbol};
 use ahash::{HashMap, HashSet};
 use symbolica::{
     atom::{Atom, AtomCore, AtomView, SliceType},
     graph,
-    id::{Match, Pattern},
-    symb,
+    id::Match,
 };
 
 use crate::{
@@ -122,7 +122,7 @@ impl Graph {
         for i_prop in 1..=tot_n_props {
             if let Some(m) = get_prop_with_id(integral_expression, i_prop) {
                 // Format check for the momenta
-                let momentum = m.get(&symb!("q_")).unwrap().to_owned();
+                let momentum = m.get(&vk_symbol!("q_")).unwrap().to_owned();
 
                 let (left_node_id, right_node_id) = get_node_ids(&m)?;
 
@@ -133,7 +133,7 @@ impl Graph {
                         momentum,
                         left_node_id,
                         right_node_id,
-                        mass: m.get(&symb!("mUVsq_")).unwrap().to_owned(),
+                        mass: m.get(&vk_symbol!("mUVsq_")).unwrap().to_owned(),
                     },
                 );
             }
@@ -351,7 +351,7 @@ impl Graph {
             let mut sorted_edges = node.edges.clone();
             sorted_edges.sort_by_key(|(e, _dir)| *e);
             atom_graph = atom_graph
-                * Atom::parse(&format!(
+                * vk_parse!(&format!(
                     "v(n({}),{})",
                     node.id,
                     sorted_edges
@@ -364,19 +364,24 @@ impl Graph {
         }
         atom_graph = replace_until_stable(
             atom_graph.as_view(),
-            &Pattern::parse("v(l1___,x_,r1___)*v(l2___,x_,r2___)").unwrap(),
-            &Pattern::parse("v(l1___,r1___,l2___,r2___)").unwrap().into(),
+            &vk_parse!("v(l1___,x_,r1___)*v(l2___,x_,r2___)")
+                .unwrap()
+                .to_pattern(),
+            &vk_parse!("v(l1___,r1___,l2___,r2___)")
+                .unwrap()
+                .to_pattern()
+                .into(),
             None,
             None,
         );
 
         let mut remaining_edges: Vec<i64> = vec![];
         if let Some(m) = atom_graph
-            .pattern_match(&Pattern::parse("v(args__)").unwrap(), None, None)
+            .pattern_match(&vk_parse!("v(args__)").unwrap().to_pattern(), None, None)
             .next_detailed()
         {
             if let Some(Match::Multiple(SliceType::Arg, aviews)) =
-                m.match_stack.get(symb!("args__"))
+                m.match_stack.get(vk_symbol!("args__"))
             {
                 for a_id in aviews {
                     let remaining_edge: i64 = match a_id.to_owned().try_into() {

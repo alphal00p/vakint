@@ -1,5 +1,4 @@
 use ahash::HashMap;
-use symbolica::atom::Atom;
 use vakint::{Vakint, VakintExpression, VakintSettings};
 
 fn main() {
@@ -12,10 +11,10 @@ fn main() {
     }))
     .unwrap();
 
-    let mut integral = Atom::parse(
-        "(k(3,11)*k(3,22)+k(3,77)*p(8,77))*topo(\
-        prop(9,edge(66,66),k(3),MUVsq,1)\
-    )",
+    let mut integral = symbolica::parse!(
+        "(vk::k(3,11)*vk::k(3,22)+vk::k(3,77)*vk::p(8,77))*vk::topo(\
+        vk::prop(9,vk::edge(66,66),vk::k(3),MUVsq,1)\
+    )"
     )
     .unwrap();
     println!(
@@ -39,14 +38,17 @@ fn main() {
     println!("Evaluated integral:\n{}\n", integral);
 
     let mut params = HashMap::default();
-    params.insert("MUVsq".into(), vakint.settings.real_to_prec("1.0"));
-    params.insert("mursq".into(), vakint.settings.real_to_prec("1.0"));
+    params.insert(
+        "oneloop_evaluation::MUVsq".into(),
+        vakint.settings.real_to_prec("1.0"),
+    );
+    params.insert("vk::mursq".into(), vakint.settings.real_to_prec("1.0"));
 
     let numerical_partial_eval =
         Vakint::partial_numerical_evaluation(&vakint.settings, integral.as_view(), &params, None);
     println!("Partial eval:\n{}\n", numerical_partial_eval);
 
-    params.insert("g(11,22)".into(), vakint.settings.real_to_prec("1.0"));
+    params.insert("vk::g(11,22)".into(), vakint.settings.real_to_prec("1.0"));
     let numerical_full_eval = Vakint::full_numerical_evaluation_without_error(
         &vakint.settings,
         integral.as_view(),

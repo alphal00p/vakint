@@ -1,7 +1,6 @@
-use symbolica::{atom::Atom, symb};
 use vakint::{
-    EvaluationOrder, LoopNormalizationFactor, NumericalEvaluationResult, Vakint, VakintExpression,
-    VakintSettings,
+    vakint_parse, vakint_symbol, EvaluationOrder, LoopNormalizationFactor,
+    NumericalEvaluationResult, Vakint, VakintExpression, VakintSettings,
 };
 
 fn main() {
@@ -14,7 +13,7 @@ fn main() {
     }))
     .unwrap();
 
-    let mut integral = Atom::parse(
+    let mut integral = vakint_parse!(
         "(
                 k(1,11)*k(2,11)*k(1,22)*k(2,22)
               + p(1,11)*k(3,11)*k(3,22)*p(2,22)
@@ -27,7 +26,7 @@ fn main() {
               *prop(4,edge(1,4),k(3)-k(1),muvsq,1)\
               *prop(5,edge(2,4),k(1)-k(2),muvsq,1)\
               *prop(6,edge(3,4),k(2)-k(3),muvsq,1)\
-          )",
+          )"
     )
     .unwrap();
     let mut vakint_expr = VakintExpression::try_from(integral.clone()).unwrap();
@@ -69,7 +68,7 @@ fn main() {
         .numerical_evaluation(integral.as_view(), &params, Some(&externals))
         .unwrap();
     println!("Numerical evaluation:\n{}\n", eval);
-    let eval_atom = eval.to_atom(symb!(vakint.settings.epsilon_symbol.clone()));
+    let eval_atom = eval.to_atom(vakint_symbol!(vakint.settings.epsilon_symbol.clone()));
     println!("Numerical evaluation as atom:\n{}\n", eval_atom);
     #[rustfmt::skip]
     let target_eval =  NumericalEvaluationResult::from_vec(

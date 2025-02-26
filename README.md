@@ -9,14 +9,17 @@ To this end, it uses a combination of `Symbolica` and `FORM` scripts, and `FMFT`
 
 * numerically, if the topology is not known, using the sector decomposition algorithm implemented in `pySecDec`.
 
-## Usage
+## Python usage
+
+`Vakint` is also part of the [`symbolica-community`](https://github.com/benruijl/symbolica-community) `Python` module where vaccuum graphs can be evaluated directly using the `Python` API exposed in that module.
+
+## Rust usage
 
 Checkout the examples directory for a few examples of how to use this library.
 For example:
 
 ```rust
-use symbolica::atom::Atom;
-use vakint::{Vakint, VakintExpression, VakintSettings};
+use vakint::{vakint_parse, Vakint, VakintExpression, VakintSettings};
 
 fn main() {
     let vakint = Vakint::new(Some(VakintSettings {
@@ -27,7 +30,7 @@ fn main() {
 
     //println!("Supported topologies:\n{}", vakint.topologies);
 
-    let input = Atom::parse(
+    let input = vakint_parse!(
         "(k(11,2)*k(11,2)+k(11,77)*k(22,77)+k(22,33)*p(42,33))*topo(\
                     prop(9,edge(7,10),k(11),mUVsqA,1)*\
                     prop(33,edge(7,10),k(22),mUVsqA,2)*\
@@ -37,7 +40,7 @@ fn main() {
                     prop(7,edge(9,21),k(33),mUVsqB,1)*\
                     prop(13,edge(9,21),k(44),mUVsqB,2)*\
                     prop(17,edge(9,21),k(33)+k(44),mUVsqB,1)\
-                )",
+                )"
     )
     .unwrap();
 
@@ -59,23 +62,22 @@ When carrying a complete evaluation, the workflow is as follows:
 
 ```rust
 use ahash::HashMap;
-use symbolica::atom::Atom;
-use vakint::{Vakint, VakintExpression, VakintSettings};
+use vakint::{vakint_parse, Vakint, VakintExpression, VakintSettings};
 
 fn main() {
     let vakint = Vakint::new(Some(VakintSettings {
         allow_unknown_integrals: false,
         use_dot_product_notation: true,
-        integral_normalization: "1".into(),
-        n_digits_at_evaluation_time: 16,
+        integral_normalization_factor: vakint::LoopNormalizationFactor::Custom("1".into()),
+        run_time_decimal_precision: 16,
         ..VakintSettings::default()
     }))
     .unwrap();
 
-    let mut integral = Atom::parse(
+    let mut integral = vakint_parse!(
         "(k(3,11)*k(3,22)+k(3,77)*p(8,77))*topo(\
         prop(9,edge(66,66),k(3),MUVsq,1)\
-    )",
+    )"
     )
     .unwrap();
     println!(
@@ -99,16 +101,21 @@ fn main() {
     println!("Evaluated integral:\n{}\n", integral);
 
     let mut params = HashMap::default();
-    params.insert("MUVsq".into(), 1.0);
-    params.insert("mursq".into(), 1.0);
+    params.insert("MUVsq".into(), vakint.settings.real_to_prec("1.0"));
+    params.insert("mursq".into(), vakint.settings.real_to_prec("1.0"));
 
-    let numerical_partial_eval = vakint.partial_numerical_evaluation(integral.as_view(), &params);
+    let numerical_partial_eval =
+        Vakint::partial_numerical_evaluation(&vakint.settings, integral.as_view(), &params, None);
     println!("Partial eval:\n{}\n", numerical_partial_eval);
 
-    params.insert("g(11,22)".into(), 1.0);
-    let numerical_full_eval = vakint
-        .full_numerical_evaluation(integral.as_view(), &params)
-        .unwrap();
+    params.insert("g(11,22)".into(), vakint.settings.real_to_prec("1.0"));
+    let numerical_full_eval = Vakint::full_numerical_evaluation_without_error(
+        &vakint.settings,
+        integral.as_view(),
+        &params,
+        None,
+    )
+    .unwrap();
     println!(
         "Full eval (metric substituted with 1):\n{}\n",
         numerical_full_eval
@@ -119,3 +126,9 @@ fn main() {
 yielding:
 
 ![result_evaluation](result_2_readme.png)
+
+## Disclaimer about Symbolica namespace
+
+In the current version of `Vakint`, the interface to `FORM` is such that the namespace of all `Symbolica` symbols from your input expression will be overwritten to be the `Vakint` one, i.e. `vk::<symbol>`.
+For now, the user sensitive to namespaces is responsible for renaming the symbols in their input expression to avoid conflicts, and possibly remap them afterwards to their original namespaces.
+For simple usage, it is recommended to parse the input expression with the macro `vakint_parse!` which will automatically assign `vk` as the namespace of all your symbols with unspecified namespaces. 
