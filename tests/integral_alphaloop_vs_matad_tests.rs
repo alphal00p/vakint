@@ -279,18 +279,12 @@ pub fn evaluate_expression_with_matad(
         Atom::new_var(vakint_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
     );
 
-    integral = integral.replace_all(
-        &vakint_parse!("logmUVmu").unwrap().to_pattern(),
-        (log_muv_mu_sq).to_pattern(),
-        None,
-        None,
-    );
-    integral = integral.replace_all(
-        &vakint_parse!("log_mu_sq").unwrap().to_pattern(),
-        (log_mu_sq).to_pattern(),
-        None,
-        None,
-    );
+    integral = integral
+        .replace(vakint_parse!("logmUVmu").unwrap().to_pattern())
+        .with((log_muv_mu_sq).to_pattern());
+    integral = integral
+        .replace(vakint_parse!("log_mu_sq").unwrap().to_pattern())
+        .with((log_mu_sq).to_pattern());
 
     let test_params = params_from_f64(
         &[("muvsq".into(), 1.0), ("mursq".into(), 1.0)]
@@ -300,12 +294,9 @@ pub fn evaluate_expression_with_matad(
         vakint.settings.run_time_decimal_precision,
     );
 
-    integral = integral.replace_all(
-        &vakint_parse!("ep").unwrap().to_pattern(),
-        Atom::new_var(vakint_symbol!(vakint.settings.epsilon_symbol.as_str())).to_pattern(),
-        None,
-        None,
-    );
+    integral = integral
+        .replace(vakint_parse!("ep").unwrap().to_pattern())
+        .with(Atom::new_var(vakint_symbol!(vakint.settings.epsilon_symbol.as_str())).to_pattern());
 
     let (res, _error) =
         Vakint::full_numerical_evaluation(&vakint.settings, integral.as_view(), &test_params, None)
@@ -523,12 +514,9 @@ pub fn test_eval_matad_one_master_combination() {
     .unwrap();
 
     let mut input = vakint_parse!("M^2*miD6+16*M^2*(1736*(-2*ep+4)^2-718*(-2*ep+4)^3+165*(-2*ep+4)^4-20*(-2*ep+4)^5+(-2*ep+4)^6-2208*(-2*ep+4)+1152)^-1*Gam(1,1)^3+4*M^2*miT111*((-2*ep+4)^2-7*(-2*ep+4)+12)^-1*Gam(1,1)+M^2*miD5*(2*(-2*ep+4)-6)^-1*(3*(-2*ep+4)-12)+M^2*miBN*(-3*(-2*ep+4)+8)*(8*(-2*ep+4)-24)^-1").unwrap();
-    input = input.replace_all(
-        &vakint_parse!("M").unwrap().to_pattern(),
-        vakint_parse!("muvsq^(1/2)").unwrap().to_pattern(),
-        None,
-        None,
-    );
+    input = input
+        .replace(vakint_parse!("M").unwrap().to_pattern())
+        .with(vakint_parse!("muvsq^(1/2)").unwrap().to_pattern());
     let res = evaluate_expression_with_matad(&vakint, input.as_view(), true);
     #[rustfmt::skip]
     let (matches, msg) = res.does_approx_match(

@@ -369,8 +369,7 @@ impl Graph {
                 .to_pattern(),
             &vk_parse!("v(l1___,r1___,l2___,r2___)")
                 .unwrap()
-                .to_pattern()
-                .into(),
+                .to_pattern(),
             None,
             None,
         );

@@ -5,7 +5,7 @@ use colored::Colorize;
 use symbolica::{
     atom::{Atom, AtomCore, AtomView, FunctionArgument, FunctionBuilder, SliceType},
     function,
-    id::{Condition, Match, PatternOrMap},
+    id::{Condition, Match},
 };
 
 use crate::{
@@ -232,7 +232,8 @@ impl Topologies {
         let mut n_props: usize = 0;
         let p = vk_parse!("prop(args__)").unwrap().to_pattern();
         let rhs_p = S.one.to_pattern();
-        let mut match_iter = integral.replace_iter(&p, &rhs_p, None, None);
+        let matcher = integral.replace(&p);
+        let mut match_iter = matcher.iter(&rhs_p);
         while match_iter.next().is_some() {
             n_props += 1;
         }
@@ -358,25 +359,23 @@ impl Topology {
                     prop_id, contracted_canonical_expression
                 )));
             }
-            contracted_canonical_expression = contracted_canonical_expression.replace_all(
-                &vk_parse!(format!("prop({},args__)", prop_id).as_str())
-                    .unwrap()
-                    .to_pattern(),
-                S.one.to_pattern(),
-                None,
-                None,
-            );
+            contracted_canonical_expression = contracted_canonical_expression
+                .replace(
+                    vk_parse!(format!("prop({},args__)", prop_id).as_str())
+                        .unwrap()
+                        .to_pattern(),
+                )
+                .with(S.one.to_pattern());
 
             for a in [&mut contracted_short_expression] {
                 if !a.is_zero() {
-                    *a = a.replace_all(
-                        &vk_parse!(format!("pow({})", prop_id).as_str())
-                            .unwrap()
-                            .to_pattern(),
-                        S.zero.to_pattern(),
-                        None,
-                        None,
-                    );
+                    *a = a
+                        .replace(
+                            vk_parse!(format!("pow({})", prop_id).as_str())
+                                .unwrap()
+                                .to_pattern(),
+                        )
+                        .with(S.zero.to_pattern());
                 }
             }
         }
@@ -394,12 +393,9 @@ impl Topology {
                         format!("edge(nl_,{})", new_node_id),
                     ),
                 ] {
-                    contracted_canonical_expression = contracted_canonical_expression.replace_all(
-                        &vk_parse!(lhs.as_str()).unwrap().to_pattern(),
-                        vk_parse!(rhs.as_str()).unwrap().to_pattern(),
-                        None,
-                        None,
-                    );
+                    contracted_canonical_expression = contracted_canonical_expression
+                        .replace(vk_parse!(lhs.as_str()).unwrap().to_pattern())
+                        .with(vk_parse!(rhs.as_str()).unwrap().to_pattern());
                 }
             }
             if old_contracted_canonical_expression == contracted_canonical_expression {
@@ -425,9 +421,13 @@ impl Topology {
         //     panic!("TTTT");
         // }
         if !contraction.is_empty() {
-            contracted_short_expression = contracted_short_expression.replace_all(
-                &vk_parse!("TopoName_(args___)").unwrap().to_pattern(),
-                PatternOrMap::Map(Box::new(move |match_in| {
+            contracted_short_expression = contracted_short_expression
+                .replace(vk_parse!("TopoName_(args___)").unwrap().to_pattern())
+                .when(Condition::from((
+                    vk_symbol!("TopoName_"),
+                    function_condition(),
+                )))
+                .with_map(move |match_in| {
                     let topo_name = if let Match::FunctionName(f) =
                         match_in.get(vk_symbol!("TopoName_")).unwrap()
                     {
@@ -456,13 +456,7 @@ impl Topology {
                         res = a.to_owned().add_arg_to_function_builder(res);
                     }
                     res.finish()
-                })),
-                Some(&Condition::from((
-                    vk_symbol!("TopoName_"),
-                    function_condition(),
-                ))),
-                None,
-            );
+                });
         }
         Ok(Integral::new(
             n_tot_props,
@@ -548,7 +542,7 @@ impl Topology {
                 for (src, (trgt, (_trgt_symbol, _trgt_rotated_symbol))) in
                     mom_vecs_to_symbols.iter()
                 {
-                    q = q.replace_all(src, trgt.clone(), None, None);
+                    q = q.replace(src).with(trgt.clone());
                 }
                 q = q - Atom::new_var(mom_vecs_to_symbols[i_lmb].1 .1 .1);
                 system.push(q);
@@ -594,11 +588,13 @@ impl Topology {
 
         let mut rotated_result = input_canonical_expression.to_owned();
         for prop_id in prop_ids {
-            rotated_result = rotated_result.replace_all(
-                &vk_parse!(format!("prop({},edges_,q_,mUVsq_,pow_)", prop_id).as_str())
-                    .unwrap()
-                    .to_pattern(),
-                PatternOrMap::Map(Box::new({
+            rotated_result = rotated_result
+                .replace(
+                    vk_parse!(format!("prop({},edges_,q_,mUVsq_,pow_)", prop_id).as_str())
+                        .unwrap()
+                        .to_pattern(),
+                )
+                .with_map({
                     let mom_vecs_to_symbols = mom_vecs_to_symbols.clone();
                     let basis_change = basis_change.clone();
                     move |match_in| {
@@ -606,18 +602,15 @@ impl Topology {
                         for ((src, (_trgt, _trgt_symbol)), rotated_expr) in
                             mom_vecs_to_symbols.iter().zip(basis_change.iter())
                         {
-                            q = q.replace_all(src, rotated_expr.to_pattern(), None, None);
+                            q = q.replace(src).with(rotated_expr.to_pattern());
                         }
                         // Map back symbols to k(i) atoms
                         for (src, (_trgt, (_trgt_symbol, trgt_rotated_symbol))) in
                             mom_vecs_to_symbols.iter()
                         {
-                            q = q.replace_all(
-                                &Atom::new_var(*trgt_rotated_symbol).to_pattern(),
-                                src.clone(),
-                                None,
-                                None,
-                            );
+                            q = q
+                                .replace(Atom::new_var(*trgt_rotated_symbol).to_pattern())
+                                .with(src.clone());
                         }
                         q = q.expand();
                         function!(
@@ -629,10 +622,7 @@ impl Topology {
                             match_in.get(vk_symbol!("pow_")).unwrap().to_atom()
                         )
                     }
-                })),
-                None,
-                None,
-            );
+                });
         }
 
         // println!("Rotated topology: {}", rotated_result);
@@ -667,12 +657,9 @@ impl Topology {
         short_form: bool,
     ) -> Atom {
         match self {
-            Topology::Unknown(_) => integral.replace_all(
-                &vk_parse!("topo(props_)").unwrap().to_pattern(),
-                vk_parse!("topo(UNKNOWN(props_))").unwrap().to_pattern(),
-                None,
-                None,
-            ),
+            Topology::Unknown(_) => integral
+                .replace(vk_parse!("topo(props_)").unwrap().to_pattern())
+                .with(vk_parse!("topo(UNKNOWN(props_))").unwrap().to_pattern()),
             t => t.get_integral().to_canonical(replacement_rules, short_form),
         }
     }
@@ -687,12 +674,9 @@ impl Topology {
                 //     "\n>>>Trying to match with the unknown integral pattern {}\n<<<",
                 //     self
                 // );
-                let undirected_input = input.replace_all(
-                    &vk_parse!("edge(x_,y_)").unwrap().to_pattern(),
-                    vk_parse!("uedge(x_,y_)").unwrap().to_pattern(),
-                    None,
-                    None,
-                );
+                let undirected_input = input
+                    .replace(vk_parse!("edge(x_,y_)").unwrap().to_pattern())
+                    .with(vk_parse!("uedge(x_,y_)").unwrap().to_pattern());
                 if undirected_input
                     .pattern_match(
                         &unknown_integral.generic_pattern.pattern,
@@ -713,23 +697,17 @@ impl Topology {
                         .next()
                         .is_some()
                     {
-                        test_input = test_input.replace_all(
-                            &prop_pattern,
-                            Atom::new_num(1).to_pattern(),
-                            None,
-                            None,
-                        );
+                        test_input = test_input
+                            .replace(&prop_pattern)
+                            .with(Atom::new_num(1).to_pattern());
                         prop_id += 1;
                         prop_pattern = vk_parse!(format!("prop({},args__)", prop_id).as_str())
                             .unwrap()
                             .to_pattern();
                     }
-                    test_input = test_input.replace_all(
-                        &vk_parse!("UNKNOWN(args__)").unwrap().to_pattern(),
-                        vk_parse!("args__").unwrap().to_pattern(),
-                        None,
-                        None,
-                    );
+                    test_input = test_input
+                        .replace(vk_parse!("UNKNOWN(args__)").unwrap().to_pattern())
+                        .with(vk_parse!("args__").unwrap().to_pattern());
                     if test_input != vk_parse!("topo(1)").unwrap() {
                         return Err(VakintError::InvalidIntegralFormat(format!(
                             "UNKNOWN integrals must have propagator ids ranging from 1 to their maximal number of propagators: {}",
@@ -784,12 +762,9 @@ impl Topology {
                     };
                     replacement_rules.canonical_expression_substitutions.insert(
                         vk_parse!("integral").unwrap(),
-                        input.replace_all(
-                            &vk_parse!("UNKNOWN(int_)").unwrap().to_pattern(),
-                            vk_parse!("int_").unwrap().to_pattern(),
-                            None,
-                            None,
-                        ),
+                        input
+                            .replace(vk_parse!("UNKNOWN(int_)").unwrap().to_pattern())
+                            .with(vk_parse!("int_").unwrap().to_pattern()),
                     );
                     replacement_rules.canonical_expression_substitutions.insert(
                         vk_parse!("n_props").unwrap(),

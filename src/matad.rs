@@ -17,7 +17,7 @@ use symbolica::{
     atom::{Atom, AtomCore, AtomView},
     domains::{integer::Integer, rational::Rational},
     function,
-    id::{Condition, PatternOrMap},
+    id::Condition,
 };
 
 use crate::{
@@ -108,42 +108,37 @@ impl MATAD {
         processed_form_output: Atom,
     ) -> Result<Atom, VakintError> {
         let mut res = processed_form_output.to_owned();
-        res = res.replace_all(
-            &vk_parse!("d").unwrap().to_pattern(),
-            vk_parse!("4-2*ep").unwrap().to_pattern(),
-            None,
-            None,
-        );
-        res = res.replace_all(
-            &function!(S.vkdot, function!(S.p, S.id1_a), function!(S.p, S.id2_a)).to_pattern(),
-            function!(S.dot, function!(S.p, S.id1_a), function!(S.p, S.id2_a)).to_pattern(),
-            Some(
+        res = res
+            .replace(vk_parse!("d").unwrap().to_pattern())
+            .with(vk_parse!("4-2*ep").unwrap().to_pattern());
+        res = res
+            .replace(
+                function!(S.vkdot, function!(S.p, S.id1_a), function!(S.p, S.id2_a)).to_pattern(),
+            )
+            .when(
                 &(Condition::from((S.id1_, number_condition()))
                     & Condition::from((S.id2_, number_condition()))),
-            ),
-            None,
-        );
+            )
+            .with(function!(S.dot, function!(S.p, S.id1_a), function!(S.p, S.id2_a)).to_pattern());
         Ok(res)
     }
 
     pub fn substitute_gam_functions(&self, result: AtomView) -> Atom {
         let mut res = result.to_owned();
-        res = res.replace_all(
-            &vk_parse!("Gam(x_,y_)").unwrap().to_pattern(),
-            vk_parse!("exp(ep*y_*EulerGamma)*Gamma(x_+ep*y_)")
-                .unwrap()
-                .to_pattern(),
-            None,
-            None,
-        );
-        res = res.replace_all(
-            &vk_parse!("iGam(x_,y_)").unwrap().to_pattern(),
-            vk_parse!("exp(-ep*y_*EulerGamma)/Gamma(x_+ep*y_)")
-                .unwrap()
-                .to_pattern(),
-            None,
-            None,
-        );
+        res = res
+            .replace(vk_parse!("Gam(x_,y_)").unwrap().to_pattern())
+            .with(
+                vk_parse!("exp(ep*y_*EulerGamma)*Gamma(x_+ep*y_)")
+                    .unwrap()
+                    .to_pattern(),
+            );
+        res = res
+            .replace(vk_parse!("iGam(x_,y_)").unwrap().to_pattern())
+            .with(
+                vk_parse!("exp(-ep*y_*EulerGamma)/Gamma(x_+ep*y_)")
+                    .unwrap()
+                    .to_pattern(),
+            );
         res
     }
 
@@ -173,12 +168,10 @@ impl MATAD {
             let mut res = av.to_owned();
             res = self.substitute_gam_functions(res.as_view());
             for (src, (trgt, matching_condition)) in processed_constants.iter() {
-                res = res.replace_all(
-                    &src.to_pattern(),
-                    trgt.to_pattern(),
-                    Some(matching_condition),
-                    None,
-                );
+                res = res
+                    .replace(src.to_pattern())
+                    .when(matching_condition)
+                    .with(trgt.to_pattern());
             }
             res
         }));
@@ -193,12 +186,10 @@ impl MATAD {
             let mut res = av.to_owned();
             res = self.substitute_gam_functions(res.as_view());
             for (src, (trgt, restriction)) in MASTERS_EXPANSION.iter() {
-                res = res.replace_all(
-                    &src.to_pattern(),
-                    trgt.to_pattern(),
-                    Some(restriction),
-                    None,
-                );
+                res = res
+                    .replace(src.to_pattern())
+                    .when(restriction)
+                    .with(trgt.to_pattern());
             }
             res
         }));
@@ -226,7 +217,7 @@ impl MATAD {
         r.repeat_map(Box::new(move |av: AtomView| {
             let mut res = av.to_owned();
             for (src, trgt) in MASTERS_SUBSTITUTION.iter() {
-                res = res.replace_all(&src.to_pattern(), trgt.to_pattern(), None, None);
+                res = res.replace(src.to_pattern()).with(trgt.to_pattern());
             }
             res
         }));
@@ -246,20 +237,18 @@ impl MATAD {
             .collect::<Vec<_>>();
         let mut r = result.to_owned();
 
-        r = r.replace_all(
-            &vk_parse!("Gamma(n_)").unwrap().to_pattern(),
-            PatternOrMap::Map(Box::new(move |match_in| {
+        r = r
+            .replace(vk_parse!("Gamma(n_)").unwrap().to_pattern())
+            .when(Condition::from((S.n_, gt_condition(0))))
+            .with_map(move |match_in| {
                 let n = get_integer_from_atom(match_in.get(S.n_).unwrap().to_atom().as_view())
                     .unwrap() as u32;
                 Atom::new_num(Integer::factorial(n - 1))
-            })),
-            Some(&Condition::from((S.n_, gt_condition(0)))),
-            None,
-        );
+            });
         r.repeat_map(Box::new(move |av: AtomView| {
             let mut res = av.to_owned();
             for (src, trgt) in processed_constants.iter() {
-                res = res.replace_all(&src.to_pattern(), trgt.to_pattern(), None, None);
+                res = res.replace(src.to_pattern()).with(trgt.to_pattern());
             }
             res
         }));
@@ -297,7 +286,7 @@ impl MATAD {
         r.repeat_map(Box::new(move |av: AtomView| {
             let mut res = av.to_owned();
             for (src, trgt) in processed_constants.iter() {
-                res = res.replace_all(&src.to_pattern(), trgt.to_pattern(), None, None);
+                res = res.replace(src.to_pattern()).with(trgt.to_pattern());
             }
             res
         }));
@@ -319,7 +308,7 @@ impl MATAD {
         r.repeat_map(Box::new(move |av: AtomView| {
             let mut res = av.to_owned();
             for (src, trgt) in processed_constants.iter() {
-                res = res.replace_all(&src.to_pattern(), trgt.to_pattern(), None, None);
+                res = res.replace(src.to_pattern()).with(trgt.to_pattern());
             }
             res
         }));
@@ -421,12 +410,9 @@ impl Vakint {
         };
 
         let mut numerator = Vakint::convert_to_dot_notation(input_numerator);
-        numerator = numerator.replace_all(
-            &Atom::new_var(muv_sq_symbol).to_pattern(),
-            vk_parse!("M^2").unwrap().to_pattern(),
-            None,
-            None,
-        );
+        numerator = numerator
+            .replace(Atom::new_var(muv_sq_symbol).to_pattern())
+            .with(vk_parse!("M^2").unwrap().to_pattern());
         if utils::could_match(
             &function!(S.dot, function!(S.p, S.id1_a), function!(S.k, S.id2_a)).to_pattern(),
             numerator.as_view(),
@@ -437,15 +423,17 @@ impl Vakint {
         }
 
         // Now map all exterior dot products into a special function `vkdot` so that it does not interfere with MATAD
-        numerator = numerator.replace_all(
-            &function!(S.dot, function!(S.p, S.id1_a), function!(S.p, S.id2_a)).to_pattern(),
-            function!(S.vkdot, function!(S.p, S.id1_a), function!(S.p, S.id2_a)).to_pattern(),
-            Some(
+        numerator = numerator
+            .replace(
+                function!(S.dot, function!(S.p, S.id1_a), function!(S.p, S.id2_a)).to_pattern(),
+            )
+            .when(
                 &(Condition::from((S.id1_, number_condition()))
                     & Condition::from((S.id2_, number_condition()))),
-            ),
-            None,
-        );
+            )
+            .with(
+                function!(S.vkdot, function!(S.p, S.id1_a), function!(S.p, S.id2_a)).to_pattern(),
+            );
 
         // And finally map all interior products into the form p<i>.p<i> expected by matad, where <i> is the edge id carrying momentum k<i>.
         let momenta = integral_specs.get_propagator_property_list("q_");
@@ -462,11 +450,11 @@ impl Vakint {
 
         let vakint_to_matad_edge_map_copy = vakint_to_matad_edge_map.clone();
 
-        numerator =
-        numerator.replace_all(
-                &function!(S.dot, function!(S.k, S.id1_a), function!(S.k, S.id2_a))
-            .to_pattern(),
-                PatternOrMap::Map(Box::new(move |match_in| {
+        numerator = numerator.replace(
+                function!(S.dot, function!(S.k, S.id1_a), function!(S.k, S.id2_a))
+            .to_pattern()).when(&(Condition::from((S.id1_, number_condition()))
+            & Condition::from((S.id2_, number_condition())))).with_map(
+                move |match_in| {
                     let id1 = lmb_prop_indices[(get_integer_from_atom(match_in.get(S.id1_).unwrap().to_atom().as_view()).unwrap()-1) as usize];
                     if id1 < 0 {
                         panic!(
@@ -490,23 +478,16 @@ impl Vakint {
                     // Also keep in mind that in MATAD propagators are euclidean propagators so
                     // a minus sign is necessary here.
                     vk_parse!(format!("-dot(p{},p{})", i_edge1, i_edge2).as_str()).unwrap()
-                })),
-                Some(
-                    &(Condition::from((S.id1_, number_condition()))
-                        & Condition::from((S.id2_, number_condition()))),
-                ),
-                None,
-            );
+                });
 
         // Substitute eps by (4-d)/2
-        numerator = numerator.replace_all(
-            &vk_parse!(&vakint.settings.epsilon_symbol)
-                .unwrap()
-                .to_pattern(),
-            vk_parse!("(4-d)/2").unwrap().to_pattern(),
-            None,
-            None,
-        );
+        numerator = numerator
+            .replace(
+                vk_parse!(&vakint.settings.epsilon_symbol)
+                    .unwrap()
+                    .to_pattern(),
+            )
+            .with(vk_parse!("(4-d)/2").unwrap().to_pattern());
 
         let dot_produce_replacer =
             Regex::new(r"dot\((?<vecA>[\w|\d]+),(?<vecB>[\w|\d]+)\)").unwrap();
@@ -541,12 +522,8 @@ impl Vakint {
 
         // Replace functions with 1 and get all remaining symbols
         let mut numerator_additional_symbols = input_numerator
-            .replace_all(
-                &vk_parse!("f_(args__)").unwrap().to_pattern(),
-                vk_parse!("1").unwrap().to_pattern(),
-                None,
-                None,
-            )
+            .replace(vk_parse!("f_(args__)").unwrap().to_pattern())
+            .with(vk_parse!("1").unwrap().to_pattern())
             .get_all_symbols(false);
         let eps_symbol = vk_symbol!(vakint.settings.epsilon_symbol.clone());
         numerator_additional_symbols.retain(|&s| s != eps_symbol);
@@ -594,14 +571,14 @@ impl Vakint {
             "MATAD".green(),
             evaluated_integral
         );
-        evaluated_integral = evaluated_integral.replace_all(
-            &vk_parse!("M^pow_").unwrap().to_pattern(),
-            vk_parse!(format!("{}^(pow_/2)", muv_sq_symbol).as_str())
-                .unwrap()
-                .to_pattern(),
-            Some(&Condition::from((S.pow_, even_condition()))),
-            None,
-        );
+        evaluated_integral = evaluated_integral
+            .replace(vk_parse!("M^pow_").unwrap().to_pattern())
+            .when(Condition::from((S.pow_, even_condition())))
+            .with(
+                vk_parse!(format!("{}^(pow_/2)", muv_sq_symbol).as_str())
+                    .unwrap()
+                    .to_pattern(),
+            );
         let mut matad_normalization_correction = vk_parse!(format!(
             "( 
                     (𝑖*(𝜋^((4-2*{eps})/2)))\
@@ -623,18 +600,11 @@ impl Vakint {
             * vakint
                 .settings
                 .get_integral_normalization_factor_atom()?
-                .replace_all(
-                    &S.n_loops.to_pattern(),
-                    Atom::new_num(integral.n_loops as i64).to_pattern(),
-                    None,
-                    None,
-                );
-        complete_normalization = complete_normalization.replace_all(
-            &Atom::new_var(vk_symbol!(self.settings.epsilon_symbol.as_str())).to_pattern(),
-            vk_parse!("ep").unwrap().to_pattern(),
-            None,
-            None,
-        );
+                .replace(S.n_loops.to_pattern())
+                .with(Atom::new_num(integral.n_loops as i64).to_pattern());
+        complete_normalization = complete_normalization
+            .replace(Atom::new_var(vk_symbol!(self.settings.epsilon_symbol.as_str())).to_pattern())
+            .with(vk_parse!("ep").unwrap().to_pattern());
 
         evaluated_integral = evaluated_integral * complete_normalization;
 
@@ -733,12 +703,9 @@ impl Vakint {
             }
         }
 
-        evaluated_integral = evaluated_integral.replace_all(
-            &vk_parse!("ep").unwrap().to_pattern(),
-            Atom::new_var(vk_symbol!(self.settings.epsilon_symbol.as_str())).to_pattern(),
-            None,
-            None,
-        );
+        evaluated_integral = evaluated_integral
+            .replace(vk_parse!("ep").unwrap().to_pattern())
+            .with(Atom::new_var(vk_symbol!(self.settings.epsilon_symbol.as_str())).to_pattern());
 
         if !vakint.settings.use_dot_product_notation {
             evaluated_integral =
@@ -756,18 +723,12 @@ impl Vakint {
             Atom::new_var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
-        evaluated_integral = evaluated_integral.replace_all(
-            &vk_parse!("logmUVmu").unwrap().to_pattern(),
-            (log_muv_mu_sq).to_pattern(),
-            None,
-            None,
-        );
-        evaluated_integral = evaluated_integral.replace_all(
-            &vk_parse!("log_mu_sq").unwrap().to_pattern(),
-            (log_mu_sq).to_pattern(),
-            None,
-            None,
-        );
+        evaluated_integral = evaluated_integral
+            .replace(vk_parse!("logmUVmu").unwrap().to_pattern())
+            .with((log_muv_mu_sq).to_pattern());
+        evaluated_integral = evaluated_integral
+            .replace(vk_parse!("log_mu_sq").unwrap().to_pattern())
+            .with((log_mu_sq).to_pattern());
 
         // println!(
         //     "evaluated_integral: {}",

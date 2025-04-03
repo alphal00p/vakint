@@ -12,7 +12,6 @@ fn test_1l_matching() {
     });
 
     debug!("Topologies:\n{}", vakint.topologies);
-
     compare_output(
         vakint
             .to_canonical(
