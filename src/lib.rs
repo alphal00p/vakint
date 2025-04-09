@@ -3091,8 +3091,8 @@ impl Vakint {
             let mut old_processed_numerator = processed_numerator.clone();
             loop {
                 let arc_mutex_lorentz_indices_sent = arc_mutex_lorentz_indices.clone();
-                let dot_product_transformer =
-                    Transformer::Map(Box::new(move |a_in: AtomView, a_out: &mut Atom| {
+                let dot_product_transformer = Transformer::Map(Box::new(
+                    move |a_in: AtomView, _state: _, a_out: &mut Atom| {
                         if let AtomView::Fun(s) = a_in {
                             let a_in = s
                                 .to_slice()
@@ -3118,7 +3118,8 @@ impl Vakint {
                         };
 
                         Ok(())
-                    }));
+                    },
+                ));
 
                 processed_numerator = old_processed_numerator
                     .replace(dot_product_matcher.to_pattern())
