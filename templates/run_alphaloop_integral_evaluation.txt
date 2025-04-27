@@ -7,7 +7,7 @@ Auto S n,x,m,t,cMi,log,z,ALARM;
 CF rat,map,uvprop,g(s),tmps(s),dot;
 
 Auto I s=4,mu=D;
-CF vx,rat,map,uvprop,g(s),vxs(s),tmps(s),dot;
+CF vx,rat,map,uvprop,g(s),vxs(s),tmps(s),dot,vec,vec1,gamma;
 CT opengammastring;
 
 Polyratfun rat;
