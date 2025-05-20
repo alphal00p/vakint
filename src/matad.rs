@@ -410,6 +410,11 @@ impl Vakint {
         };
 
         let mut numerator = Vakint::convert_to_dot_notation(input_numerator);
+
+        // println!("Numerator before processing: {}", numerator);
+        let mut indices = Vakint::identify_vector_indices(numerator.as_view())?;
+        // for (i, user_i) in indices.iter().enumerate() {}
+
         numerator = numerator
             .replace(Atom::new_var(muv_sq_symbol).to_pattern())
             .with(vk_parse!("M^2").unwrap().to_pattern());
@@ -564,7 +569,8 @@ impl Vakint {
             vakint.settings.temporary_directory.clone(),
         )?;
 
-        let processed_form_result = self.process_form_output(form_result, vec![])?;
+        let processed_form_result =
+            self.process_form_output(form_result, indices, HashMap::new())?;
         let mut evaluated_integral = matad.process_matad_form_output(processed_form_result)?;
         debug!(
             "{}: raw result from FORM:\n{}",

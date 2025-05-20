@@ -27,6 +27,7 @@ use std::{
     path::PathBuf,
     process::{Command, ExitStatus, Stdio},
     sync::{Arc, LazyLock, Mutex},
+    vec,
 };
 use string_template_plus::{Render, RenderOptions, Template};
 
@@ -2187,7 +2188,28 @@ impl VakintTerm {
         // If it was not used, the command below will do nothing.
         form_numerator = Vakint::convert_from_dot_notation(form_numerator.as_view(), false);
         let vectors = Self::identify_vectors_in_numerator(form_numerator.as_view())?;
+
+        let mut vector_mapping: HashMap<Atom, Atom> = HashMap::new();
+
         for (vec, id) in vectors.iter() {
+            vector_mapping.insert(
+                vk_parse!(format!("{}{}", vec, id).as_str()).unwrap(),
+                vk_parse!(format!("{}({})", vec, id).as_str()).unwrap(),
+            );
+            let vec_pattern = vk_parse!(format!("{}({},idx_)", vec, id).as_str())
+                .unwrap()
+                .to_pattern();
+            let matcher = form_numerator.pattern_match(&vec_pattern, None, None);
+            for m in matcher {
+                let idx = m.get(&vk_symbol!("idx_")).unwrap();
+                vector_mapping.insert(
+                    vk_parse!(format!("{}{}({})", vec, id, idx.to_canonical_string()).as_str())
+                        .unwrap(),
+                    vk_parse!(format!("{}({},{})", vec, id, idx.to_canonical_string()).as_str())
+                        .unwrap(),
+                );
+            }
+
             form_numerator = form_numerator
                 .replace(
                     vk_parse!(format!("{}({},idx_)", vec, id).as_str())
@@ -2208,7 +2230,7 @@ impl VakintTerm {
                     .as_str())
                     .unwrap()
                     .to_pattern(),
-                )
+                );
         }
 
         let template =
@@ -2217,6 +2239,7 @@ impl VakintTerm {
         let mut vars: HashMap<String, String> = HashMap::new();
         let (form_header_additions, form_expression, indices) =
             vakint.prepare_expression_for_form(form_numerator, true)?;
+
         vars.insert("numerator".into(), form_expression);
         vars.insert("additional_symbols".into(), form_header_additions);
 
@@ -2235,21 +2258,42 @@ impl VakintTerm {
         )?;
         // println!("Raw output: {}", form_result);
 
-        let mut reduced_numerator = vakint.process_form_output(form_result, indices)?;
+        // println!(
+        //     "Indices: {}",
+        //     indices
+        //         .clone()
+        //         .iter()
+        //         .map(|idx| idx.to_string())
+        //         .collect::<Vec<_>>()
+        //         .join(",")
+        // );
+
+        // println!(
+        //     "Vector mapping: {}",
+        //     vector_mapping
+        //         .iter()
+        //         .map(|(k, v)| format!("{} -> {}", k, v))
+        //         .collect::<Vec<_>>()
+        //         .join("\n")
+        // );
+        let mut reduced_numerator =
+            vakint.process_form_output(form_result, indices, vector_mapping)?;
+
         // println!("Reduced numerator: {}", reduced_numerator);
 
+        // Map back surviving external indices
         for (vec, id) in vectors.iter() {
             reduced_numerator = reduced_numerator
                 .replace(
-                    vk_parse!(format!("{}{}", vec, id).as_str())
+                    vk_parse!(format!("{}{}(idx_)", vec, id).as_str())
                         .unwrap()
                         .to_pattern(),
                 )
                 .with(
-                    vk_parse!(format!("{}({})", vec, id).as_str())
+                    vk_parse!(format!("{}({},idx_)", vec, id).as_str())
                         .unwrap()
                         .to_pattern(),
-                );
+                )
         }
 
         if !vakint.settings.use_dot_product_notation {
@@ -3607,17 +3651,14 @@ impl Vakint {
         // println!("Input expression with dot products : {}", form_expression);
 
         let mut vector_mapping: HashMap<Atom, Atom> = HashMap::new();
-        while let Some(m) = form_expression
-            .pattern_match(
-                &vk_parse!("v_(id_)").unwrap().to_pattern(),
-                Some(
-                    &(Condition::from((vk_symbol!("id_"), number_condition()))
-                        & Condition::from((vk_symbol!("v_"), symbol_condition()))),
-                ),
-                None,
-            )
-            .next()
-        {
+        let vec_pattern = vk_parse!("v_(id_)").unwrap().to_pattern();
+        let vec_conditions = Condition::from((vk_symbol!("id_"), number_condition()))
+            & Condition::from((vk_symbol!("v_"), symbol_condition()));
+        let form_expression_clone = form_expression.clone();
+
+        let matcher =
+            form_expression_clone.pattern_match(&vec_pattern, Some(&vec_conditions), None);
+        for m in matcher {
             let v = match m.get(&vk_symbol!("v_")).unwrap() {
                 Atom::Var(s) => s.get_symbol(),
                 _ => {
@@ -3627,6 +3668,9 @@ impl Vakint {
                     )))
                 }
             };
+            if v != S.p && v != S.k {
+                continue;
+            }
             let v_id = get_integer_from_atom(m.get(&vk_symbol!("id_")).unwrap().as_view()).unwrap();
 
             form_expression = form_expression
@@ -3645,6 +3689,44 @@ impl Vakint {
                 vk_parse!(format!("{}({})", v, v_id).as_str()).unwrap(),
             );
         }
+
+        let vec_pattern = vk_parse!("v_(id_,idx_)").unwrap().to_pattern();
+        let form_expression_clone = form_expression.clone();
+        let matcher =
+            form_expression_clone.pattern_match(&vec_pattern, Some(&vec_conditions), None);
+        for m in matcher {
+            let v = match m.get(&vk_symbol!("v_")).unwrap() {
+                Atom::Var(s) => s.get_symbol(),
+                _ => {
+                    return Err(VakintError::MalformedGraph(format!(
+                        "Could not find v in graph:\n{}",
+                        integral.canonical_expression.as_ref().unwrap()
+                    )))
+                }
+            };
+            if v != S.p && v != S.k {
+                continue;
+            }
+            let v_id = get_integer_from_atom(m.get(&vk_symbol!("id_")).unwrap().as_view()).unwrap();
+            let idx = m.get(&vk_symbol!("idx_")).unwrap();
+            form_expression = form_expression
+                .replace(
+                    vk_parse!(format!("{}({},{})", v, v_id, idx.to_canonical_string()).as_str())
+                        .unwrap()
+                        .to_pattern(),
+                )
+                .with(
+                    vk_parse!(format!("vec1({}{},{})", v, v_id, idx.to_canonical_string()).as_str())
+                        .unwrap()
+                        .to_pattern(),
+                );
+            vector_mapping.insert(
+                vk_parse!(format!("{}{}({})", v, v_id, idx.to_canonical_string()).as_str())
+                    .unwrap(),
+                vk_parse!(format!("{}({},{})", v, v_id, idx.to_canonical_string()).as_str())
+                    .unwrap(),
+            );
+        }
         // println!("Input expression for FORM : {}", form_expression);
 
         let template = Template::parse_template(
@@ -3658,6 +3740,7 @@ impl Vakint {
 
         let (form_header_additions, form_expression, indices) =
             vakint.prepare_expression_for_form(form_expression, true)?;
+
         vars.insert("numerator".into(), form_expression);
         vars.insert("additional_symbols".into(), form_header_additions);
 
@@ -3685,19 +3768,13 @@ impl Vakint {
             vakint.settings.temporary_directory.clone(),
         )?;
 
-        let mut evaluated_integral = vakint.process_form_output(form_result, indices)?;
+        let mut evaluated_integral =
+            vakint.process_form_output(form_result, indices, vector_mapping)?;
         debug!(
             "{}: raw result from FORM:\n{}",
             "AlphaLoop".green(),
             evaluated_integral
         );
-
-        // Convert vectors back from pi(j) notation to p(i,j) notation
-        for (s, t) in vector_mapping.iter() {
-            evaluated_integral = evaluated_integral
-                .replace(s.to_pattern())
-                .with(t.to_pattern());
-        }
 
         if !vakint.settings.use_dot_product_notation {
             evaluated_integral =
@@ -4228,6 +4305,7 @@ impl Vakint {
         &self,
         form_output: String,
         indices: Vec<Atom>,
+        vector_mapping: HashMap<Atom, Atom>,
     ) -> Result<Atom, VakintError> {
         let processed_form_str = form_output
             .replace("[", "")
@@ -4238,6 +4316,23 @@ impl Vakint {
             .map(|s| s.trim())
             .collect::<Vec<_>>()
             .join("");
+
+        // Make sure to replace the indices already in the source of the vector mappings since this replacement is done *before* substituting the indices
+        let vector_mapping: HashMap<Atom, Atom> = vector_mapping
+            .iter()
+            .map(|(s, t)| {
+                let mut new_s = s.to_owned();
+                for (i_index, user_i) in indices.iter().enumerate() {
+                    let integer_index =
+                        Atom::new_num((FORM_REPLACEMENT_INDEX_SHIFT + 1 + (i_index as u64)) as i64);
+                    new_s = new_s
+                        .replace(user_i.as_view().to_pattern())
+                        .with(integer_index);
+                }
+                (new_s, t.clone())
+            })
+            .collect();
+
         // Map back the integer indices to the original expressions if substitutions took place
         match vk_parse!(processed_form_str.as_str()) {
             Ok(mut processed) => {
@@ -4291,15 +4386,19 @@ impl Vakint {
                             .unwrap()
                             .to_pattern(),
                     );
+                processed = processed
+                    .replace(vk_parse!("vec1(vec_,idx_)").unwrap().to_pattern())
+                    .when(Condition::from((vk_symbol!("v1_"), symbol_condition())))
+                    .with(vk_parse!("vec_(idx_)").unwrap().to_pattern());
+
+                // Convert vectors back from pi(j) notation to p(i,j) notation
+                for (s, t) in vector_mapping.iter() {
+                    processed = processed.replace(s.to_pattern()).with(t.to_pattern());
+                }
 
                 for (i_index, user_i) in indices.iter().enumerate() {
                     let mut replacements = vec![];
-                    for vec in [
-                        LOOP_MOMENTUM_SYMBOL,
-                        EXTERNAL_MOMENTUM_SYMBOL,
-                        "vec",
-                        "vec1",
-                    ] {
+                    for vec in [LOOP_MOMENTUM_SYMBOL, EXTERNAL_MOMENTUM_SYMBOL] {
                         replacements.push(Replacement::new(
                             vk_parse!(format!(
                                 "{}(id_,{})",
