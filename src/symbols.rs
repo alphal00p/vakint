@@ -16,6 +16,7 @@ pub struct VakintSymbols {
     pub dot: Symbol,
     pub vkdot: Symbol,
     pub g: Symbol,
+    pub g_form: Symbol,
     pub x: Symbol,
     pub y: Symbol,
     pub xa: Atom,
@@ -59,6 +60,7 @@ pub static S: LazyLock<VakintSymbols> = LazyLock::new(|| VakintSymbols {
     )
     .unwrap(),
     g: symbol!(format!("{}::{}",crate::NAMESPACE,METRIC_SYMBOL); Symmetric).unwrap(),
+    g_form: symbol!(format!("{}::g",crate::NAMESPACE); Symmetric).unwrap(),
     x: vk_symbol!("x"),
     y: vk_symbol!("y"),
     xa: Atom::new_var(vk_symbol!("xa")),
