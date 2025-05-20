@@ -12,7 +12,7 @@ fn main() {
     .unwrap();
 
     let mut integral = symbolica::parse!(
-        "(vk::k(3,11)*vk::k(3,22)+vk::k(3,77)*vk::p(8,77))*vk::topo(\
+        "(vk::k(3,mink4(4,11))*vk::k(3,mink4(4,22))+vk::k(3,mink4(4,77))*vk::p(8,mink4(4,77)))*vk::topo(\
         vk::prop(9,vk::edge(66,66),vk::k(3),MUVsq,1)\
     )"
     )
@@ -48,7 +48,10 @@ fn main() {
         Vakint::partial_numerical_evaluation(&vakint.settings, integral.as_view(), &params, None);
     println!("Partial eval:\n{}\n", numerical_partial_eval);
 
-    params.insert("vk::g(11,22)".into(), vakint.settings.real_to_prec("1.0"));
+    params.insert(
+        "vk::g(oneloop_evaluation::mink4(4,22),oneloop_evaluation::mink4(4,11))".into(),
+        vakint.settings.real_to_prec("1.0"),
+    );
     let numerical_full_eval = Vakint::full_numerical_evaluation_without_error(
         &vakint.settings,
         integral.as_view(),

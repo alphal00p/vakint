@@ -451,7 +451,7 @@ impl Vakint {
             vakint.settings.temporary_directory.clone(),
         )?;
 
-        let processed_form_result = self.process_form_output(form_result)?;
+        let processed_form_result = self.process_form_output(form_result, vec![])?;
         let mut evaluated_integral = fmft.process_fmft_form_output(processed_form_result)?;
         debug!(
             "{}: raw result from FORM:\n{}",
