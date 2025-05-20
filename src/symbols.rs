@@ -58,7 +58,7 @@ pub static S: LazyLock<VakintSymbols> = LazyLock::new(|| VakintSymbols {
         format!("{}::vkdot",crate::NAMESPACE);  Symmetric, Linear
     )
     .unwrap(),
-    g: symbol!(format!("{}::METRIC_SYMBOL",crate::NAMESPACE); Symmetric).unwrap(),
+    g: symbol!(format!("{}::{}",crate::NAMESPACE,METRIC_SYMBOL); Symmetric).unwrap(),
     x: vk_symbol!("x"),
     y: vk_symbol!("y"),
     xa: Atom::new_var(vk_symbol!("xa")),
