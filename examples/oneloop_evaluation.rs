@@ -12,7 +12,12 @@ fn main() {
     .unwrap();
 
     let mut integral = symbolica::parse!(
-        "(vk::k(3,mink4(4,11))*vk::k(3,mink4(4,22))+vk::k(3,mink4(4,77))*vk::p(8,mink4(4,77)))*vk::topo(\
+        "(
+              vk::k(3,mink4(4,11))*vk::k(3,mink4(4,22))
+            + vk::k(3,mink4(4,77))*vk::p(8,mink4(4,77))
+            + vk::p(1,mink4(4,77))*vk::p(2,mink4(4,77))
+            + vk::p(1,mink4(4,99))*vk::p(2,mink4(4,101))
+        )*vk::topo(\
         vk::prop(9,vk::edge(66,66),vk::k(3),MUVsq,1)\
     )"
     )
@@ -48,19 +53,43 @@ fn main() {
         Vakint::partial_numerical_evaluation(&vakint.settings, integral.as_view(), &params, None);
     println!("Partial eval:\n{}\n", numerical_partial_eval);
 
+    let externals = vakint.externals_from_f64(
+        &(1..=2)
+            .map(|i| {
+                (
+                    i,
+                    (
+                        0.17 * ((i + 1) as f64),
+                        0.4 * ((i + 2) as f64),
+                        0.3 * ((i + 3) as f64),
+                        0.12 * ((i + 4) as f64),
+                    ),
+                )
+            })
+            .collect(),
+    );
+
     params.insert(
         "vk::g(oneloop_evaluation::mink4(4,22),oneloop_evaluation::mink4(4,11))".into(),
+        vakint.settings.real_to_prec("1.0"),
+    );
+    params.insert(
+        "vk::p(1,oneloop_evaluation::mink4(4,99))".into(),
+        vakint.settings.real_to_prec("1.0"),
+    );
+    params.insert(
+        "vk::p(2,oneloop_evaluation::mink4(4,101))".into(),
         vakint.settings.real_to_prec("1.0"),
     );
     let numerical_full_eval = Vakint::full_numerical_evaluation_without_error(
         &vakint.settings,
         integral.as_view(),
         &params,
-        None,
+        Some(&externals),
     )
     .unwrap();
     println!(
-        "Full eval (metric substituted with 1):\n{}\n",
+        "Full eval (tensor structures left all substituted with 1):\n{}\n",
         numerical_full_eval
     );
 }

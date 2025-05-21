@@ -21,7 +21,8 @@ use symbolica::{
 };
 
 use crate::{
-    get_integer_from_atom, number_condition, symbol_condition, symbols::S, FMFTOptions, TEMPLATES,
+    get_integer_from_atom, number_condition, symbol_condition, symbols::S, FMFTOptions, NAMESPACE,
+    TEMPLATES,
 };
 
 use crate::{ReplacementRules, Vakint, VakintError, VakintSettings};
@@ -378,17 +379,17 @@ impl Vakint {
             )
             .with(vk_parse!("(4-d)/2").unwrap().to_pattern());
 
+        let (form_header_additions, expression_str, indices) =
+            self.sanitize_user_expressions(numerator.as_view(), true)?;
+
+        // let expression_str =
+        //     &AtomPrinter::new_with_options(numerator.as_view(), PrintOptions::file_no_namespace())
+        //         .to_string();
+
         let dot_produce_replacer =
             Regex::new(r"dot\((?<vecA>[\w|\d]+),(?<vecB>[\w|\d]+)\)").unwrap();
         let numerator_string = dot_produce_replacer
-            .replace_all(
-                &AtomPrinter::new_with_options(
-                    numerator.as_view(),
-                    PrintOptions::file_no_namespace(),
-                )
-                .to_string(),
-                "($vecA.$vecB)",
-            )
+            .replace_all(&expression_str, "($vecA.$vecB)")
             .to_string();
 
         let powers = (1..=integral.n_props)
@@ -421,21 +422,34 @@ impl Vakint {
         vars.insert("numerator".into(), numerator_string);
         vars.insert("integral".into(), integral_string);
         vars.insert("symbols".into(), muv_sq_symbol.to_string());
-        if !numerator_additional_symbols.is_empty() {
-            vars.insert(
-                "additional_symbols".into(),
-                format!(
-                    "Auto S {};",
-                    numerator_additional_symbols
-                        .iter()
-                        .map(|item| item.get_stripped_name())
-                        .collect::<Vec<_>>()
-                        .join(", "),
-                ),
-            );
+
+        let mut additional_symbols_str = if !numerator_additional_symbols.is_empty() {
+            format!(
+                "Auto S {};\n",
+                numerator_additional_symbols
+                    .iter()
+                    .map(|item| item.get_stripped_name())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            )
         } else {
-            vars.insert("additional_symbols".into(), "".into());
+            "".into()
+        };
+        additional_symbols_str = format!(
+            "{}\nCF {};",
+            additional_symbols_str,
+            S.g.get_name().replace(&format!("{}::", NAMESPACE), "")
+        );
+        if !form_header_additions.is_empty() {
+            if !additional_symbols_str.is_empty() {
+                additional_symbols_str =
+                    format!("{}\n{}", form_header_additions, additional_symbols_str);
+            } else {
+                additional_symbols_str = form_header_additions;
+            }
         }
+        vars.insert("additional_symbols".into(), additional_symbols_str);
+
         let rendered = template
             .render(&RenderOptions {
                 variables: vars,
@@ -452,7 +466,7 @@ impl Vakint {
         )?;
 
         let processed_form_result =
-            self.process_form_output(form_result, vec![], HashMap::new())?;
+            self.process_form_output(form_result, indices, HashMap::new())?;
         let mut evaluated_integral = fmft.process_fmft_form_output(processed_form_result)?;
         debug!(
             "{}: raw result from FORM:\n{}",
@@ -466,7 +480,8 @@ impl Vakint {
         let muv_sq_dimension = 2 * (integral.n_loops as i64) - powers.iter().sum::<i64>();
 
         evaluated_integral = evaluated_integral
-            * vk_parse!(format!("{}^{}", muv_sq_symbol, muv_sq_dimension).as_str()).unwrap();
+            * vk_parse!(format!("{}^{}", muv_sq_symbol.get_name(), muv_sq_dimension).as_str())
+                .unwrap();
 
         let fmft_normalization_correction = vk_parse!(format!(
             "( 
