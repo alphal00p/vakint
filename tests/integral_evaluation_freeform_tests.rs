@@ -1,23 +1,13 @@
 mod test_utils;
-use vakint::{
-    utils::simplify_real, EvaluationMethod, EvaluationOrder, FMFTOptions, LoopNormalizationFactor,
-    MATADOptions, PySecDecOptions,
-};
+use vakint::{EvaluationMethod, EvaluationOrder, LoopNormalizationFactor, PySecDecOptions};
 
 use std::vec;
 
-use log::debug;
-use std::collections::HashMap;
-use symbolica::{
-    atom::AtomCore,
-    domains::{float::NumericalFloatLike, rational::Fraction},
-    parse,
-};
-use test_utils::{compare_numerical_output, compare_output, get_vakint};
+use symbolica::parse;
 use vakint::{Vakint, VakintSettings};
 
 use crate::test_utils::compare_vakint_evaluation_vs_reference;
-use vakint::{externals_from_f64, params_from_f64, vakint_parse};
+use vakint::{externals_from_f64, params_from_f64};
 
 const N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS: u32 = 32;
 

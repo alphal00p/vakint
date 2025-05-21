@@ -27,4 +27,4 @@ features = ["macros"]
 test-log = "*"
 
 [patch.crates-io]
-symbolica = { git = "https://github.com/benruijl/symbolica", rev = "57f25f34928ca667bd5889d94ed616d15e2ad94f" }
+#symbolica = { git = "https://github.com/benruijl/symbolica", rev = "dc423c78a69bb4127947b433ce4b4228edc70b54" }
