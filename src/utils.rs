@@ -19,7 +19,11 @@ pub(crate) mod vakint_macros {
     }
     macro_rules! vk_symbol {
         ($s: expr) => {{
-            symbolica::symbol!(format!("{}::{}", crate::NAMESPACE, $s))
+            if format!("{}", $s).starts_with(format!("{}::", crate::NAMESPACE).as_str()) {
+                symbolica::symbol!($s)
+            } else {
+                symbolica::symbol!(format!("{}::{}", crate::NAMESPACE, $s))
+            }
         }};
     }
 

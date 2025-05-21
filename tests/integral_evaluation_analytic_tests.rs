@@ -197,13 +197,13 @@ fn test_integrate_1l_cross_product_with_additional_symbols_numerator() {
         VakintSettings{number_of_terms_in_epsilon_expansion: 5, integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::analytic_only(),
         vakint_parse!(
-            "(A*k(1,11)*p(1,11)*k(1,12)*p(1,12)+B)*topo(\
+            "(user_space::A*k(1,11)*p(1,11)*k(1,12)*p(1,12)+user_space::B)*topo(\
                 prop(1,edge(1,1),k(1),muvsq,2)\
             )"
         )
         .unwrap()
         .as_view(),
-        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0), ("A".into(), 3.0), ("B".into(), 4.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0), ("user_space::A".into(), 3.0), ("user_space::B".into(), 4.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         externals_from_f64(
         &(1..=1)
@@ -362,9 +362,9 @@ fn test_integrate_3l_rank_4_additional_symbols_numerator() {
         EvaluationOrder::alphaloop_only(),
         vakint_parse!(
             "(
-                  A*k(1,11)*k(2,11)*k(1,22)*k(2,22)
-                + B*p(1,11)*k(3,11)*k(3,22)*p(2,22)
-                + C*p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+                  user_space::A*k(1,11)*k(2,11)*k(1,22)*k(2,22)
+                + user_space::B*p(1,11)*k(3,11)*k(3,22)*p(2,22)
+                + user_space::C*p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
              )
             *topo(\
                  prop(1,edge(1,2),k(1),muvsq,1)\
@@ -377,7 +377,7 @@ fn test_integrate_3l_rank_4_additional_symbols_numerator() {
         ).unwrap().as_view(),
         params_from_f64(&[
             ("muvsq".into(), 1.0), ("mursq".into(), 2.0),
-            ("A".into(), 5.0), ("B".into(), 7.0), ("C".into(), 11.0)
+            ("user_space::A".into(), 5.0), ("user_space::B".into(), 7.0), ("user_space::C".into(), 11.0)
             ].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         externals_from_f64(
@@ -442,9 +442,9 @@ fn test_integrate_3l_rank_4_matad_additional_symbols_numerator() {
         EvaluationOrder::matad_only(Some(MATADOptions {direct_numerical_substition: true,..MATADOptions::default()})),
         vakint_parse!(
             "(
-                  A*k(1,11)*k(2,11)*k(1,22)*k(2,22)
-                + B*p(1,11)*k(3,11)*k(3,22)*p(2,22)
-                + C*p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+                  user_space::A*k(1,11)*k(2,11)*k(1,22)*k(2,22)
+                + user_space::B*p(1,11)*k(3,11)*k(3,22)*p(2,22)
+                + user_space::C*p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
              )
             *topo(\
                  prop(1,edge(1,2),k(1),muvsq,1)\
@@ -457,7 +457,7 @@ fn test_integrate_3l_rank_4_matad_additional_symbols_numerator() {
         ).unwrap().as_view(),
         params_from_f64(&[
             ("muvsq".into(), 1.0), ("mursq".into(), 2.0),
-            ("A".into(), 5.0), ("B".into(), 7.0), ("C".into(), 11.0)
+            ("user_space::A".into(), 5.0), ("user_space::B".into(), 7.0), ("user_space::C".into(), 11.0)
             ].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         externals_from_f64(
@@ -595,9 +595,9 @@ fn test_integrate_4l_h_rank_4_additional_symbols_numerator() {
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
         vakint_parse!(
             "(
-                  A*k(1,11)*k(2,11)*k(1,22)*k(2,22)
-                + B*p(1,11)*k(3,11)*k(3,22)*p(2,22)
-                + C*p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+                  user_space::A*k(1,11)*k(2,11)*k(1,22)*k(2,22)
+                + user_space::B*p(1,11)*k(3,11)*k(3,22)*p(2,22)
+                + user_space::C*p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
              )*topo(\
                  prop(1,edge(5,1),k(1),muvsq,1)\
                 *prop(2,edge(2,6),k(2),muvsq,1)\
@@ -611,7 +611,7 @@ fn test_integrate_4l_h_rank_4_additional_symbols_numerator() {
             )"
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
-        params_from_f64(&[("muvsq".into(), 3.0), ("mursq".into(), 5.0), ("A".into(), 5.0), ("B".into(), 7.0), ("C".into(), 11.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 3.0), ("mursq".into(), 5.0), ("user_space::A".into(), 5.0), ("user_space::B".into(), 7.0), ("user_space::C".into(), 11.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         externals_from_f64(
         &(1..=2)
@@ -975,9 +975,9 @@ fn test_integrate_4l_clover_with_numerator() {
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
         vakint_parse!(
             "( 
-                  A * k(1,11)*k(2,11)*k(1,22)*k(2,22)
-                + B * p(1,11)*k(3,11)*k(3,22)*p(2,22)
-                + C * p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+                  user_space::A * k(1,11)*k(2,11)*k(1,22)*k(2,22)
+                + user_space::B * p(1,11)*k(3,11)*k(3,22)*p(2,22)
+                + user_space::C * p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
              )*topo(
                 prop(1, edge(1, 1), k(1), muvsq, 2)*\
                 prop(2, edge(1, 1), k(2), muvsq, 1)*\
@@ -986,7 +986,7 @@ fn test_integrate_4l_clover_with_numerator() {
             )"
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
-        params_from_f64(&[("muvsq".into(), 0.3), ("mursq".into(), 0.7), ("A".into(), 3.0), ("B".into(), 4.0), ("C".into(), 5.0)].iter().cloned().collect(),
+        params_from_f64(&[("muvsq".into(), 0.3), ("mursq".into(), 0.7), ("user_space::A".into(), 3.0), ("user_space::B".into(), 4.0), ("user_space::C".into(), 5.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         externals_from_f64(
         &(1..=2)

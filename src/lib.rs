@@ -73,6 +73,7 @@ pub type Momentum = (
 pub static FORM_REPLACEMENT_INDEX_SHIFT: u64 = 13370000;
 
 pub static NAMESPACE: &str = "vk";
+pub static PYSECDEC_NAMESPACE_SEPARATOR: &str = "NAMESPACESEP";
 
 static MINIMAL_FORM_VERSION: &str = "4.2.1";
 static MINIMAL_PYSECDEC_VERSION: &str = "1.6.4";
@@ -1392,7 +1393,7 @@ impl Default for PySecDecOptions {
     fn default() -> Self {
         // Give some random values to the external and masses. The user is expected to change these.
         let mut numerical_masses = HashMap::default();
-        numerical_masses.insert("muvsq".into(), 1.0);
+        numerical_masses.insert(format!("{}::muvsq", NAMESPACE), 1.0);
         let mut numerical_external_momenta = HashMap::default();
         for i in 1..=10 {
             numerical_external_momenta.insert(format!("p{}", i), (13.0, 4.0, 3.0, 12.0));
@@ -1854,8 +1855,13 @@ impl LoopNormalizationFactor {
             .replace(vk_parse!("log_mu_sq").unwrap().to_pattern())
             .with(log_mu_sq.to_pattern());
 
-        let mut params = HashMap::default();
-        params.insert("mursq".into(), settings.real_to_prec("1"));
+        let mut params: HashMap<String, Complex<Float>, _> = HashMap::default();
+        params.insert(
+            vk_symbol!(settings.mu_r_sq_symbol.as_str())
+                .get_name()
+                .into(),
+            settings.real_to_prec("1"),
+        );
         let num_res = match Vakint::full_numerical_evaluation_without_error(
             settings,
             expanded_expr_atom.as_view(),
@@ -1865,7 +1871,7 @@ impl LoopNormalizationFactor {
             Ok(r) => r,
             Err(e) => {
                 return Err(VakintError::InvalidLoopNormalization(
-                    format!("{}", expr),
+                    expr.to_canonical_string(),
                     e.to_string(),
                     LoopNormalizationFactor::allowed_symbols(settings).join(","),
                 ))
@@ -3227,10 +3233,23 @@ impl Vakint {
                             if m.is_zero() {
                                 "".into()
                             } else {
-                                masses.insert(String::from(
-                                    m.get_symbol().unwrap().get_stripped_name(),
-                                ));
-                                format!("-{}", m.get_symbol().unwrap().get_stripped_name())
+                                masses.insert(
+                                    m.get_symbol()
+                                        .unwrap()
+                                        .get_name()
+                                        .replace(&format!("{}::", NAMESPACE), "")
+                                        .replace("::", PYSECDEC_NAMESPACE_SEPARATOR)
+                                        .replace("_", "UNDERSCORE"),
+                                );
+                                format!(
+                                    "-{}",
+                                    m.get_symbol()
+                                        .unwrap()
+                                        .get_name()
+                                        .replace(&format!("{}::", NAMESPACE), "")
+                                        .replace("::", PYSECDEC_NAMESPACE_SEPARATOR)
+                                        .replace("_", "UNDERSCORE")
+                                )
                             }
                         }
                     ))
@@ -3319,12 +3338,19 @@ impl Vakint {
                 )
                 .unwrap()
                 .to_atom();
-            let mut numerator_string = AtomPrinter::new_with_options(
-                processed_numerator.as_atom_view(),
-                PrintOptions::file_no_namespace(),
-            )
-            .to_string()
-            .replace(vakint.settings.epsilon_symbol.as_str(), "eps");
+            // let mut numerator_string = AtomPrinter::new_with_options(
+            //     processed_numerator.as_atom_view(),
+            //     PrintOptions::file_no_namespace(),
+            // )
+            // .to_string()
+            // .replace(vakint.settings.epsilon_symbol.as_str(), "eps");
+            let mut numerator_string = processed_numerator
+                .to_canonical_string()
+                .replace(&format!("{}::", NAMESPACE), "")
+                .replace("::", PYSECDEC_NAMESPACE_SEPARATOR)
+                .replace("_", "UNDERSCORE")
+                .replace(vakint.settings.epsilon_symbol.as_str(), "eps");
+
             // Powers higher than two cannot occur as different dummy indices would have been used in
             // the call 'processed_numerator = Vakint::convert_from_dot_notation(processed_numerator.as_view(), true)'
             let remove_squares_re =
@@ -3359,7 +3385,14 @@ impl Vakint {
                 numerator_additional_symbols.iter().collect::<Vec<_>>();
             sorted_additional_numerator_symbols.sort();
             for additional_param in sorted_additional_numerator_symbols.iter() {
-                real_parameters.push(format!("'{}'", additional_param.get_stripped_name()));
+                real_parameters.push(format!(
+                    "'{}'",
+                    additional_param
+                        .get_name()
+                        .replace(&format!("{}::", NAMESPACE), "")
+                        .replace("::", PYSECDEC_NAMESPACE_SEPARATOR)
+                        .replace("_", "UNDERSCORE")
+                ));
             }
 
             // And the external momenta
@@ -3414,20 +3447,39 @@ impl Vakint {
                 ),
             );
             let mut default_masses = vec![];
+            println!(
+                "options.numerical_masses: {}",
+                options
+                    .numerical_masses
+                    .iter()
+                    .map(|(k, v)| format!("{}: {}", k, v))
+                    .collect::<Vec<_>>()
+                    .join(","),
+            );
             for m in masses_vec {
-                if let Some(num_m) = options.numerical_masses.get(&m) {
+                let cooked_m_symbol = m
+                    .replace(PYSECDEC_NAMESPACE_SEPARATOR, "::")
+                    .replace(&format!("{}::", NAMESPACE), "")
+                    .replace("UNDERSCORE", "_");
+                println!("Accessing: {}", cooked_m_symbol);
+                if let Some(num_m) = options.numerical_masses.get(&cooked_m_symbol) {
                     default_masses.push((m, num_m));
                 } else {
-                    return Err(VakintError::EvaluationError(format!("Missing specification of numerical value for mass '{}'. Specify it in the PySecDecOptions of Vakint.", m)));
+                    return Err(VakintError::EvaluationError(format!("Missing specification of numerical value for mass '{}'. Specify it in the PySecDecOptions of Vakint.", cooked_m_symbol)));
                 }
             }
             for additional_param in sorted_additional_numerator_symbols.iter() {
-                if let Some(num_additional_param) = options
-                    .numerical_masses
-                    .get(additional_param.get_stripped_name())
-                {
+                if let Some(num_additional_param) = options.numerical_masses.get(
+                    &additional_param
+                        .get_name()
+                        .replace(&format!("{}::", NAMESPACE), ""),
+                ) {
                     default_masses.push((
-                        String::from(additional_param.get_stripped_name()),
+                        additional_param
+                            .get_name()
+                            .replace(&format!("{}::", NAMESPACE), "")
+                            .replace("::", PYSECDEC_NAMESPACE_SEPARATOR)
+                            .replace("_", "UNDERSCORE"),
                         num_additional_param,
                     ));
                 } else {
@@ -4228,9 +4280,8 @@ impl Vakint {
         if substitute_indices {
             processed_str = expression_no_indices.to_canonical_string();
         }
-        processed_str = processed_str.replace("vk::", "");
+        processed_str = processed_str.replace(&format!("{}::", NAMESPACE), "");
         // println!("processed_str= {}", processed_str);
-
         let user_symbols = expression_no_indices.get_all_symbols(true);
         let mut user_variables = expression_no_indices.get_all_symbols(false);
         let mut user_functions: HashSet<Symbol, RandomState> = user_symbols
@@ -4240,12 +4291,12 @@ impl Vakint {
             .collect::<HashSet<_, _>>();
         user_variables = user_variables
             .iter()
-            .filter(|s| s.get_namespace() != "vk")
+            .filter(|s| s.get_namespace() != NAMESPACE)
             .cloned()
             .collect::<HashSet<_, _>>();
         user_functions = user_functions
             .iter()
-            .filter(|s| s.get_namespace() != "vk")
+            .filter(|s| s.get_namespace() != NAMESPACE)
             .cloned()
             .collect::<HashSet<_, _>>();
 

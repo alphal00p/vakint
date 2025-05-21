@@ -7,6 +7,7 @@ use crate::utils::{self, set_precision_in_polynomial_atom};
 use crate::{
     gt_condition,
     matad_numerics::{ADDITIONAL_CONSTANTS, HPL_SUBSTITUTIONS, POLY_GAMMA_SUBSTITUTIONS},
+    NAMESPACE,
 };
 use colored::Colorize;
 use log::debug;
@@ -412,8 +413,6 @@ impl Vakint {
         let mut numerator = Vakint::convert_to_dot_notation(input_numerator);
 
         // println!("Numerator before processing: {}", numerator);
-        let mut indices = Vakint::identify_vector_indices(numerator.as_view())?;
-        // for (i, user_i) in indices.iter().enumerate() {}
 
         numerator = numerator
             .replace(Atom::new_var(muv_sq_symbol).to_pattern())
@@ -494,17 +493,23 @@ impl Vakint {
             )
             .with(vk_parse!("(4-d)/2").unwrap().to_pattern());
 
+        // let indices = Vakint::identify_vector_indices(numerator.as_view())?;
+        // for (i_index, user_i) in indices.iter().enumerate() {
+        //     numerator = numerator.replace(user_i.to_pattern()).with(Atom::new_num(
+        //         (FORM_REPLACEMENT_INDEX_SHIFT + 1 + (i_index as u64)) as i64,
+        //     ));
+        // }
+        let (form_header_additions, expression_str, indices) =
+            self.sanitize_user_expressions(numerator.as_view(), true)?;
+
+        // let expression_str =
+        //     &AtomPrinter::new_with_options(numerator.as_view(), PrintOptions::file_no_namespace())
+        //         .to_string();
+
         let dot_produce_replacer =
             Regex::new(r"dot\((?<vecA>[\w|\d]+),(?<vecB>[\w|\d]+)\)").unwrap();
         let numerator_string = dot_produce_replacer
-            .replace_all(
-                &AtomPrinter::new_with_options(
-                    numerator.as_view(),
-                    PrintOptions::file_no_namespace(),
-                )
-                .to_string(),
-                "($vecA.$vecB)",
-            )
+            .replace_all(&expression_str, "($vecA.$vecB)")
             .to_string();
         let powers = (1..=integral.n_props)
             .map(|i_prop| {
@@ -539,21 +544,33 @@ impl Vakint {
         vars.insert("symbols".into(), muv_sq_symbol.get_stripped_name().into());
         vars.insert("integral".into(), integral_string);
         vars.insert("n_loops".into(), format!("{}", integral.n_loops));
-        if !numerator_additional_symbols.is_empty() {
-            vars.insert(
-                "additional_symbols".into(),
-                format!(
-                    "Auto S {};",
-                    numerator_additional_symbols
-                        .iter()
-                        .map(|item| item.get_stripped_name())
-                        .collect::<Vec<_>>()
-                        .join(", "),
-                ),
-            );
+        let mut additional_symbols_str = if !numerator_additional_symbols.is_empty() {
+            format!(
+                "Auto S {};\n",
+                numerator_additional_symbols
+                    .iter()
+                    .map(|item| item.get_stripped_name())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            )
         } else {
-            vars.insert("additional_symbols".into(), "".into());
+            "".into()
+        };
+        additional_symbols_str = format!(
+            "{}\nCF {};",
+            additional_symbols_str,
+            S.g.get_name().replace(&format!("{}::", NAMESPACE), "")
+        );
+        if !form_header_additions.is_empty() {
+            if !additional_symbols_str.is_empty() {
+                additional_symbols_str =
+                    format!("{}\n{}", form_header_additions, additional_symbols_str);
+            } else {
+                additional_symbols_str = form_header_additions;
+            }
         }
+        vars.insert("additional_symbols".into(), additional_symbols_str);
+
         let rendered = template
             .render(&RenderOptions {
                 variables: vars,
@@ -581,7 +598,7 @@ impl Vakint {
             .replace(vk_parse!("M^pow_").unwrap().to_pattern())
             .when(Condition::from((S.pow_, even_condition())))
             .with(
-                vk_parse!(format!("{}^(pow_/2)", muv_sq_symbol).as_str())
+                vk_parse!(format!("{}^(pow_/2)", muv_sq_symbol.get_name()).as_str())
                     .unwrap()
                     .to_pattern(),
             );
