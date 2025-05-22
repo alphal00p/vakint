@@ -544,7 +544,7 @@ impl Topology {
                 {
                     q = q.replace(src).with(trgt.clone());
                 }
-                q = q - Atom::new_var(mom_vecs_to_symbols[i_lmb].1 .1 .1);
+                q -= Atom::new_var(mom_vecs_to_symbols[i_lmb].1 .1 .1);
                 system.push(q);
             }
         }

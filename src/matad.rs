@@ -615,8 +615,8 @@ impl Vakint {
         .unwrap();
 
         // Since MATAD uses euclidean denominator, we must adjust the overall sign by (-1) per quadratic denominator with power one.
-        matad_normalization_correction = matad_normalization_correction
-            * vk_parse!(format!("((-1)^{})", powers.iter().sum::<i64>()).as_str()).unwrap();
+        matad_normalization_correction *=
+            vk_parse!(format!("((-1)^{})", powers.iter().sum::<i64>()).as_str()).unwrap();
 
         // Adjust normalization factor
         let mut complete_normalization = matad_normalization_correction
@@ -629,7 +629,7 @@ impl Vakint {
             .replace(Atom::new_var(vk_symbol!(self.settings.epsilon_symbol.as_str())).to_pattern())
             .with(vk_parse!("ep").unwrap().to_pattern());
 
-        evaluated_integral = evaluated_integral * complete_normalization;
+        evaluated_integral *= complete_normalization;
 
         if options.expand_masters {
             let expansion_depth = vakint.settings.number_of_terms_in_epsilon_expansion

@@ -350,17 +350,16 @@ impl Graph {
         for node in node_values {
             let mut sorted_edges = node.edges.clone();
             sorted_edges.sort_by_key(|(e, _dir)| *e);
-            atom_graph = atom_graph
-                * vk_parse!(&format!(
-                    "v(n({}),{})",
-                    node.id,
-                    sorted_edges
-                        .iter()
-                        .map(|(e, _dir)| format!("{}", e))
-                        .collect::<Vec<_>>()
-                        .join(",")
-                ))
-                .unwrap();
+            atom_graph *= vk_parse!(&format!(
+                "v(n({}),{})",
+                node.id,
+                sorted_edges
+                    .iter()
+                    .map(|(e, _dir)| format!("{}", e))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ))
+            .unwrap();
         }
         atom_graph = replace_until_stable(
             atom_graph.as_view(),

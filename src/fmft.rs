@@ -479,8 +479,8 @@ impl Vakint {
         // Offset dimensionality by the denominators
         let muv_sq_dimension = 2 * (integral.n_loops as i64) - powers.iter().sum::<i64>();
 
-        evaluated_integral = evaluated_integral
-            * vk_parse!(format!("{}^{}", muv_sq_symbol.get_name(), muv_sq_dimension).as_str())
+        evaluated_integral *=
+            vk_parse!(format!("{}^{}", muv_sq_symbol.get_name(), muv_sq_dimension).as_str())
                 .unwrap();
 
         let fmft_normalization_correction = vk_parse!(format!(
@@ -506,7 +506,7 @@ impl Vakint {
             .replace(Atom::new_var(vk_symbol!(self.settings.epsilon_symbol.as_str())).to_pattern())
             .with(vk_parse!("ep").unwrap().to_pattern());
 
-        evaluated_integral = evaluated_integral * complete_normalization;
+        evaluated_integral *= complete_normalization;
 
         if options.expand_masters {
             let expansion_depth = vakint.settings.number_of_terms_in_epsilon_expansion

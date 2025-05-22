@@ -24,7 +24,7 @@ fn test_reduction_1l_a() {
         )
         .unwrap();
 
-    compare_output(
+    _ = compare_output(
         vakint
             .tensor_reduce(integral.as_view())
             .as_ref()
@@ -59,7 +59,7 @@ fn test_reduction_1l_b() {
         )
         .unwrap();
 
-    compare_output(
+    _ = compare_output(
         vakint
             .tensor_reduce(integral.as_view())
             .as_ref()
@@ -94,7 +94,7 @@ fn test_reduction_2l_a() {
         )
         .unwrap();
 
-    compare_output(
+    _ = compare_output(
         vakint
             .tensor_reduce(integral.as_view())
             .as_ref()

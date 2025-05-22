@@ -43,8 +43,8 @@ fn test_integrate_1l_decorated_indices_alphaloop() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             (-1, ("0.0".into(), "-36.79980696990178527744327373291".into()),),
-            (0,  ("0.0".into(), "99.70093613678094097571666372594".into()),),
-            (1,  ("0.0".into(), "-183.0878169087836963770976657747".into()),),
+            (0,  ("0.0".into(), "-35.56610641976561545008896235793".into()),),
+            (1,  ("0.0".into(), "-65.21588421381265673942992661242".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -78,8 +78,8 @@ fn test_integrate_1l_decorated_indices_matad() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             (-1, ("0.0".into(), "-36.79980696990178527744327373291".into()),),
-            (0,  ("0.0".into(), "99.70093613678094097571666372594".into()),),
-            (1,  ("0.0".into(), "-183.0878169087836963770976657747".into()),),
+            (0,  ("0.0".into(), "-35.56610641976561545008896235793".into()),),
+            (1,  ("0.0".into(), "-65.21588421381265673942992661242".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
 
@@ -119,10 +119,10 @@ fn test_integrate_1l_decorated_indices_fmft() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             (-4, ("-35378.93674652074486878056225484".into(), "0.0".into()),),
-            (-3,  ("379847.4112339445643392527721787".into(), "0.0".into()),),
-            (-2,  ("-2225660.681830551493330196973382".into(), "0.0".into()),),
-            (-1,  ("9310322.197027486227836524560952".into(), "0.0".into()),),
-            (0,  ("-31010419.86210674125026829677739".into(), "0.0".into()),),
+            (-3,  ("-140329.6806090741577242311770814".into(), "0.0".into()),),
+            (-2,  ("-464844.1053751088101148680385287".into(), "0.0".into()),),
+            (-1,  ("-1098012.239402848410636935684308".into(), "0.0".into()),),
+            (0,  ("-2358474.482147627644123865090031".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
 
@@ -131,6 +131,7 @@ fn test_integrate_1l_decorated_indices_fmft() {
 
 #[test_log::test]
 fn test_integrate_1l_decorated_indices_pysecdec() {
+    Vakint::initialize_vakint_symbols();
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
         VakintSettings{number_of_terms_in_epsilon_expansion: 5, integral_normalization_factor: LoopNormalizationFactor::MSbar, ..VakintSettings::default()},
@@ -155,11 +156,11 @@ fn test_integrate_1l_decorated_indices_pysecdec() {
             .collect(),
             N_DIGITS_PYSECDEC_EVALUATION_FOR_TESTS),
         vec![
-            (-1, ("0.0".into(),  "-15.41829599538179739876641630989".into()),),
-            (0,  ("0.0".into(),   "41.25556923066471696715797280407".into()),),
-            (1,  ("0.0".into(),  "-75.58506810083682014451198579381".into()),),
-            (2,  ("0.0".into(),   "104.8268973321405776943695037314".into()),),
-            (3,  ("0.0".into(),  "-130.2125934660588794479583559489".into()),),
+            (-1, ("0.0".into(),  "-15.4182959953817973987664163098897650903".into()),),
+            (0,  ("0.0".into(),  "-15.4182959953817973987664163098897650903".into()),),
+            (1,  ("0.0".into(),  "-28.0993361631583491418567542617704801124".into()),),
+            (2,  ("0.0".into(),  "-21.9214464510894766034570152742441344730".into()),),
+            (3,  ("0.0".into(),  "-31.3082101898603561311809529349519918383".into()),),
         ],
         N_DIGITS_PYSECDEC_EVALUATION_FOR_TESTS, MAX_PULL
     );

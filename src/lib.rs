@@ -795,28 +795,26 @@ impl Integral {
 
                 let (id_node_left, id_node_right) = get_node_ids(&m)?;
 
-                generic_expression = generic_expression
-                    * vk_parse!(format!(
-                        "prop(id{id}_,uedge(n{id_l_node}l_,n{id_r_node}r_),q{id}__,{mass},{power})",
-                        id = i_prop,
-                        id_l_node = id_node_left,
-                        id_r_node = id_node_right,
-                        mass = mass_symbol_string,
-                        power = pow_symbol_string
-                    )
-                    .as_str())
-                    .unwrap();
-                unoriented_generic_expression = unoriented_generic_expression
-                    * vk_parse!(format!(
-                        "prop(id{id}_,uedge(n{id_l_node}_,n{id_r_node}_),q{id}__,{mass},{power})",
-                        id = i_prop,
-                        id_l_node = id_node_left,
-                        id_r_node = id_node_right,
-                        mass = mass_symbol_string,
-                        power = pow_symbol_string
-                    )
-                    .as_str())
-                    .unwrap();
+                generic_expression *= vk_parse!(format!(
+                    "prop(id{id}_,uedge(n{id_l_node}l_,n{id_r_node}r_),q{id}__,{mass},{power})",
+                    id = i_prop,
+                    id_l_node = id_node_left,
+                    id_r_node = id_node_right,
+                    mass = mass_symbol_string,
+                    power = pow_symbol_string
+                )
+                .as_str())
+                .unwrap();
+                unoriented_generic_expression *= vk_parse!(format!(
+                    "prop(id{id}_,uedge(n{id_l_node}_,n{id_r_node}_),q{id}__,{mass},{power})",
+                    id = i_prop,
+                    id_l_node = id_node_left,
+                    id_r_node = id_node_right,
+                    mass = mass_symbol_string,
+                    power = pow_symbol_string
+                )
+                .as_str())
+                .unwrap();
 
                 let new_conditions =
                     Condition::from((vk_symbol!(mass_symbol_string.clone()), symbol_or_number()))
@@ -940,15 +938,14 @@ impl Integral {
                         * if dir.is_incoming() { 1 } else { -1 }),
                 );
             }
-            alphaloop_expression = alphaloop_expression * fb.finish();
+            alphaloop_expression *= fb.finish();
         }
         for (&e_id, edge) in graph.edges.iter() {
-            alphaloop_expression = alphaloop_expression
-                * function!(
-                    vk_symbol!("uvprop"),
-                    &edge.momentum,
-                    function!(vk_symbol!("pow"), Atom::new_num(e_id as i64))
-                );
+            alphaloop_expression *= function!(
+                vk_symbol!("uvprop"),
+                &edge.momentum,
+                function!(vk_symbol!("pow"), Atom::new_num(e_id as i64))
+            );
         }
 
         Ok(Integral {
@@ -1795,7 +1792,7 @@ impl LoopNormalizationFactor {
                 "( 𝑖*(𝜋^((4-2*eps)/2)) * (exp(-EulerGamma))^(eps) )^(-n_loops)".into()
             }
             LoopNormalizationFactor::MSbar => {
-                "(exp(log_mu_sq)/(4*𝜋*exp(-EulerGamma)))^(eps*n_loops)".into()
+                "(((2*𝜋)^2)*exp(log_mu_sq)/(4*𝜋*exp(-EulerGamma)))^(eps*n_loops)".into()
             }
             LoopNormalizationFactor::Custom(s) => s.clone(),
         }
@@ -2462,7 +2459,7 @@ impl From<VakintExpression> for Atom {
         let mut res = Atom::Zero;
         for term in vakint_expr.0.iter() {
             let t: Atom = VakintTerm::into(term.clone());
-            res = res + t;
+            res += t;
         }
         res
     }
@@ -2507,9 +2504,8 @@ impl NumericalEvaluationResult {
     pub fn to_atom(&self, epsilon_symbol: Symbol) -> Atom {
         let mut res = Atom::Zero;
         for (exp, coeff) in self.get_epsilon_coefficients() {
-            res = res
-                + (Atom::new_num(coeff.re) + Atom::new_var(Atom::I) * Atom::new_num(coeff.im))
-                    * Atom::new_var(epsilon_symbol).pow(Atom::new_num(exp))
+            res += (Atom::new_num(coeff.re) + Atom::new_var(Atom::I) * Atom::new_num(coeff.im))
+                * Atom::new_var(epsilon_symbol).pow(Atom::new_num(exp))
         }
         res
     }
@@ -3125,8 +3121,8 @@ impl Vakint {
             let mut old_processed_numerator = processed_numerator.clone();
             loop {
                 let arc_mutex_lorentz_indices_sent = arc_mutex_lorentz_indices.clone();
-                let dot_product_transformer = Transformer::Map(Box::new(
-                    move |a_in: AtomView, _state: _, a_out: &mut Atom| {
+                let dot_product_transformer =
+                    Transformer::Map(Box::new(move |a_in: AtomView, _state, a_out: &mut Atom| {
                         if let AtomView::Fun(s) = a_in {
                             let a_in = s
                                 .to_slice()
@@ -3152,8 +3148,7 @@ impl Vakint {
                         };
 
                         Ok(())
-                    },
-                ));
+                    }));
 
                 processed_numerator = old_processed_numerator
                     .replace(dot_product_matcher.to_pattern())

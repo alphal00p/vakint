@@ -95,11 +95,26 @@ pub fn simplify_real(input: AtomView) -> Atom {
     );
     res = replace_until_stable(
         res.as_view(),
+        &vk_parse!("log(a__*b_^n_)").unwrap().to_pattern(),
+        &vk_parse!("log(a__)+n_*log(b_)").unwrap().to_pattern(),
+        None,
+        None,
+    );
+    res = replace_until_stable(
+        res.as_view(),
+        &vk_parse!("log(a__*b_)").unwrap().to_pattern(),
+        &vk_parse!("log(a__)+log(b_)").unwrap().to_pattern(),
+        None,
+        None,
+    );
+    res = replace_until_stable(
+        res.as_view(),
         &vk_parse!("log(exp(x_))").unwrap().to_pattern(),
         &vk_parse!("x_").unwrap().to_pattern(),
         None,
         None,
     );
+
     res = replace_until_stable(
         res.as_view(),
         &vk_parse!("exp(log(x_))").unwrap().to_pattern(),
@@ -160,7 +175,7 @@ pub fn set_precision_in_polynomial_atom(
     let coeffs = input.coefficient_list::<i8>(&[Atom::new_var(variable)]);
     for (var_with_power, coeff) in coeffs {
         let new_coeff = set_precision_in_float_atom(coeff.as_view(), settings);
-        res = res + new_coeff * var_with_power;
+        res += new_coeff * var_with_power;
     }
 
     res

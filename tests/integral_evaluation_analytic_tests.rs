@@ -49,25 +49,31 @@ fn test_integrate_1l_a() {
     let evaluated_integral_res = vakint.evaluate_integral(integral.as_view());
     let evaluated_integral_res_ref = evaluated_integral_res.as_ref();
 
-    // let coefs = evaluated_integral_res_ref
-    //     .unwrap()
-    //     .coefficient_list(State::get_symbol("ε"));
-    // for (v, c) in coefs.0 {
+    let expanded_evaluated_integral_res = evaluated_integral_res_ref.unwrap().expand();
+    // let coefs =
+    //     expanded_evaluated_integral_res.coefficient_list::<i8>(&[vakint_parse!("vk::ε").unwrap()]);
+    // for (v, c) in coefs {
+    //     println!("---");
     //     println!("{}: {}", v, c);
     // }
-    // println!("ε^0: {}", coefs.1);
+    // panic!();
+
     let evaluated_integral = compare_output(
-        evaluated_integral_res_ref.map(|a| a.as_view()),
-        simplify_real(vakint_parse!(
-            "(\
+        Ok(expanded_evaluated_integral_res.as_view()),
+        //evaluated_integral_res_ref.map(|a| a.as_view()),
+        simplify_real(
+            vakint_parse!(
+                "(\
         + ε^-1 * (1/4*𝑖*𝜋^2*muvsq^2*g(1,2))\
-        + ε^-0 * (1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2)+1/4*𝑖*𝜋^2*muvsq^2*log(muvsq^-1)*g(1,2)+1/4*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))*g(1,2))\
-        + ε    * ((1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2))*log(exp(-EulerGamma))+(1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2)+1/4*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))*g(1,2))*log(muvsq^-1)+𝑖*𝜋^2*(7/16*muvsq^2*g(1,2)+1/48*𝜋^2*muvsq^2*g(1,2))+3/8*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/4*muvsq^2*(1/2*𝑖*𝜋^2*log(𝜋)^2+1/2*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2-𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/8*𝑖*𝜋^2*muvsq^2*log(muvsq^-1)^2*g(1,2)+1/8*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))^2*g(1,2))\
-        + ε^2  * ((7/16*muvsq^2*g(1,2)+1/48*𝜋^2*muvsq^2*g(1,2))*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))+1/2*(1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2))*log(exp(-EulerGamma))^2+(𝑖*𝜋^2*(7/16*muvsq^2*g(1,2)+1/48*𝜋^2*muvsq^2*g(1,2))+3/8*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/4*muvsq^2*(1/2*𝑖*𝜋^2*log(𝜋)^2+1/2*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2-𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2))*log(exp(-EulerGamma))+1/2*(1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2)+1/4*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))*g(1,2))*log(muvsq^-1)^2+((1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2))*log(exp(-EulerGamma))+𝑖*𝜋^2*(7/16*muvsq^2*g(1,2)+1/48*𝜋^2*muvsq^2*g(1,2))+3/8*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/4*muvsq^2*(1/2*𝑖*𝜋^2*log(𝜋)^2+1/2*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2-𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/8*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))^2*g(1,2))*log(muvsq^-1)+𝑖*𝜋^2*(151190863202516241/410199796539607264*muvsq^2*g(1,2)+1/32*𝜋^2*muvsq^2*g(1,2))+3/8*muvsq^2*(1/2*𝑖*𝜋^2*log(𝜋)^2+1/2*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2-𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/4*muvsq^2*(-1/6*𝑖*𝜋^2*log(𝜋)^3+1/6*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^3+1/2*𝑖*𝜋^2*log(𝜋)^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)-1/2*𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2)*g(1,2)+1/24*𝑖*𝜋^2*muvsq^2*log(muvsq^-1)^3*g(1,2)+1/24*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))^3*g(1,2))\
-        )"
-        )
-        .unwrap().as_view()),
+        + ε^0  * (3/8*𝑖*𝜋^2*muvsq^2*g(1,2)+1/4*𝑖*𝜋^2*muvsq^2*log(mursq)*g(1,2)-1/4*𝑖*𝜋^2*muvsq^2*log(muvsq)*g(1,2))\
+        + ε    * (7/16*𝑖*𝜋^2*muvsq^2*g(1,2)+1/48*𝑖*𝜋^4*muvsq^2*g(1,2)+1/8*𝑖*𝜋^2*muvsq^2*log(mursq)^2*g(1,2)+1/8*𝑖*𝜋^2*muvsq^2*log(muvsq)^2*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*log(mursq)*g(1,2)-3/8*𝑖*𝜋^2*muvsq^2*log(muvsq)*g(1,2)-1/4*𝑖*𝜋^2*muvsq^2*log(mursq)*log(muvsq)*g(1,2))\
+        + ε^2  * (151190863202516241/410199796539607264*𝑖*𝜋^2*muvsq^2*g(1,2)+1/32*𝑖*𝜋^4*muvsq^2*g(1,2)+3/16*𝑖*𝜋^2*muvsq^2*log(mursq)^2*g(1,2)+1/24*𝑖*𝜋^2*muvsq^2*log(mursq)^3*g(1,2)+3/16*𝑖*𝜋^2*muvsq^2*log(muvsq)^2*g(1,2)-1/24*𝑖*𝜋^2*muvsq^2*log(muvsq)^3*g(1,2)+7/16*𝑖*𝜋^2*muvsq^2*log(mursq)*g(1,2)-7/16*𝑖*𝜋^2*muvsq^2*log(muvsq)*g(1,2)+1/48*𝑖*𝜋^4*muvsq^2*log(mursq)*g(1,2)-1/48*𝑖*𝜋^4*muvsq^2*log(muvsq)*g(1,2)-1/8*𝑖*𝜋^2*muvsq^2*log(mursq)^2*log(muvsq)*g(1,2)+1/8*𝑖*𝜋^2*muvsq^2*log(mursq)*log(muvsq)^2*g(1,2)-3/8*𝑖*𝜋^2*muvsq^2*log(mursq)*log(muvsq)*g(1,2))\
+            )")
+            .unwrap()
+            .as_view(),
+        ).expand(),
     );
+
     //debug!("Evaluated integral: {}", evaluated_integral);
 
     let mut params = HashMap::default();
@@ -91,19 +97,18 @@ fn test_integrate_1l_a() {
         numerical_partial_eval.rationalize_coefficients(&Fraction::from(
             0.1_f64.powi((vakint.settings.run_time_decimal_precision - 4) as i32)
         )),
-        vakint_parse!("-2879700/536411*𝑖*g(1,2)+3726809/395976*𝑖*ε*g(1,2)+1075967/436073*𝑖*ε^-1*g(1,2)-4041047/334810*𝑖*ε^2*g(1,2)").unwrap()
+        vakint_parse!("2861033/773022*𝑖*vk::g(1,2)+3640727/573586*𝑖*vk::ε*vk::g(1,2)+1075967/436073*𝑖*vk::ε^-1*vk::g(1,2)+7131281/1067276*𝑖*vk::ε^2*vk::g(1,2)").unwrap()
     );
-
     let prec = Fraction::from(0.1.pow((vakint.settings.run_time_decimal_precision - 4) as u64));
-    compare_output(
+    _ = compare_output(
         Ok(numerical_partial_eval
             .rationalize_coefficients(&prec)
             .as_view()),
         vakint_parse!(format!(
-            "-5.36845814123893`{prec}*𝑖*g(1,2)\
-                +9.4117042447109682`{prec}*𝑖*ε*g(1,2)\
-                +2.46740110027234`{prec}*𝑖*ε^-1*g(1,2)\
-                -12.0696723514860`{prec}*𝑖*ε^2*g(1,2)",
+            "3.701101650408509`{prec}*𝑖*g(1,2)\
+                +6.347307988684978`{prec}*𝑖*ε*g(1,2)\
+                +2.467401100272340`{prec}*𝑖*ε^-1*g(1,2)\
+                +6.681758982674564`{prec}*𝑖*ε^2*g(1,2)",
             prec = vakint.settings.run_time_decimal_precision - 1
         )
         .as_str())
@@ -126,10 +131,10 @@ fn test_integrate_1l_a() {
     compare_numerical_output(
         numerical_full_eval_ref,
         vec![
-            (-1, ("0.0".into(), "2.46740110027234".into())),
-            (0, ("0.0".into(), "-5.36845814123893".into())),
-            (1, ("0.0".into(), "9.41170424471097".into())),
-            (2, ("0.0".into(), "-12.0696723514860".into())),
+            (-1, ("0.0".into(), "2.467401100272340".into())),
+            (0, ("0.0".into(), "3.701101650408509".into())),
+            (1, ("0.0".into(), "6.347307988684978".into())),
+            (2, ("0.0".into(), "6.681758982674565".into())),
         ],
         vakint.settings.run_time_decimal_precision,
     );
@@ -181,10 +186,10 @@ fn test_integrate_1l_cross_product() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             (-1, ("0.0".into(), "-15.41829599538179739876641630989".into()),),
-            (0,  ("0.0".into(),  "41.25556923066471696715797280407".into()),),
-            (1,  ("0.0".into(), "-75.58506810083682014451198579381".into()),),
-            (2,  ("0.0".into(),  "104.8268973321405776943695037314".into()),),
-            (3,  ("0.0".into(),  "-130.2125934660588794479583559489".into()),),
+            (0,  ("0.0".into(), "-15.41829599538179739876641630989".into()),),
+            (1,  ("0.0".into(), "-28.09933616315834914185675426177".into()),),
+            (2,  ("0.0".into(), "-21.92144645108947660345701527424".into()),),
+            (3,  ("0.0".into(), "-31.30821018986035613118095293495".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -212,10 +217,10 @@ fn test_integrate_1l_cross_product_with_additional_symbols_numerator() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             (-1, ("0.0".into(), "-6.776470381787957720961284930165".into()),),
-            (0,  ("0.0".into(), "-21.34624897436485396509954629830".into()),),
-            (1,  ("0.0".into(), "72.41426780477804749630966479154".into()),),
-            (2,  ("0.0".into(), "-147.4626326303287005964359960851".into()),),
-            (3,  ("0.0".into(), "211.1788648410998597813244933220".into()),),
+            (0,  ("0.0".into(), "-46.25488798614539219629924892967".into()),),
+            (1,  ("0.0".into(), "-51.82831147814090168009015188908".into()),),
+            (2,  ("0.0".into(), "-81.58277415564679875594772935461".into()),),
+            (3,  ("0.0".into(), "-69.88990073019845746778737271354".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -243,9 +248,9 @@ fn test_integrate_1l_dot_product_external() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             (-1, ("0.0".into(), "-7298.572454605580698628106094408".into()),),
-            (0,  ("0.0".into(),  "15879.89918178474997676561014674".into()),),
-            (1,  ("0.0".into(), "-27839.82115585504758906774113191".into()),),
-            (2,  ("0.0".into(),  "35702.09081569554005452137401203".into()),),
+            (0,  ("0.0".into(),  "-10947.85868190837104794215914161".into()),),
+            (1,  ("0.0".into(), "-18775.33703053016641729482116716".into()),),
+            (2,  ("0.0".into(),  "-19764.64307075136314315766281197".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -275,9 +280,9 @@ fn test_integrate_2l() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             (-2, ("-146.1136365510036558546604990331".into(), "0.0".into()),),
-            (-1, ("635.8146971740286947808753047759".into(),  "0.0".into()),),
-            (0,  ("-1646.531034471454483109201793220".into(), "0.0".into()),),
-            (1,  ("2240.516116133454318298096346441".into(),  "0.0".into()),),
+            (-1, ("-438.3409096530109675639814970992".into(),  "0.0".into()),),
+            (0,  ("-920.6659438677135293597636718376".into(), "0.0".into()),),
+            (1,  ("-2358.169673453033244370977417874".into(),  "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -310,7 +315,7 @@ fn test_integrate_3l() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             (-1, ("0.0".into(), "-2311.289033520460340396770711738".into()),),
-            ( 0, ("0.0".into(),  "35134.99893627257345553503414002".into()),),
+            ( 0, ("0.0".into(),  "9647.808284968523284819072033817".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -346,9 +351,9 @@ fn test_integrate_3l_rank_4() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             (-3, ("0.0".into(),   "4975068.903103003548576756843470".into()),),
-            (-2, ("0.0".into(),  "-15967412.96033300288621485195252".into()),),
-            (-1, ("0.0".into(),   "46275660.33034806160550888444548".into()),),
-            ( 0, ("0.0".into(),  "-117731367.8844665539198405383934".into()),),
+            (-2, ("0.0".into(),  "38893977.28458284777498997027566".into()),),
+            (-1, ("0.0".into(),   "172684280.6796404510100040673463".into()),),
+            ( 0, ("0.0".into(),  "533601880.7076116546200537059228".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -387,9 +392,9 @@ fn test_integrate_3l_rank_4_additional_symbols_numerator() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             (-3, ("0.0".into(),   "51891342.24417464772786998080343".into()),),
-            (-2, ("0.0".into(),  "-167769771.6403982559590402103780".into()),),
-            (-1, ("0.0".into(),   "486068084.1087102468110182518293".into()),),
-            ( 0, ("0.0".into(),  "-1237710265.809503746583431557798".into()),),
+            (-2, ("0.0".into(),  "404449675.4942040064883673562925".into()),),
+            (-1, ("0.0".into(),   "1791033786.227345613037700936867".into()),),
+            ( 0, ("0.0".into(),  "5518874647.019060130141182226994".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -425,10 +430,10 @@ fn test_integrate_3l_rank_4_matad() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             (-3, ("0.0".into(),   "4975068.903103003548576756843470".into()),),
-            (-2, ("0.0".into(),  "-15967412.96033300288621485195252".into()),),
-            (-1, ("0.0".into(),   "46275660.33034806160550888444548".into()),),
-            ( 0, ("0.0".into(),  "-117731367.8844665539198405383934".into()),),
-            ( 1, ("0.0".into(),  "919780256.2106401071849409513709".into()),),
+            (-2, ("0.0".into(),   "38893977.28458284777498997027566".into()),),
+            (-1, ("0.0".into(),   "172684280.6796404510100040673463".into()),),
+            ( 0, ("0.0".into(),   "533601880.7076116546200537059229".into()),),
+            ( 1, ("0.0".into(),   "1931790768.728074898808769939759".into()),),
             ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -467,10 +472,10 @@ fn test_integrate_3l_rank_4_matad_additional_symbols_numerator() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             (-3, ("0.0".into(),   "51891342.24417464772786998080343".into()),),
-            (-2, ("0.0".into(),  "-167769771.6403982559590402103780".into()),),
-            (-1, ("0.0".into(),   "486068084.1087102468110182518293".into()),),
-            ( 0, ("0.0".into(),  "-1237710265.809503746583431557798".into()),),
-            ( 1, ( "0.0".into(),  "9616506746.507901578686816427718".into()),),
+            (-2, ("0.0".into(),   "404449675.4942040064883673562925".into()),),
+            (-1, ("0.0".into(),   "1791033786.227345613037700936867".into()),),
+            ( 0, ("0.0".into(),   "5518874647.019060130141182226994".into()),),
+            ( 1, ( "0.0".into(),  "19997559685.62917299165116831086".into()),),
             ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -503,8 +508,8 @@ fn test_integrate_3l_matad() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             (-1, ("0.0".into(), "-2311.289033520460340396770711738".into()),),
-            ( 0, ("0.0".into(),  "35134.99893627257345553503414002".into()),),
-            ( 1, ("0.0".into(),  "-287175.6919292485174272232526581".into()),),
+            ( 0, ("0.0".into(),  "9647.808284968523284819072033817".into()),),
+            ( 1, ("0.0".into(),  "-40259.80884519899852832255821372".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -578,10 +583,10 @@ fn test_integrate_4l_h_rank_4() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             (-4,  ("+10674.59739307939575801964744189".into(), "0.0".into()),),
-            (-3,  ("-47071.92195516143798974687670839".into(), "0.0".into()),),
-            (-2,  ("+61389.19910667747809242280299166".into(), "0.0".into()),),
-            (-1,  ("+928571.7264940044122518812620547".into(), "0.0".into()),),
-            ( 0,  ("+29325841.99455641744844958694905".into(), "0.0".into()),),
+            (-3,  ("+109876.8599799874165101526102648".into(), "0.0".into()),),
+            (-2,  ("+523100.2201190291672501506043102".into(), "0.0".into()),),
+            (-1,  ("+2398035.283172097754065659367279".into(), "0.0".into()),),
+            ( 0,  ("+45463747.08560375418644783085990".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
@@ -620,10 +625,10 @@ fn test_integrate_4l_h_rank_4_additional_symbols_numerator() {
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         vec![
             (-4,  ("+53372.98696539697879009823720947".into(), "0.0".into()),),
-            (-3,  ("-235359.6097758071899487343835420".into(), "0.0".into()),),
-            (-2,  ("-101464.4077196306917939828600505".into(), "0.0".into()),),
-            (-1,  ("+11355453.75154459334966095599239".into(), "0.0".into()),),
-            ( 0,  ("+277164323.3312205706615743239968".into(), "0.0".into()),),
+            (-3,  ("+549384.2998999370825507630513242".into(), "0.0".into()),),
+            (-2,  ("+2207090.697342127753994656146542".into(), "0.0".into()),),
+            (-1,  ("+12697906.62436134259734910568075".into(), "0.0".into()),),
+            ( 0,  ("+412404431.7658464058084812513050".into(), "0.0".into()),),
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );

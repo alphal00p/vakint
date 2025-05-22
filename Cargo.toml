@@ -28,3 +28,4 @@ test-log = "*"
 
 [patch.crates-io]
 #symbolica = { git = "https://github.com/benruijl/symbolica", rev = "dc423c78a69bb4127947b433ce4b4228edc70b54" }
+symbolica = { git = "https://github.com/alphal00p/symbolica" }

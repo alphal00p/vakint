@@ -12,7 +12,7 @@ fn test_1l_matching() {
     });
 
     debug!("Topologies:\n{}", vakint.topologies);
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
                 parse!(
@@ -34,7 +34,7 @@ fn test_1l_matching() {
         .unwrap(),
     );
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
                 parse!(
@@ -51,7 +51,7 @@ fn test_1l_matching() {
         parse!("(vk::k(1,2)^2+vk::k(1,33)*pext(12,33))*vk::topo(vk::I1L(muvsq,1))").unwrap(),
     );
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
                 parse!("(lm(1,2)^2+lm(1,33)*pext(12,33))*vk::topo(vk::I1L(muvsq,-3))")
@@ -75,7 +75,7 @@ fn test_2l_matching_3prop() {
 
     //println!("Topologies:\n{}", vakint.topologies);
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
                 parse!(
@@ -101,7 +101,7 @@ fn test_2l_matching_3prop() {
         .unwrap(),
     );
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
                 parse!(
@@ -121,7 +121,7 @@ fn test_2l_matching_3prop() {
             .unwrap(),
     );
 
-    compare_output(
+    _ = compare_output(
         vakint.to_canonical(
             parse!("(k(1,2)*k(1,2)+k(1,77)*k(2,77)+k(2,33)*p(42,33))*vk::topo(vk::I2L(mUVsq,1,2,1))")
                 .unwrap()
@@ -142,7 +142,7 @@ fn test_2l_matching_pinched() {
         ..VakintSettings::default()
     });
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
                 parse!(
@@ -166,7 +166,7 @@ fn test_2l_matching_pinched() {
         .unwrap(),
     );
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
                 parse!(
@@ -185,7 +185,7 @@ fn test_2l_matching_pinched() {
             .unwrap(),
     );
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
                 parse!(
@@ -207,7 +207,7 @@ fn test_2l_matching_pinched() {
         .unwrap(),
     );
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
                 parse!(
@@ -238,7 +238,7 @@ fn test_3l_matching_with_zero_powers_in_short_form() {
 
     debug!("Topologies:\n{}", vakint.topologies);
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
                 parse!(
@@ -285,7 +285,7 @@ fn test_unknown_integrals() {
 
     // println!("Topologies:\n{}", vakint_with_unknown_integrals.topologies);
 
-    compare_output(
+    _ = compare_output(
         vakint_with_unknown_integrals
             .to_canonical(unknown_integral.as_view(), false)
             .as_ref()
@@ -309,7 +309,7 @@ fn test_2l_pinched_matching() {
 
     // println!("Topologies:\n{}", vakint_with_unknown_integrals.topologies);
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
                 parse!("vk::topo(vk::prop(1,vk::edge(1,1),k(1),muvsq,1)*vk::prop(2,vk::edge(1,1),k(2),muvsq,1))")
