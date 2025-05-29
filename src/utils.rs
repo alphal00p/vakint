@@ -2,6 +2,7 @@ use ahash::HashMap;
 use symbolica::{
     atom::{Atom, AtomCore, AtomView, Symbol},
     coefficient::CoefficientView,
+    domains::float::Complex,
     id::{Condition, MatchSettings, Pattern, PatternRestriction},
 };
 use vakint_macros::vk_parse;
@@ -11,10 +12,10 @@ use crate::{eq_condition, VakintSettings};
 pub(crate) mod vakint_macros {
     macro_rules! vk_parse {
         ($s: expr) => {{
-            symbolica::parse!($s, crate::NAMESPACE)
+            symbolica::try_parse!($s, crate::NAMESPACE)
         }};
         ($s: expr, $ns: expr) => {{
-            symbolica::parse!($sm, $ns)
+            symbolica::try_parse!($sm, $ns)
         }};
     }
     macro_rules! vk_symbol {
@@ -33,17 +34,21 @@ pub(crate) mod vakint_macros {
 #[macro_export]
 macro_rules! vakint_parse {
     ($s: expr) => {{
-        symbolica::parse!($s, $crate::NAMESPACE)
+        symbolica::try_parse!($s, $crate::NAMESPACE)
     }};
     ($s: expr, $ns: expr) => {{
-        symbolica::parse!($sm, $ns)
+        symbolica::try_parse!($sm, $ns)
     }};
 }
 
 #[macro_export]
 macro_rules! vakint_symbol {
     ($s: expr) => {{
-        symbolica::symbol!(format!("{}::{}", $crate::NAMESPACE, $s))
+        if format!("{}", $s).starts_with(format!("{}::", $crate::NAMESPACE).as_str()) {
+            symbolica::symbol!($s)
+        } else {
+            symbolica::symbol!(format!("{}::{}", $crate::NAMESPACE, $s))
+        }
     }};
 }
 
@@ -72,6 +77,7 @@ pub fn replace_until_stable(
     }
     let mut old_res = replacer.with(rhs);
     loop {
+        // println!("lhs={}, rhs={}", lhs, rhs);
         let mut replacer = old_res.replace(lhs);
         if let Some(c) = conditions {
             replacer = replacer.when(c);
@@ -93,6 +99,34 @@ pub fn simplify_real(input: AtomView) -> Atom {
         Some(&Condition::from((crate::vk_symbol!("y_"), eq_condition(0)))),
         None,
     );
+    res = replace_until_stable(
+        res.as_view(),
+        &vk_parse!("log(x__*exp(EulerGamma))").unwrap().to_pattern(),
+        &vk_parse!("EulerGamma+log(x__)").unwrap().to_pattern(),
+        None,
+        None,
+    );
+    res = replace_until_stable(
+        res.as_view(),
+        &vk_parse!("exp(x_)^p_").unwrap().to_pattern(),
+        &vk_parse!("exp(p_*x_)").unwrap().to_pattern(),
+        None,
+        None,
+    );
+    // res = replace_until_stable(
+    //     res.as_view(),
+    //     &vk_parse!("log(x__*𝜋)").unwrap().to_pattern(),
+    //     &vk_parse!("log(x__)+log(𝜋)").unwrap().to_pattern(),
+    //     None,
+    //     None,
+    // );
+    // res = replace_until_stable(
+    //     res.as_view(),
+    //     &vk_parse!("log(x__*𝜋^p_)").unwrap().to_pattern(),
+    //     &vk_parse!("log(x__)+p_*log(𝜋)").unwrap().to_pattern(),
+    //     None,
+    //     None,
+    // );
     res = replace_until_stable(
         res.as_view(),
         &vk_parse!("log(exp(x_))").unwrap().to_pattern(),
@@ -121,6 +155,8 @@ pub fn simplify_real(input: AtomView) -> Atom {
         None,
         None,
     );
+    // Collect in EulerGamma to explicitly realise the MSbar cancellation
+    res = res.collect::<i8>(vakint_parse!("EulerGamma").unwrap(), None, None);
     res
 }
 
@@ -139,10 +175,12 @@ pub fn set_precision_in_float_atom(input: AtomView, settings: &VakintSettings) -
     let binary_prec = settings.get_binary_precision();
     if let AtomView::Num(fl_view) = input {
         match fl_view.get_coeff_view() {
-            CoefficientView::Float(fl) => {
-                let mut truncated_float = fl.to_float();
-                truncated_float.set_prec(binary_prec);
-                Atom::new_num(truncated_float)
+            CoefficientView::Float(fl_re, fl_im) => {
+                let mut truncated_float_re = fl_re.to_float();
+                truncated_float_re.set_prec(binary_prec);
+                let mut truncated_float_im = fl_im.to_float();
+                truncated_float_im.set_prec(binary_prec);
+                Atom::num(Complex::new(truncated_float_re, truncated_float_im))
             }
             _ => input.to_owned(),
         }
@@ -157,10 +195,10 @@ pub fn set_precision_in_polynomial_atom(
     settings: &VakintSettings,
 ) -> Atom {
     let mut res = Atom::Zero;
-    let coeffs = input.coefficient_list::<i8>(&[Atom::new_var(variable)]);
+    let coeffs = input.coefficient_list::<i8>(&[Atom::var(variable)]);
     for (var_with_power, coeff) in coeffs {
         let new_coeff = set_precision_in_float_atom(coeff.as_view(), settings);
-        res = res + new_coeff * var_with_power;
+        res += new_coeff * var_with_power;
     }
 
     res
@@ -180,7 +218,7 @@ pub fn split_linear_atom(a: AtomView, variable: AtomView) -> (Atom, Atom) {
                 .unwrap_or(&Atom::Zero)
                 .to_owned(),
             split_atom
-                .get(&Atom::new_num(1))
+                .get(&Atom::num(1))
                 .unwrap_or(&Atom::Zero)
                 .to_owned(),
         );

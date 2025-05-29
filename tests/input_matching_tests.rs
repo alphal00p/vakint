@@ -1,6 +1,6 @@
 mod test_utils;
 use log::debug;
-use symbolica::parse;
+use symbolica::try_parse;
 use test_utils::{compare_output, get_vakint};
 use vakint::{VakintError, VakintSettings};
 
@@ -12,10 +12,10 @@ fn test_1l_matching() {
     });
 
     debug!("Topologies:\n{}", vakint.topologies);
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
-                parse!(
+                try_parse!(
                     "(lm(8,2)*lm(8,2)+lm(8,33)*pext(12,33))*vk::topo(\
                     vk::prop(77,vk::edge(42,42),lm(8),muvsq,1)\
                 )"
@@ -26,7 +26,7 @@ fn test_1l_matching() {
             )
             .as_ref()
             .map(|a| a.as_view()),
-        parse!(
+        try_parse!(
             "(vk::k(1,2)^2+vk::k(1,33)*pext(12,33))*vk::topo(\
                 vk::prop(1,vk::edge(1,1),vk::k(1),muvsq,1)\
             )"
@@ -34,10 +34,10 @@ fn test_1l_matching() {
         .unwrap(),
     );
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
-                parse!(
+                try_parse!(
                     "(lm(8,2)*lm(8,2)+lm(8,33)*pext(12,33))*vk::topo(\
                     vk::prop(77,vk::edge(42,42),lm(8),muvsq,1)\
                 )"
@@ -48,20 +48,20 @@ fn test_1l_matching() {
             )
             .as_ref()
             .map(|a| a.as_view()),
-        parse!("(vk::k(1,2)^2+vk::k(1,33)*pext(12,33))*vk::topo(vk::I1L(muvsq,1))").unwrap(),
+        try_parse!("(vk::k(1,2)^2+vk::k(1,33)*pext(12,33))*vk::topo(vk::I1L(muvsq,1))").unwrap(),
     );
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
-                parse!("(lm(1,2)^2+lm(1,33)*pext(12,33))*vk::topo(vk::I1L(muvsq,-3))")
+                try_parse!("(lm(1,2)^2+lm(1,33)*pext(12,33))*vk::topo(vk::I1L(muvsq,-3))")
                     .unwrap()
                     .as_view(),
                 false,
             )
             .as_ref()
             .map(|a| a.as_view()),
-        parse!("(lm(1,2)^2+lm(1,33)*pext(12,33))*vk::topo(vk::prop(1,vk::edge(1,1),vk::k(1),muvsq,-3))")
+        try_parse!("(lm(1,2)^2+lm(1,33)*pext(12,33))*vk::topo(vk::prop(1,vk::edge(1,1),vk::k(1),muvsq,-3))")
             .unwrap(),
     );
 }
@@ -75,10 +75,10 @@ fn test_2l_matching_3prop() {
 
     //println!("Topologies:\n{}", vakint.topologies);
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
-                parse!(
+                try_parse!(
                     "(k(11,2)*k(11,2)+k(11,77)*k(22,77)+k(22,33)*p(42,33))*vk::topo(\
                             vk::prop(9,vk::edge(7,10),k(11),mUVsq,1)*\
                             vk::prop(33,vk::edge(7,10),k(22),mUVsq,2)*\
@@ -91,7 +91,7 @@ fn test_2l_matching_3prop() {
             )
             .as_ref()
             .map(|a| a.as_view()),
-        parse!(
+        try_parse!(
             "(vk::k(1,2)*vk::k(1,2)+vk::k(1,77)*vk::k(2,77)+vk::k(2,33)*p(42,33))*vk::topo(\
                         vk::prop(1,vk::edge(1,2),vk::k(1),mUVsq,1)*\
                         vk::prop(2,vk::edge(1,2),vk::k(2),mUVsq,2)*\
@@ -101,10 +101,10 @@ fn test_2l_matching_3prop() {
         .unwrap(),
     );
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
-                parse!(
+                try_parse!(
                     "(vk::k(11,2)*vk::k(11,2)+vk::k(11,77)*vk::k(22,77)+vk::k(22,33)*p(42,33))*vk::topo(\
                             vk::prop(9,vk::edge(7,10),vk::k(11),mUVsq,1)*\
                             vk::prop(33,vk::edge(7,10),vk::k(22),mUVsq,2)*\
@@ -117,18 +117,18 @@ fn test_2l_matching_3prop() {
             )
             .as_ref()
             .map(|a| a.as_view()),
-        parse!("(vk::k(1,2)*vk::k(1,2)+vk::k(1,77)*vk::k(2,77)+vk::k(2,33)*p(42,33))*vk::topo(vk::I2L(mUVsq,1,2,1))")
+        try_parse!("(vk::k(1,2)*vk::k(1,2)+vk::k(1,77)*vk::k(2,77)+vk::k(2,33)*p(42,33))*vk::topo(vk::I2L(mUVsq,1,2,1))")
             .unwrap(),
     );
 
-    compare_output(
+    _ = compare_output(
         vakint.to_canonical(
-            parse!("(k(1,2)*k(1,2)+k(1,77)*k(2,77)+k(2,33)*p(42,33))*vk::topo(vk::I2L(mUVsq,1,2,1))")
+            try_parse!("(k(1,2)*k(1,2)+k(1,77)*k(2,77)+k(2,33)*p(42,33))*vk::topo(vk::I2L(mUVsq,1,2,1))")
                 .unwrap()
                 .as_view(),
             false,
         ).as_ref().map(|a| a.as_view()),
-        parse!("(k(1,2)*k(1,2)+k(1,77)*k(2,77)+k(2,33)*p(42,33))*vk::topo(\
+        try_parse!("(k(1,2)*k(1,2)+k(1,77)*k(2,77)+k(2,33)*p(42,33))*vk::topo(\
                                                 vk::prop(1,vk::edge(1,2),vk::k(1),mUVsq,1)*vk::prop(2,vk::edge(1,2),vk::k(2),mUVsq,2)*\
                                                 vk::prop(3,vk::edge(2,1),vk::k(1)+vk::k(2),mUVsq,1)\
                                             )").unwrap(),
@@ -142,10 +142,10 @@ fn test_2l_matching_pinched() {
         ..VakintSettings::default()
     });
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
-                parse!(
+                try_parse!(
                     "(k(11,2)*k(11,2)+k(11,77)*k(22,77)+k(22,33)*p(42,33))*vk::topo(\
                             vk::prop(33,vk::edge(10,10),k(22),mUVsq,2)*\
                             vk::prop(55,vk::edge(10,10),k(11),mUVsq,1)\
@@ -157,7 +157,7 @@ fn test_2l_matching_pinched() {
             )
             .as_ref()
             .map(|a| a.as_view()),
-        parse!(
+        try_parse!(
             "(vk::k(2,2)^2+vk::k(1,33)*p(42,33)+vk::k(1,77)*vk::k(2,77))*vk::topo(\
                         vk::prop(1,vk::edge(1,1),vk::k(1),mUVsq,2)*\
                         vk::prop(2,vk::edge(1,1),vk::k(2),mUVsq,1)
@@ -166,10 +166,10 @@ fn test_2l_matching_pinched() {
         .unwrap(),
     );
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
-                parse!(
+                try_parse!(
                     "(k(11,2)*k(11,2)+k(11,77)*k(22,77)+k(22,33)*p(42,33))*vk::topo(\
                             vk::prop(33,vk::edge(10,10),k(22),mUVsq,2)*\
                             vk::prop(55,vk::edge(10,10),k(11),mUVsq,1)\
@@ -181,14 +181,14 @@ fn test_2l_matching_pinched() {
             )
             .as_ref()
             .map(|a| a.as_view()),
-        parse!("(vk::k(2,2)^2+vk::k(1,33)*p(42,33)+vk::k(1,77)*vk::k(2,77))*vk::topo(vk::I2L_pinch_3(mUVsq,2,1,0))")
+        try_parse!("(vk::k(2,2)^2+vk::k(1,33)*p(42,33)+vk::k(1,77)*vk::k(2,77))*vk::topo(vk::I2L_pinch_3(mUVsq,2,1,0))")
             .unwrap(),
     );
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
-                parse!(
+                try_parse!(
                     "(vk::k(2,2)^2+vk::k(1,33)*p(42,33)+vk::k(1,77)*vk::k(2,77))*vk::topo(vk::I2L(mUVsq,2,1,0))"
                 )
                 .unwrap()
@@ -197,7 +197,7 @@ fn test_2l_matching_pinched() {
             )
             .as_ref()
             .map(|a| a.as_view()),
-        parse!(
+        try_parse!(
             "(vk::k(2,2)^2+vk::k(1,33)*p(42,33)+vk::k(1,77)*vk::k(2,77))*vk::topo(\
                         vk::prop(1,vk::edge(1,2),vk::k(1),mUVsq,2)*\
                         vk::prop(2,vk::edge(1,2),vk::k(2),mUVsq,1)*\
@@ -207,10 +207,10 @@ fn test_2l_matching_pinched() {
         .unwrap(),
     );
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
-                parse!(
+                try_parse!(
                     "(vk::k(2,2)^2+vk::k(1,33)*p(42,33)+vk::k(1,77)*vk::k(2,77))*vk::topo(vk::I2L_pinch_3(mUVsq,2,1,0))"
                 )
                 .unwrap()
@@ -219,7 +219,7 @@ fn test_2l_matching_pinched() {
             )
             .as_ref()
             .map(|a| a.as_view()),
-        parse!(
+        try_parse!(
             "(vk::k(2,2)^2+vk::k(1,33)*p(42,33)+vk::k(1,77)*vk::k(2,77))*vk::topo(\
                         vk::prop(1,vk::edge(1,1),vk::k(1),mUVsq,2)*\
                         vk::prop(2,vk::edge(1,1),vk::k(2),mUVsq,1)
@@ -238,10 +238,10 @@ fn test_3l_matching_with_zero_powers_in_short_form() {
 
     debug!("Topologies:\n{}", vakint.topologies);
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
-                parse!(
+                try_parse!(
                     "( 1 )*vk::topo(\
                 vk::prop(1,vk::edge(1,2),k(1),muvsq,1)\
               * vk::prop(2,vk::edge(1,2),k(2),muvsq,1)\
@@ -255,7 +255,7 @@ fn test_3l_matching_with_zero_powers_in_short_form() {
             )
             .as_ref()
             .map(|a| a.as_view()),
-        parse!("vk::topo(vk::I3L_pinch_1_6(muvsq,0,1,1,1,2,0))").unwrap(),
+        try_parse!("vk::topo(vk::I3L_pinch_1_6(muvsq,0,1,1,1,2,0))").unwrap(),
     );
 }
 
@@ -270,7 +270,7 @@ fn test_unknown_integrals() {
         ..VakintSettings::default()
     });
 
-    let unknown_integral = parse!(
+    let unknown_integral = try_parse!(
         "(vk::k(1,2)*vk::k(1,2)+vk::k(1,77)*vk::k(2,77)+vk::k(2,33)*p(42,33))*vk::topo(\
                     vk::prop(1,vk::edge(7,10),vk::k(2),mA,2)*\
                     vk::prop(2,vk::edge(7,10),vk::k(1),mB,1)\
@@ -285,12 +285,12 @@ fn test_unknown_integrals() {
 
     // println!("Topologies:\n{}", vakint_with_unknown_integrals.topologies);
 
-    compare_output(
+    _ = compare_output(
         vakint_with_unknown_integrals
             .to_canonical(unknown_integral.as_view(), false)
             .as_ref()
             .map(|a| a.as_view()),
-        parse!(
+        try_parse!(
             "(vk::k(1,2)^2+vk::k(1,77)*vk::k(2,77)+vk::k(2,33)*p(42,33))*vk::topo(vk::UNKNOWN(\
                         vk::prop(1,vk::edge(7,10),vk::k(2),mA,2)*\
                         vk::prop(2,vk::edge(7,10),vk::k(1),mB,1))\
@@ -309,16 +309,16 @@ fn test_2l_pinched_matching() {
 
     // println!("Topologies:\n{}", vakint_with_unknown_integrals.topologies);
 
-    compare_output(
+    _ = compare_output(
         vakint
             .to_canonical(
-                parse!("vk::topo(vk::prop(1,vk::edge(1,1),k(1),muvsq,1)*vk::prop(2,vk::edge(1,1),k(2),muvsq,1))")
+                try_parse!("vk::topo(vk::prop(1,vk::edge(1,1),k(1),muvsq,1)*vk::prop(2,vk::edge(1,1),k(2),muvsq,1))")
                     .unwrap()
                     .as_view(),
                 true,
             )
             .as_ref()
             .map(|a| a.as_view()),
-        parse!("vk::topo(vk::I2L_pinch_3(muvsq,1,1,0))").unwrap(),
+        try_parse!("vk::topo(vk::I2L_pinch_3(muvsq,1,1,0))").unwrap(),
     );
 }

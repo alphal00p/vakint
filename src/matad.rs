@@ -244,7 +244,7 @@ impl MATAD {
             .with_map(move |match_in| {
                 let n = get_integer_from_atom(match_in.get(S.n_).unwrap().to_atom().as_view())
                     .unwrap() as u32;
-                Atom::new_num(Integer::factorial(n - 1))
+                Atom::num(Integer::factorial(n - 1))
             });
         r.repeat_map(Box::new(move |av: AtomView| {
             let mut res = av.to_owned();
@@ -415,7 +415,7 @@ impl Vakint {
         // println!("Numerator before processing: {}", numerator);
 
         numerator = numerator
-            .replace(Atom::new_var(muv_sq_symbol).to_pattern())
+            .replace(Atom::var(muv_sq_symbol).to_pattern())
             .with(vk_parse!("M^2").unwrap().to_pattern());
         if utils::could_match(
             &function!(S.dot, function!(S.p, S.id1_a), function!(S.k, S.id2_a)).to_pattern(),
@@ -444,7 +444,7 @@ impl Vakint {
         let mut lmb_prop_indices = vec![];
         for i_loop in 1..=integral.n_loops {
             if let Some((i_edge, _)) = momenta.iter().find(|(_i_prop, k)| {
-                k.as_view() == function!(S.k, Atom::new_num(i_loop as i64)).as_view()
+                k.as_view() == function!(S.k, Atom::num(i_loop as i64)).as_view()
             }) {
                 lmb_prop_indices.push(*i_edge as isize);
             } else {
@@ -495,7 +495,7 @@ impl Vakint {
 
         // let indices = Vakint::identify_vector_indices(numerator.as_view())?;
         // for (i_index, user_i) in indices.iter().enumerate() {
-        //     numerator = numerator.replace(user_i.to_pattern()).with(Atom::new_num(
+        //     numerator = numerator.replace(user_i.to_pattern()).with(Atom::num(
         //         (FORM_REPLACEMENT_INDEX_SHIFT + 1 + (i_index as u64)) as i64,
         //     ));
         // }
@@ -515,7 +515,7 @@ impl Vakint {
             .map(|i_prop| {
                 integral_specs
                     .canonical_expression_substitutions
-                    .get(&function!(S.pow, Atom::new_num(i_prop as i64)))
+                    .get(&function!(S.pow, Atom::num(i_prop as i64)))
                     .map(|a| a.try_into().unwrap())
                     .unwrap_or(0)
             })
@@ -615,8 +615,8 @@ impl Vakint {
         .unwrap();
 
         // Since MATAD uses euclidean denominator, we must adjust the overall sign by (-1) per quadratic denominator with power one.
-        matad_normalization_correction = matad_normalization_correction
-            * vk_parse!(format!("((-1)^{})", powers.iter().sum::<i64>()).as_str()).unwrap();
+        matad_normalization_correction *=
+            vk_parse!(format!("((-1)^{})", powers.iter().sum::<i64>()).as_str()).unwrap();
 
         // Adjust normalization factor
         let mut complete_normalization = matad_normalization_correction
@@ -624,12 +624,12 @@ impl Vakint {
                 .settings
                 .get_integral_normalization_factor_atom()?
                 .replace(S.n_loops.to_pattern())
-                .with(Atom::new_num(integral.n_loops as i64).to_pattern());
+                .with(Atom::num(integral.n_loops as i64).to_pattern());
         complete_normalization = complete_normalization
-            .replace(Atom::new_var(vk_symbol!(self.settings.epsilon_symbol.as_str())).to_pattern())
+            .replace(Atom::var(vk_symbol!(self.settings.epsilon_symbol.as_str())).to_pattern())
             .with(vk_parse!("ep").unwrap().to_pattern());
 
-        evaluated_integral = evaluated_integral * complete_normalization;
+        evaluated_integral *= complete_normalization;
 
         if options.expand_masters {
             let expansion_depth = vakint.settings.number_of_terms_in_epsilon_expansion
@@ -657,7 +657,7 @@ impl Vakint {
             // evaluated_integral = vk_parse!("(any___)^-1").unwrap().replace_all(
             //     evaluated_integral.as_view(),
             //     &PatternOrMap::Map(Box::new(move |match_in| {
-            //         Atom::new_num(1) / match_in.get(S.any___).unwrap().to_atom().expand()
+            //         Atom::num(1) / match_in.get(S.any___).unwrap().to_atom().expand()
             //     })),
             //     None,
             //     None,
@@ -728,7 +728,7 @@ impl Vakint {
 
         evaluated_integral = evaluated_integral
             .replace(vk_parse!("ep").unwrap().to_pattern())
-            .with(Atom::new_var(vk_symbol!(self.settings.epsilon_symbol.as_str())).to_pattern());
+            .with(Atom::var(vk_symbol!(self.settings.epsilon_symbol.as_str())).to_pattern());
 
         if !vakint.settings.use_dot_product_notation {
             evaluated_integral =
@@ -737,13 +737,13 @@ impl Vakint {
 
         let log_muv_mu_sq = function!(
             Atom::LOG,
-            Atom::new_var(muv_sq_symbol)
-                / Atom::new_var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            Atom::var(muv_sq_symbol)
+                / Atom::var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         let log_mu_sq = function!(
             Atom::LOG,
-            Atom::new_var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            Atom::var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         evaluated_integral = evaluated_integral

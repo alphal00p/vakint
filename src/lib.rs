@@ -63,12 +63,19 @@ use symbols::{EXTERNAL_MOMENTUM_SYMBOL, LOOP_MOMENTUM_SYMBOL, METRIC_SYMBOL, S};
 
 use phf::phf_map;
 
-pub type Momentum = (
+pub enum Momentum {
+    Complex(ComplexMomentum),
+    Real(RealMomentum),
+}
+
+pub type ComplexMomentum = (
     Complex<Float>,
     Complex<Float>,
     Complex<Float>,
     Complex<Float>,
 );
+
+pub type RealMomentum = (Float, Float, Float, Float);
 
 pub static FORM_REPLACEMENT_INDEX_SHIFT: u64 = 13370000;
 
@@ -188,6 +195,17 @@ pub enum VakintError {
 pub fn params_from_f64(
     params: &HashMap<String, f64, ahash::RandomState>,
     decimal_prec: u32,
+) -> HashMap<String, Float, ahash::RandomState> {
+    let binary_prec: u32 = ((decimal_prec as f64) * LOG2_10).floor() as u32;
+    params
+        .iter()
+        .map(|(k, v)| (k.clone(), Float::with_val(binary_prec, v)))
+        .collect()
+}
+
+pub fn params_from_complex_f64(
+    params: &HashMap<String, Complex<f64>, ahash::RandomState>,
+    decimal_prec: u32,
 ) -> HashMap<String, Complex<Float>, ahash::RandomState> {
     let binary_prec: u32 = ((decimal_prec as f64) * LOG2_10).floor() as u32;
     params
@@ -196,8 +214,8 @@ pub fn params_from_f64(
             (
                 k.clone(),
                 Complex::new(
-                    Float::with_val(binary_prec, v),
-                    Float::with_val(binary_prec, 0),
+                    Float::with_val(binary_prec, v.re),
+                    Float::with_val(binary_prec, v.im),
                 ),
             )
         })
@@ -214,24 +232,50 @@ pub fn externals_from_f64(
         .map(|(&k, v)| {
             (
                 k,
-                (
+                Momentum::Real((
+                    Float::with_val(binary_prec, v.0),
+                    Float::with_val(binary_prec, v.1),
+                    Float::with_val(binary_prec, v.2),
+                    Float::with_val(binary_prec, v.3),
+                )),
+            )
+        })
+        .collect()
+}
+
+#[allow(clippy::type_complexity)]
+pub fn externals_from_complex_f64(
+    externals: &HashMap<
+        usize,
+        (Complex<f64>, Complex<f64>, Complex<f64>, Complex<f64>),
+        ahash::RandomState,
+    >,
+    decimal_prec: u32,
+) -> HashMap<usize, Momentum, ahash::RandomState> {
+    let binary_prec: u32 = ((decimal_prec as f64) * LOG2_10).floor() as u32;
+    externals
+        .iter()
+        .map(|(&k, v)| {
+            (
+                k,
+                Momentum::Complex((
                     Complex::new(
-                        Float::with_val(binary_prec, v.0),
-                        Float::with_val(binary_prec, 0.0),
+                        Float::with_val(binary_prec, v.0.re),
+                        Float::with_val(binary_prec, v.0.im),
                     ),
                     Complex::new(
-                        Float::with_val(binary_prec, v.1),
-                        Float::with_val(binary_prec, 0.0),
+                        Float::with_val(binary_prec, v.1.re),
+                        Float::with_val(binary_prec, v.1.im),
                     ),
                     Complex::new(
-                        Float::with_val(binary_prec, v.2),
-                        Float::with_val(binary_prec, 0.0),
+                        Float::with_val(binary_prec, v.2.re),
+                        Float::with_val(binary_prec, v.2.im),
                     ),
                     Complex::new(
-                        Float::with_val(binary_prec, v.3),
-                        Float::with_val(binary_prec, 0.0),
+                        Float::with_val(binary_prec, v.3.re),
+                        Float::with_val(binary_prec, v.3.im),
                     ),
-                ),
+                )),
             )
         })
         .collect()
@@ -795,28 +839,26 @@ impl Integral {
 
                 let (id_node_left, id_node_right) = get_node_ids(&m)?;
 
-                generic_expression = generic_expression
-                    * vk_parse!(format!(
-                        "prop(id{id}_,uedge(n{id_l_node}l_,n{id_r_node}r_),q{id}__,{mass},{power})",
-                        id = i_prop,
-                        id_l_node = id_node_left,
-                        id_r_node = id_node_right,
-                        mass = mass_symbol_string,
-                        power = pow_symbol_string
-                    )
-                    .as_str())
-                    .unwrap();
-                unoriented_generic_expression = unoriented_generic_expression
-                    * vk_parse!(format!(
-                        "prop(id{id}_,uedge(n{id_l_node}_,n{id_r_node}_),q{id}__,{mass},{power})",
-                        id = i_prop,
-                        id_l_node = id_node_left,
-                        id_r_node = id_node_right,
-                        mass = mass_symbol_string,
-                        power = pow_symbol_string
-                    )
-                    .as_str())
-                    .unwrap();
+                generic_expression *= vk_parse!(format!(
+                    "prop(id{id}_,uedge(n{id_l_node}l_,n{id_r_node}r_),q{id}__,{mass},{power})",
+                    id = i_prop,
+                    id_l_node = id_node_left,
+                    id_r_node = id_node_right,
+                    mass = mass_symbol_string,
+                    power = pow_symbol_string
+                )
+                .as_str())
+                .unwrap();
+                unoriented_generic_expression *= vk_parse!(format!(
+                    "prop(id{id}_,uedge(n{id_l_node}_,n{id_r_node}_),q{id}__,{mass},{power})",
+                    id = i_prop,
+                    id_l_node = id_node_left,
+                    id_r_node = id_node_right,
+                    mass = mass_symbol_string,
+                    power = pow_symbol_string
+                )
+                .as_str())
+                .unwrap();
 
                 let new_conditions =
                     Condition::from((vk_symbol!(mass_symbol_string.clone()), symbol_or_number()))
@@ -930,7 +972,7 @@ impl Integral {
                 );
         }
 
-        let mut alphaloop_expression = Atom::new_num(1);
+        let mut alphaloop_expression = Atom::num(1);
 
         for (_n_id, node) in graph.nodes.iter() {
             let mut fb = FunctionBuilder::new(vk_symbol!("vxs"));
@@ -940,15 +982,14 @@ impl Integral {
                         * if dir.is_incoming() { 1 } else { -1 }),
                 );
             }
-            alphaloop_expression = alphaloop_expression * fb.finish();
+            alphaloop_expression *= fb.finish();
         }
         for (&e_id, edge) in graph.edges.iter() {
-            alphaloop_expression = alphaloop_expression
-                * function!(
-                    vk_symbol!("uvprop"),
-                    &edge.momentum,
-                    function!(vk_symbol!("pow"), Atom::new_num(e_id as i64))
-                );
+            alphaloop_expression *= function!(
+                vk_symbol!("uvprop"),
+                &edge.momentum,
+                function!(vk_symbol!("pow"), Atom::num(e_id as i64))
+            );
         }
 
         Ok(Integral {
@@ -1566,7 +1607,8 @@ impl EvaluationMethod {
         &mut self,
         quiet: Option<bool>,
         relative_precision: f64,
-        numerical_masses: &HashMap<String, Complex<Float>, RandomState>,
+        numerical_params_real: &HashMap<String, Float, RandomState>,
+        numerical_params_complex: &HashMap<String, Complex<Float>, RandomState>,
         numerical_external_momenta: &HashMap<usize, Momentum, RandomState>,
     ) {
         match self {
@@ -1574,21 +1616,30 @@ impl EvaluationMethod {
             EvaluationMethod::MATAD(_) => {}
             EvaluationMethod::FMFT(_) => {}
             EvaluationMethod::PySecDec(opts) => {
-                let f64_numerical_masses = numerical_masses
-                    .iter()
-                    .map(|(k, v)| (k.clone(), v.norm().re.to_f64()))
-                    .collect();
+                let mut f64_numerical_masses: HashMap<String, f64, std::hash::RandomState> =
+                    numerical_params_complex
+                        .iter()
+                        .map(|(k, v)| (k.clone(), v.norm().re.to_f64()))
+                        .collect();
+                for (k, v) in numerical_params_real.iter() {
+                    f64_numerical_masses.insert(k.clone(), v.to_f64());
+                }
                 let f64_numerical_external_momenta = numerical_external_momenta
                     .iter()
                     .map(|(k, v)| {
                         (
                             format!("p{}", k),
-                            (
-                                v.0.norm().re.to_f64(),
-                                v.1.norm().re.to_f64(),
-                                v.2.norm().re.to_f64(),
-                                v.3.norm().re.to_f64(),
-                            ),
+                            match v {
+                                Momentum::Complex(k) => (
+                                    k.0.norm().re.to_f64(),
+                                    k.1.norm().re.to_f64(),
+                                    k.2.norm().re.to_f64(),
+                                    k.3.norm().re.to_f64(),
+                                ),
+                                Momentum::Real(k) => {
+                                    (k.0.to_f64(), k.1.to_f64(), k.2.to_f64(), k.3.to_f64())
+                                }
+                            },
                         )
                     })
                     .collect();
@@ -1716,14 +1767,16 @@ impl EvaluationOrder {
         &mut self,
         quiet: Option<bool>,
         relative_precision: f64,
-        numerical_masses: &HashMap<String, Complex<Float>, RandomState>,
+        numerical_params_real: &HashMap<String, Float, RandomState>,
+        numerical_params_complex: &HashMap<String, Complex<Float>, RandomState>,
         numerical_external_momenta: &HashMap<usize, Momentum, RandomState>,
     ) {
         for method in self.0.iter_mut() {
             method.adjust(
                 quiet,
                 relative_precision,
-                numerical_masses,
+                numerical_params_real,
+                numerical_params_complex,
                 numerical_external_momenta,
             );
         }
@@ -1761,12 +1814,9 @@ impl VakintSettings {
         ((self.run_time_decimal_precision.max(17) as f64) * LOG2_10).floor() as u32
     }
 
-    pub fn real_to_prec(&self, re: &str) -> Complex<Float> {
+    pub fn real_to_prec(&self, re: &str) -> Float {
         let prec = self.get_binary_precision();
-        Complex::new(
-            Float::parse(re, Some(prec)).unwrap(),
-            Float::parse("0", Some(prec)).unwrap(),
-        )
+        Float::parse(re, Some(prec)).unwrap()
     }
 
     pub fn complex_to_prec(&self, re: &str, im: &str) -> Complex<Float> {
@@ -1834,7 +1884,7 @@ impl LoopNormalizationFactor {
         let expr: Atom = self.to_atom(settings)?;
         let expanded_expr = expr
             .replace(vk_parse!("n_loops").unwrap().to_pattern())
-            .with(Atom::new_num(1).to_pattern());
+            .with(Atom::num(1).to_pattern());
 
         let expanded_expr = match expanded_expr.series(
             vk_symbol!(settings.epsilon_symbol.as_str()),
@@ -1849,13 +1899,13 @@ impl LoopNormalizationFactor {
         let mut expanded_expr_atom = expanded_expr.to_atom();
         let log_mu_sq = function!(
             Atom::LOG,
-            Atom::new_var(vk_symbol!(settings.mu_r_sq_symbol.as_str()))
+            Atom::var(vk_symbol!(settings.mu_r_sq_symbol.as_str()))
         );
         expanded_expr_atom = expanded_expr_atom
             .replace(vk_parse!("log_mu_sq").unwrap().to_pattern())
             .with(log_mu_sq.to_pattern());
 
-        let mut params: HashMap<String, Complex<Float>, _> = HashMap::default();
+        let mut params: HashMap<String, Float, _> = HashMap::default();
         params.insert(
             vk_symbol!(settings.mu_r_sq_symbol.as_str())
                 .get_name()
@@ -1866,6 +1916,7 @@ impl LoopNormalizationFactor {
             settings,
             expanded_expr_atom.as_view(),
             &params,
+            &HashMap::default(),
             None,
         ) {
             Ok(r) => r,
@@ -1927,10 +1978,10 @@ impl TryFrom<&LoopNormalizationFactor> for Atom {
             Ok(a) => {
                 let mut processed_a = a
                     .replace(vk_parse!("I").unwrap().to_pattern())
-                    .with(Atom::new_var(Atom::I).to_pattern());
+                    .with(Atom::var(S.cmplx_i).to_pattern());
                 processed_a = processed_a
                     .replace(vk_parse!("pi").unwrap().to_pattern())
-                    .with(Atom::new_var(Atom::PI).to_pattern());
+                    .with(Atom::var(Atom::PI).to_pattern());
                 Ok(processed_a)
             }
             Err(e) => Err(VakintError::InvalidLoopNormalization(
@@ -2037,7 +2088,7 @@ impl VakintTerm {
                     &integral_specs,
                 )?;
                 self.numerator = simplify_real(evaluated_integral.as_view());
-                self.integral = Atom::new_num(1);
+                self.integral = Atom::num(1);
                 could_evaluate_integral = true;
                 break 'eval;
             }
@@ -2342,7 +2393,7 @@ impl VakintExpression {
         for (integral, numerator) in
             input.coefficient_list::<i8>(&topo_variables.iter().collect::<Vec<_>>())
         {
-            if integral == Atom::new_num(1) {
+            if integral == Atom::num(1) {
                 return Err(VakintError::InvalidIntegralFormat(format!("{}", numerator)));
             }
             if utils::could_match(
@@ -2462,7 +2513,7 @@ impl From<VakintExpression> for Atom {
         let mut res = Atom::Zero;
         for term in vakint_expr.0.iter() {
             let t: Atom = VakintTerm::into(term.clone());
-            res = res + t;
+            res += t;
         }
         res
     }
@@ -2507,9 +2558,9 @@ impl NumericalEvaluationResult {
     pub fn to_atom(&self, epsilon_symbol: Symbol) -> Atom {
         let mut res = Atom::Zero;
         for (exp, coeff) in self.get_epsilon_coefficients() {
-            res = res
-                + (Atom::new_num(coeff.re) + Atom::new_var(Atom::I) * Atom::new_num(coeff.im))
-                    * Atom::new_var(epsilon_symbol).pow(Atom::new_num(exp))
+            // res += (Atom::num(coeff.re) + Atom::var(S.cmplx_i) * Atom::num(coeff.im))
+            //     * Atom::var(epsilon_symbol).pow(Atom::num(exp))
+            res += Atom::num(coeff) * Atom::var(epsilon_symbol).pow(Atom::num(exp))
         }
         res
     }
@@ -2519,7 +2570,7 @@ impl NumericalEvaluationResult {
         epsilon_symbol: Symbol,
         settings: &VakintSettings,
     ) -> Result<Self, VakintError> {
-        let epsilon_coeffs = input.coefficient_list::<i8>(&[Atom::new_var(epsilon_symbol)]);
+        let epsilon_coeffs = input.coefficient_list::<i8>(&[Atom::var(epsilon_symbol)]);
 
         let epsilon_coeffs_vec = epsilon_coeffs
             .iter()
@@ -2538,9 +2589,9 @@ impl NumericalEvaluationResult {
                         get_integer_from_atom(m.get(&vk_symbol!("n_")).unwrap().as_view()).unwrap(),
                         coeff,
                     )
-                } else if *eps_atom == Atom::new_var(epsilon_symbol) {
+                } else if *eps_atom == Atom::var(epsilon_symbol) {
                     (1, coeff)
-                } else if *eps_atom == Atom::new_num(1) {
+                } else if *eps_atom == Atom::num(1) {
                     (0, coeff)
                 } else {
                     panic!("Epsilon atom should be of the form {}^n_", epsilon_symbol)
@@ -2816,11 +2867,21 @@ impl Vakint {
     pub fn params_from_f64(
         &self,
         params: &HashMap<String, f64>,
-    ) -> HashMap<String, Complex<Float>, ahash::RandomState> {
+    ) -> HashMap<String, Float, ahash::RandomState> {
         let hm = HashMap::<String, f64, ahash::RandomState>::from_iter(
             params.iter().map(|(k, v)| (k.clone(), *v)),
         );
         params_from_f64(&hm, self.settings.run_time_decimal_precision)
+    }
+
+    pub fn params_from_complex_f64(
+        &self,
+        params: &HashMap<String, Complex<f64>>,
+    ) -> HashMap<String, Complex<Float>, ahash::RandomState> {
+        let hm = HashMap::<String, Complex<f64>, ahash::RandomState>::from_iter(
+            params.iter().map(|(k, v)| (k.clone(), *v)),
+        );
+        params_from_complex_f64(&hm, self.settings.run_time_decimal_precision)
     }
 
     pub fn externals_from_f64(
@@ -2833,34 +2894,61 @@ impl Vakint {
         externals_from_f64(&em, self.settings.run_time_decimal_precision)
     }
 
+    #[allow(clippy::type_complexity)]
+    pub fn externals_from_complex_f64(
+        &self,
+        externals: &HashMap<usize, (Complex<f64>, Complex<f64>, Complex<f64>, Complex<f64>)>,
+    ) -> HashMap<usize, Momentum, ahash::RandomState> {
+        let em = HashMap::<
+            usize,
+            (Complex<f64>, Complex<f64>, Complex<f64>, Complex<f64>),
+            ahash::RandomState,
+        >::from_iter(externals.iter().map(|(k, v)| (*k, *v)));
+        externals_from_complex_f64(&em, self.settings.run_time_decimal_precision)
+    }
+
     pub fn numerical_evaluation(
         &self,
         expression: AtomView,
-        params: &HashMap<String, Complex<Float>, ahash::RandomState>,
+        params_real: &HashMap<String, Float, ahash::RandomState>,
+        params_complex: &HashMap<String, Complex<Float>, ahash::RandomState>,
         externals: Option<&HashMap<usize, Momentum, ahash::RandomState>>,
     ) -> Result<(NumericalEvaluationResult, Option<NumericalEvaluationResult>), VakintError> {
-        Vakint::full_numerical_evaluation(&self.settings, expression, params, externals)
+        Vakint::full_numerical_evaluation(
+            &self.settings,
+            expression,
+            params_real,
+            params_complex,
+            externals,
+        )
     }
 
     pub fn get_coeff_map(prec: u32) -> impl Fn(&Fraction<IntegerRing>) -> Complex<Float> {
         move |x| Complex::new(x.to_multi_prec_float(prec), Float::with_val(prec, 0.))
     }
 
+    #[allow(clippy::complexity)]
     pub fn get_constants_map(
         settings: &VakintSettings,
-        params: &HashMap<String, Complex<Float>, ahash::RandomState>,
+        params_real: &HashMap<String, Float, ahash::RandomState>,
+        params_complex: &HashMap<String, Complex<Float>, ahash::RandomState>,
         externals: Option<&HashMap<usize, Momentum, ahash::RandomState>>,
-    ) -> Result<HashMap<Atom, Complex<Float>, ahash::random_state::RandomState>, VakintError> {
-        let mut const_map: HashMap<Atom, Complex<Float>, ahash::random_state::RandomState> =
+    ) -> Result<
+        (
+            HashMap<Atom, Float, ahash::random_state::RandomState>,
+            HashMap<Atom, Complex<Float>, ahash::random_state::RandomState>,
+        ),
+        VakintError,
+    > {
+        let mut const_map_real: HashMap<Atom, Float, ahash::random_state::RandomState> =
+            HashMap::default();
+        let mut const_map_complex: HashMap<Atom, Complex<Float>, ahash::random_state::RandomState> =
             HashMap::default();
 
         let binary_prec = settings.get_binary_precision();
-        const_map.insert(
+        const_map_real.insert(
             Atom::from(Var::new(Atom::PI)),
-            Complex::new(
-                Float::with_val(binary_prec, Constant::Pi),
-                Float::with_val(binary_prec, 0),
-            ),
+            Float::with_val(binary_prec, Constant::Pi),
         );
 
         if let Some(ext_p) = externals.as_ref() {
@@ -2869,68 +2957,93 @@ impl Vakint {
                     if i > j {
                         continue;
                     }
-                    let dot_product = val1.0.to_owned() * val2.0.to_owned()
-                        - val1.1.to_owned() * val2.1.to_owned()
-                        - val1.2.to_owned() * val2.2.to_owned()
-                        - val1.3.to_owned() * val2.3.to_owned();
-                    const_map.insert(
-                        function!(
-                            S.dot,
-                            function!(S.p, Atom::new_num(i as i64)),
-                            function!(S.p, Atom::new_num(j as i64))
-                        ),
-                        dot_product.to_owned(),
+                    let key = function!(
+                        S.dot,
+                        function!(S.p, Atom::num(i as i64)),
+                        function!(S.p, Atom::num(j as i64))
                     );
+                    match (val1, val2) {
+                        (Momentum::Real(k1), Momentum::Real(k2)) => {
+                            let dot_product = k1.0.to_owned() * k2.0.to_owned()
+                                - k1.1.to_owned() * k2.1.to_owned()
+                                - k1.2.to_owned() * k2.2.to_owned()
+                                - k1.3.to_owned() * k2.3.to_owned();
+                            const_map_real.insert(key, dot_product.to_owned());
+                        }
+                        (Momentum::Real(k1), Momentum::Complex(k2)) => {
+                            let dot_product = k2.0.to_owned() * k1.0.to_owned()
+                                - k2.1.to_owned() * k1.1.to_owned()
+                                - k2.2.to_owned() * k1.2.to_owned()
+                                - k2.3.to_owned() * k1.3.to_owned();
+                            const_map_complex.insert(key, dot_product.to_owned());
+                        }
+                        (Momentum::Complex(k1), Momentum::Real(k2)) => {
+                            let dot_product = k1.0.to_owned() * k2.0.to_owned()
+                                - k1.1.to_owned() * k2.1.to_owned()
+                                - k1.2.to_owned() * k2.2.to_owned()
+                                - k1.3.to_owned() * k2.3.to_owned();
+                            const_map_complex.insert(key, dot_product.to_owned());
+                        }
+                        (Momentum::Complex(k1), Momentum::Complex(k2)) => {
+                            let dot_product = k1.0.to_owned() * k2.0.to_owned()
+                                - k1.1.to_owned() * k2.1.to_owned()
+                                - k1.2.to_owned() * k2.2.to_owned()
+                                - k1.3.to_owned() * k2.3.to_owned();
+                            const_map_complex.insert(key, dot_product.to_owned());
+                        }
+                    }
                 }
             }
         }
 
-        const_map.insert(
+        const_map_real.insert(
             Atom::from(Var::new(vk_symbol!("EulerGamma"))),
-            Complex::new(
-                Float::with_val(binary_prec, Constant::Euler),
-                Float::with_val(binary_prec, 0),
-            ),
+            Float::with_val(binary_prec, Constant::Euler),
         );
 
-        const_map.insert(
-            Atom::from(Var::new(Atom::I)),
+        const_map_complex.insert(
+            Atom::from(Var::new(S.cmplx_i)),
             Complex::new(
                 Float::with_val(binary_prec, 0),
                 Float::with_val(binary_prec, 1),
             ),
         );
 
-        const_map.insert(
-            function!(Atom::LOG, Atom::new_num(2)),
-            Complex::new(
-                Float::with_val(binary_prec, Constant::Log2),
-                Float::new(binary_prec),
-            ),
+        const_map_real.insert(
+            function!(Atom::LOG, Atom::num(2)),
+            Float::with_val(binary_prec, Constant::Log2),
         );
 
-        for (symb, value) in params.iter() {
-            const_map.insert(vk_parse!(symb.as_str()).unwrap(), value.clone());
+        for (symb, value) in params_complex.iter() {
+            const_map_complex.insert(vk_parse!(symb.as_str()).unwrap(), value.clone());
+        }
+        for (symb, value) in params_real.iter() {
+            const_map_real.insert(vk_parse!(symb.as_str()).unwrap(), value.clone());
         }
 
-        Ok(const_map)
+        Ok((const_map_real, const_map_complex))
     }
 
     pub fn partial_numerical_evaluation(
         settings: &VakintSettings,
         integral: AtomView,
-        params: &HashMap<String, Complex<Float>, ahash::RandomState>,
+        params_real: &HashMap<String, Float, ahash::RandomState>,
+        params_complex: &HashMap<String, Complex<Float>, ahash::RandomState>,
         externals: Option<&HashMap<usize, Momentum, ahash::RandomState>>,
     ) -> Atom {
-        let const_map = Vakint::get_constants_map(settings, params, externals).unwrap();
+        let (const_map_real, const_map_complex) =
+            Vakint::get_constants_map(settings, params_real, params_complex, externals).unwrap();
 
         let mut res = Vakint::convert_to_dot_notation(integral);
-        for (src, trgt) in const_map.iter() {
-            res = res.replace(src.to_pattern()).with(
-                (Atom::new_num(trgt.re.clone())
-                    + Atom::new_var(Atom::I) * Atom::new_num(trgt.im.clone()))
-                .to_pattern(),
-            );
+        for (src, trgt) in const_map_real.iter() {
+            res = res.replace(src.to_pattern()).with(Atom::num(trgt.clone()));
+        }
+        for (src, trgt) in const_map_complex.iter() {
+            // res = res.replace(src.to_pattern()).with(
+            //     (Atom::num(trgt.re.clone()) + Atom::var(S.cmplx_i) * Atom::num(trgt.im.clone()))
+            //         .to_pattern(),
+            // );
+            res = res.replace(src.to_pattern()).with(Atom::num(trgt.clone()));
         }
 
         res
@@ -2939,7 +3052,8 @@ impl Vakint {
     pub fn full_numerical_evaluation(
         settings: &VakintSettings,
         integral: AtomView,
-        params: &HashMap<String, Complex<Float>, ahash::RandomState>,
+        params_real: &HashMap<String, Float, ahash::RandomState>,
+        params_complex: &HashMap<String, Complex<Float>, ahash::RandomState>,
         externals: Option<&HashMap<usize, Momentum, ahash::RandomState>>,
     ) -> Result<(NumericalEvaluationResult, Option<NumericalEvaluationResult>), VakintError> {
         if integral
@@ -2949,23 +3063,29 @@ impl Vakint {
         {
             return Ok((
                 Vakint::full_numerical_evaluation_without_error(
-                    settings, integral, params, externals,
+                    settings,
+                    integral,
+                    params_real,
+                    params_complex,
+                    externals,
                 )?,
                 None,
             ));
         }
         let (error_atom, integral_atom) =
-            utils::split_linear_atom(integral, Atom::new_var(S.error_flag_symbol).as_view());
+            utils::split_linear_atom(integral, Atom::var(S.error_flag_symbol).as_view());
         let mut central = Vakint::full_numerical_evaluation_without_error(
             settings,
             integral_atom.as_view(),
-            params,
+            params_real,
+            params_complex,
             externals,
         )?;
         let mut error = Vakint::full_numerical_evaluation_without_error(
             settings,
             error_atom.as_view(),
-            params,
+            params_real,
+            params_complex,
             externals,
         )?;
 
@@ -2989,10 +3109,11 @@ impl Vakint {
     pub fn full_numerical_evaluation_without_error(
         settings: &VakintSettings,
         integral: AtomView,
-        params: &HashMap<String, Complex<Float>, ahash::RandomState>,
+        params_real: &HashMap<String, Float, ahash::RandomState>,
+        params_complex: &HashMap<String, Complex<Float>, ahash::RandomState>,
         externals: Option<&HashMap<usize, Momentum, ahash::RandomState>>,
     ) -> Result<NumericalEvaluationResult, VakintError> {
-        let epsilon_coeffs = integral.coefficient_list::<i8>(&[Atom::new_var(vk_symbol!("ε"))]);
+        let epsilon_coeffs = integral.coefficient_list::<i8>(&[Atom::var(vk_symbol!("ε"))]);
         let epsilon_coeffs_vec = epsilon_coeffs
             .iter()
             .map(|(eps_atom, coeff)| {
@@ -3010,7 +3131,7 @@ impl Vakint {
                     )
                 } else if *eps_atom == vk_parse!("ε").unwrap() {
                     (1, coeff)
-                } else if *eps_atom == Atom::new_num(1) {
+                } else if *eps_atom == Atom::num(1) {
                     (0, coeff)
                 } else {
                     panic!("Epsilon atom should be of the form ε^n_")
@@ -3018,11 +3139,20 @@ impl Vakint {
             })
             .collect::<Vec<_>>();
 
-        let map = Vakint::get_constants_map(settings, params, externals).unwrap();
-        let map_view: HashMap<AtomView<'_>, Complex<Float>, RandomState> =
-            map.iter().map(|(k, v)| (k.as_view(), v.clone())).collect();
-
         let binary_prec = settings.get_binary_precision();
+
+        let (map_real, map_complex) =
+            Vakint::get_constants_map(settings, params_real, params_complex, externals).unwrap();
+        let mut map_view: HashMap<AtomView<'_>, Complex<Float>, RandomState> = map_complex
+            .iter()
+            .map(|(k, v)| (k.as_view(), v.clone()))
+            .collect();
+        for (k, v) in map_real.iter() {
+            map_view.insert(
+                k.as_view(),
+                Complex::new(v.clone(), Float::with_val(binary_prec, 0.)),
+            );
+        }
         let mut epsilon_coeffs_vec_floats = vec![];
         for (i64, coeff) in epsilon_coeffs_vec.iter() {
             let coeff_processed = Vakint::convert_to_dot_notation(coeff.as_view());
@@ -3585,7 +3715,7 @@ impl Vakint {
 
         let log_mu_sq = function!(
             Atom::LOG,
-            Atom::new_var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            Atom::var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         let pysecdec_normalization_correction = vk_parse!(format!(
@@ -3614,7 +3744,7 @@ impl Vakint {
                             .settings
                             .get_integral_normalization_factor_atom()?
                             .replace(S.n_loops.to_pattern())
-                            .with(Atom::new_num(integral.n_loops as i64).to_pattern());
+                            .with(Atom::num(integral.n_loops as i64).to_pattern());
 
                     let expanded_evaluation = match processed.series(
                         vk_symbol!(vakint.settings.epsilon_symbol.as_str()),
@@ -3690,7 +3820,7 @@ impl Vakint {
 
         let mut numerator = numerator.to_owned();
         numerator = numerator
-            .replace(Atom::new_var(muv_sq_symbol).to_pattern())
+            .replace(Atom::var(muv_sq_symbol).to_pattern())
             .with(vk_parse!("mUV^2").unwrap().to_pattern());
         // println!("Numerator : {}", numerator);
         // println!("Evaluating AlphaLoop : {}", alphaloop_expression);
@@ -3836,20 +3966,20 @@ impl Vakint {
         evaluated_integral = evaluated_integral
             .replace(vk_parse!("mUV").unwrap().to_pattern())
             .with(
-                Atom::new_var(muv_sq_symbol)
-                    .pow((Atom::new_num(1) / Atom::new_num(2)).as_atom_view())
+                Atom::var(muv_sq_symbol)
+                    .pow((Atom::num(1) / Atom::num(2)).as_atom_view())
                     .to_pattern(),
             );
 
         let log_muv_mu_sq = function!(
             Atom::LOG,
-            Atom::new_var(muv_sq_symbol)
-                / Atom::new_var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            Atom::var(muv_sq_symbol)
+                / Atom::var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         let log_mu_sq = function!(
             Atom::LOG,
-            Atom::new_var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            Atom::var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         //*((2*𝜋)^(2*{eps}))\
@@ -3880,7 +4010,7 @@ impl Vakint {
                 .get_integral_normalization_factor_atom()?
                 .as_view()
                 .replace(S.n_loops.to_pattern())
-                .with(Atom::new_num(integral.n_loops as i64).to_pattern());
+                .with(Atom::num(integral.n_loops as i64).to_pattern());
 
         let expanded_evaluation = match evaluated_integral.series(
             vk_symbol!(vakint.settings.epsilon_symbol.as_str()),
@@ -4271,7 +4401,7 @@ impl Vakint {
                 let litteral_form_name = format!("[{}]", user_i.to_canonical_string());
                 expression_no_indices = expression_no_indices
                     .replace(user_i.to_pattern())
-                    .with(Atom::new_num(0));
+                    .with(Atom::num(0));
                 processed_str =
                     processed_str.replace(&user_i.to_canonical_string(), &litteral_form_name);
                 form_header_indices.push(litteral_form_name);
@@ -4375,7 +4505,7 @@ impl Vakint {
                 let mut new_s = s.to_owned();
                 for (i_index, user_i) in indices.iter().enumerate() {
                     let integer_index =
-                        Atom::new_num((FORM_REPLACEMENT_INDEX_SHIFT + 1 + (i_index as u64)) as i64);
+                        Atom::num((FORM_REPLACEMENT_INDEX_SHIFT + 1 + (i_index as u64)) as i64);
                     new_s = new_s
                         .replace(user_i.as_view().to_pattern())
                         .with(integer_index);
@@ -4402,7 +4532,7 @@ impl Vakint {
                     );
                 processed = processed
                     .replace(vk_parse!("pi").unwrap().to_pattern())
-                    .with(Atom::new_var(Atom::PI).to_pattern());
+                    .with(Atom::var(Atom::PI).to_pattern());
 
                 processed = processed
                     .replace(vk_parse!("g(idx1_,idx2_)").unwrap().to_pattern())

@@ -495,7 +495,7 @@ impl Topology {
         let mut need_to_force_lmb = false;
         for i_loop in 1..=n_loops {
             if !momenta.iter().any(|(_i_prop, k)| {
-                k.as_view() == function!(S.k, Atom::new_num(i_loop as i64)).as_view()
+                k.as_view() == function!(S.k, Atom::num(i_loop as i64)).as_view()
             }) {
                 need_to_force_lmb = true;
                 break;
@@ -522,9 +522,9 @@ impl Topology {
             (1..=n_loops)
                 .map(|i| {
                     (
-                        function!(S.k, Atom::new_num(i as i64)).to_pattern(),
+                        function!(S.k, Atom::num(i as i64)).to_pattern(),
                         (
-                            Atom::new_var(vk_symbol!(format!("k{}", i))).to_pattern(),
+                            Atom::var(vk_symbol!(format!("k{}", i))).to_pattern(),
                             (
                                 vk_symbol!(format!("k{}", i)),
                                 vk_symbol!(format!("krotated{}", i)),
@@ -544,7 +544,7 @@ impl Topology {
                 {
                     q = q.replace(src).with(trgt.clone());
                 }
-                q = q - Atom::new_var(mom_vecs_to_symbols[i_lmb].1 .1 .1);
+                q -= Atom::var(mom_vecs_to_symbols[i_lmb].1 .1 .1);
                 system.push(q);
             }
         }
@@ -554,7 +554,7 @@ impl Topology {
         // );
         let variables = mom_vecs_to_symbols
             .iter()
-            .map(|(_src, (_trgt, (trgt_symbol, _trgt_rotated_symbol)))| Atom::new_var(*trgt_symbol))
+            .map(|(_src, (_trgt, (trgt_symbol, _trgt_rotated_symbol)))| Atom::var(*trgt_symbol))
             .collect::<Vec<_>>();
         // println!(
         //     "variables: {:?}",
@@ -609,13 +609,13 @@ impl Topology {
                             mom_vecs_to_symbols.iter()
                         {
                             q = q
-                                .replace(Atom::new_var(*trgt_rotated_symbol).to_pattern())
+                                .replace(Atom::var(*trgt_rotated_symbol).to_pattern())
                                 .with(src.clone());
                         }
                         q = q.expand();
                         function!(
                             vk_symbol!("prop"),
-                            Atom::new_num(prop_id as i64),
+                            Atom::num(prop_id as i64),
                             match_in.get(vk_symbol!("edges_")).unwrap().to_atom(),
                             q,
                             match_in.get(vk_symbol!("mUVsq_")).unwrap().to_atom(),
@@ -699,7 +699,7 @@ impl Topology {
                     {
                         test_input = test_input
                             .replace(&prop_pattern)
-                            .with(Atom::new_num(1).to_pattern());
+                            .with(Atom::num(1).to_pattern());
                         prop_id += 1;
                         prop_pattern = vk_parse!(format!("prop({},args__)", prop_id).as_str())
                             .unwrap()
@@ -768,11 +768,11 @@ impl Topology {
                     );
                     replacement_rules.canonical_expression_substitutions.insert(
                         vk_parse!("n_props").unwrap(),
-                        Atom::new_num((prop_id - 1) as i64),
+                        Atom::num((prop_id - 1) as i64),
                     );
                     replacement_rules
                         .canonical_expression_substitutions
-                        .insert(vk_parse!("n_loops").unwrap(), Atom::new_num(n_loops as i64));
+                        .insert(vk_parse!("n_loops").unwrap(), Atom::num(n_loops as i64));
                     Ok(Some(replacement_rules))
                 } else {
                     //println!("Does not match!");

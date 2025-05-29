@@ -1,4 +1,4 @@
-use symbolica::parse;
+use symbolica::try_parse;
 use vakint::{Vakint, VakintExpression, VakintSettings};
 
 fn main() {
@@ -10,7 +10,7 @@ fn main() {
 
     //println!("Supported topologies:\n{}", vakint.topologies);
 
-    let input = parse!(
+    let input = try_parse!(
         "(vk::k(11,2)*vk::k(11,2)+vk::k(11,77)*vk::k(22,77)+vk::k(22,33)*p(42,33))*vk::topo(\
                     vk::prop(9,vk::edge(7,10),vk::k(11),mUVsqA,1)*\
                     vk::prop(33,vk::edge(7,10),vk::k(22),mUVsqA,2)*\

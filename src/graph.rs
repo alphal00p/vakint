@@ -344,23 +344,22 @@ impl Graph {
 
     // See "counting cycles II" of Ben's blog post at: https://symbolica.io/posts/pattern_matching/
     pub fn get_one_lmb(&self) -> Result<Vec<i64>, VakintError> {
-        let mut atom_graph = Atom::new_num(1);
+        let mut atom_graph = Atom::num(1);
         let mut node_values = self.nodes.values().collect::<Vec<_>>();
         node_values.sort_by_key(|n| n.id);
         for node in node_values {
             let mut sorted_edges = node.edges.clone();
             sorted_edges.sort_by_key(|(e, _dir)| *e);
-            atom_graph = atom_graph
-                * vk_parse!(&format!(
-                    "v(n({}),{})",
-                    node.id,
-                    sorted_edges
-                        .iter()
-                        .map(|(e, _dir)| format!("{}", e))
-                        .collect::<Vec<_>>()
-                        .join(",")
-                ))
-                .unwrap();
+            atom_graph *= vk_parse!(&format!(
+                "v(n({}),{})",
+                node.id,
+                sorted_edges
+                    .iter()
+                    .map(|(e, _dir)| format!("{}", e))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ))
+            .unwrap();
         }
         atom_graph = replace_until_stable(
             atom_graph.as_view(),

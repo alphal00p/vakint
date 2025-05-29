@@ -1,7 +1,6 @@
 mod test_utils;
 use vakint::{
-    utils::simplify_real, EvaluationMethod, EvaluationOrder, FMFTOptions, LoopNormalizationFactor,
-    MATADOptions,
+    EvaluationMethod, EvaluationOrder, FMFTOptions, LoopNormalizationFactor, MATADOptions,
 };
 
 use std::vec;
@@ -9,6 +8,7 @@ use std::vec;
 use log::debug;
 use std::collections::HashMap;
 use symbolica::{
+    atom::Atom,
     atom::AtomCore,
     domains::{float::NumericalFloatLike, rational::Fraction},
 };
@@ -47,39 +47,46 @@ fn test_integrate_1l_a() {
     integral = vakint.tensor_reduce(integral.as_view()).unwrap();
 
     let evaluated_integral_res = vakint.evaluate_integral(integral.as_view());
-    let evaluated_integral_res_ref = evaluated_integral_res.as_ref();
+    let evaluated_integral = evaluated_integral_res.unwrap();
 
-    // let coefs = evaluated_integral_res_ref
-    //     .unwrap()
-    //     .coefficient_list(State::get_symbol("ε"));
-    // for (v, c) in coefs.0 {
-    //     println!("{}: {}", v, c);
-    // }
-    // println!("ε^0: {}", coefs.1);
-    let evaluated_integral = compare_output(
-        evaluated_integral_res_ref.map(|a| a.as_view()),
-        simplify_real(vakint_parse!(
-            "(\
-        + ε^-1 * (1/4*𝑖*𝜋^2*muvsq^2*g(1,2))\
-        + ε^-0 * (1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2)+1/4*𝑖*𝜋^2*muvsq^2*log(muvsq^-1)*g(1,2)+1/4*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))*g(1,2))\
-        + ε    * ((1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2))*log(exp(-EulerGamma))+(1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2)+1/4*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))*g(1,2))*log(muvsq^-1)+𝑖*𝜋^2*(7/16*muvsq^2*g(1,2)+1/48*𝜋^2*muvsq^2*g(1,2))+3/8*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/4*muvsq^2*(1/2*𝑖*𝜋^2*log(𝜋)^2+1/2*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2-𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/8*𝑖*𝜋^2*muvsq^2*log(muvsq^-1)^2*g(1,2)+1/8*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))^2*g(1,2))\
-        + ε^2  * ((7/16*muvsq^2*g(1,2)+1/48*𝜋^2*muvsq^2*g(1,2))*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))+1/2*(1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2))*log(exp(-EulerGamma))^2+(𝑖*𝜋^2*(7/16*muvsq^2*g(1,2)+1/48*𝜋^2*muvsq^2*g(1,2))+3/8*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/4*muvsq^2*(1/2*𝑖*𝜋^2*log(𝜋)^2+1/2*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2-𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2))*log(exp(-EulerGamma))+1/2*(1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2)+1/4*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))*g(1,2))*log(muvsq^-1)^2+((1/4*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+3/8*𝑖*𝜋^2*muvsq^2*g(1,2))*log(exp(-EulerGamma))+𝑖*𝜋^2*(7/16*muvsq^2*g(1,2)+1/48*𝜋^2*muvsq^2*g(1,2))+3/8*muvsq^2*(-𝑖*𝜋^2*log(𝜋)+𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/4*muvsq^2*(1/2*𝑖*𝜋^2*log(𝜋)^2+1/2*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2-𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/8*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))^2*g(1,2))*log(muvsq^-1)+𝑖*𝜋^2*(151190863202516241/410199796539607264*muvsq^2*g(1,2)+1/32*𝜋^2*muvsq^2*g(1,2))+3/8*muvsq^2*(1/2*𝑖*𝜋^2*log(𝜋)^2+1/2*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2-𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1))*g(1,2)+1/4*muvsq^2*(-1/6*𝑖*𝜋^2*log(𝜋)^3+1/6*𝑖*𝜋^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^3+1/2*𝑖*𝜋^2*log(𝜋)^2*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)-1/2*𝑖*𝜋^2*log(𝜋)*log(1/4*𝜋^-1*mursq*exp(-EulerGamma)^-1)^2)*g(1,2)+1/24*𝑖*𝜋^2*muvsq^2*log(muvsq^-1)^3*g(1,2)+1/24*𝑖*𝜋^2*muvsq^2*log(exp(-EulerGamma))^3*g(1,2))\
-        )"
-        )
-        .unwrap().as_view()),
-    );
+    //let evaluated_integral = evaluated_integral_res.unwrap().expand();
+
+    let mut targets: HashMap<Atom, Atom> = HashMap::default();
+
+    for (eps_term, trgt) in [
+        ("ε^-1","1/4*𝜋^2*𝑖*muvsq^2*g(1,2)"),
+        ("1",   "1/4*vk::muvsq^2*(-𝜋^2*vk::𝑖*log(𝜋)+𝜋^2*vk::𝑖*log(1/4*𝜋^-1*vk::mursq))*vk::g(1,2)+3/8*𝜋^2*vk::𝑖*vk::muvsq^2*vk::g(1,2)-1/4*𝜋^2*vk::𝑖*vk::muvsq^2*log(vk::muvsq)*vk::g(1,2)"),
+        ("ε",   "-(1/4*vk::muvsq^2*(-𝜋^2*vk::𝑖*log(𝜋)+𝜋^2*vk::𝑖*log(1/4*𝜋^-1*vk::mursq))*vk::g(1,2)+3/8*𝜋^2*vk::𝑖*vk::muvsq^2*vk::g(1,2))*log(vk::muvsq)+𝜋^2*vk::𝑖*(7/16*vk::muvsq^2*vk::g(1,2)+1/48*𝜋^2*vk::muvsq^2*vk::g(1,2))+3/8*vk::muvsq^2*(-𝜋^2*vk::𝑖*log(𝜋)+𝜋^2*vk::𝑖*log(1/4*𝜋^-1*vk::mursq))*vk::g(1,2)+1/4*vk::muvsq^2*(1/2*𝜋^2*vk::𝑖*log(𝜋)^2+1/2*𝜋^2*vk::𝑖*log(1/4*𝜋^-1*vk::mursq)^2-𝜋^2*vk::𝑖*log(𝜋)*log(1/4*𝜋^-1*vk::mursq))*vk::g(1,2)+1/8*𝜋^2*vk::𝑖*vk::muvsq^2*log(vk::muvsq)^2*vk::g(1,2)"),
+        ("ε^2", "(7/16*vk::muvsq^2*vk::g(1,2)+1/48*𝜋^2*vk::muvsq^2*vk::g(1,2))*(-𝜋^2*vk::𝑖*log(𝜋)+𝜋^2*vk::𝑖*log(1/4*𝜋^-1*vk::mursq))+1/2*(1/4*vk::muvsq^2*(-𝜋^2*vk::𝑖*log(𝜋)+𝜋^2*vk::𝑖*log(1/4*𝜋^-1*vk::mursq))*vk::g(1,2)+3/8*𝜋^2*vk::𝑖*vk::muvsq^2*vk::g(1,2))*log(vk::muvsq)^2-(𝜋^2*vk::𝑖*(7/16*vk::muvsq^2*vk::g(1,2)+1/48*𝜋^2*vk::muvsq^2*vk::g(1,2))+3/8*vk::muvsq^2*(-𝜋^2*vk::𝑖*log(𝜋)+𝜋^2*vk::𝑖*log(1/4*𝜋^-1*vk::mursq))*vk::g(1,2)+1/4*vk::muvsq^2*(1/2*𝜋^2*vk::𝑖*log(𝜋)^2+1/2*𝜋^2*vk::𝑖*log(1/4*𝜋^-1*vk::mursq)^2-𝜋^2*vk::𝑖*log(𝜋)*log(1/4*𝜋^-1*vk::mursq))*vk::g(1,2))*log(vk::muvsq)+𝜋^2*vk::𝑖*(151190863202516241/410199796539607264*vk::muvsq^2*vk::g(1,2)+1/32*𝜋^2*vk::muvsq^2*vk::g(1,2))+3/8*vk::muvsq^2*(1/2*𝜋^2*vk::𝑖*log(𝜋)^2+1/2*𝜋^2*vk::𝑖*log(1/4*𝜋^-1*vk::mursq)^2-𝜋^2*vk::𝑖*log(𝜋)*log(1/4*𝜋^-1*vk::mursq))*vk::g(1,2)+1/4*vk::muvsq^2*(-1/6*𝜋^2*vk::𝑖*log(𝜋)^3+1/6*𝜋^2*vk::𝑖*log(1/4*𝜋^-1*vk::mursq)^3+1/2*𝜋^2*vk::𝑖*log(𝜋)^2*log(1/4*𝜋^-1*vk::mursq)-1/2*𝜋^2*vk::𝑖*log(𝜋)*log(1/4*𝜋^-1*vk::mursq)^2)*vk::g(1,2)-1/24*𝜋^2*vk::𝑖*vk::muvsq^2*log(vk::muvsq)^3*vk::g(1,2)")
+        ] {
+        targets.insert(vakint_parse!(eps_term).unwrap(),vakint_parse!(trgt).unwrap());
+    }
+    for (v, c) in evaluated_integral
+        .coefficient_list::<i8>(&[vakint_parse!("ε").unwrap()])
+        .iter()
+    {
+        // println!("{} -> {}", v, c.to_canonical_string());
+        _ = compare_output(
+            Ok(c.as_view()),
+            targets.get(&v.to_owned()).unwrap().to_owned(),
+        );
+    }
+
     //debug!("Evaluated integral: {}", evaluated_integral);
-
     let mut params = HashMap::default();
     params.insert("muvsq".into(), vakint.settings.real_to_prec("1"));
     params.insert("mursq".into(), vakint.settings.real_to_prec("1"));
+
+    //evaluated_integral = evaluated_integral.expand();
 
     let numerical_partial_eval = Vakint::partial_numerical_evaluation(
         &vakint.settings,
         evaluated_integral.as_view(),
         &params,
+        &HashMap::default(),
         None,
     );
+    // numerical_partial_eval = numerical_partial_eval.expand();
 
     // This test is too unstable as the printout at fixed precision is not accurate enough
     // let numerical_partial_eval_canonical_str = numerical_partial_eval.to_canonical_string();
@@ -87,23 +94,31 @@ fn test_integrate_1l_a() {
     //     numerical_partial_eval_canonical_str,
     //     "-12.0696723514860*g(1,2)*ε^2*𝑖+-5.36845814123893*g(1,2)*𝑖+2.46740110027234*g(1,2)*ε^-1*𝑖+9.41170424471097*g(1,2)*ε*𝑖"
     // );
+    let fractional_precision =
+        Fraction::from(0.1_f64.powi((vakint.settings.run_time_decimal_precision - 4) as i32));
+    // println!(
+    //     "TARGET {}",
+    //     numerical_partial_eval
+    //         .rationalize_coefficients(&Fraction::from(
+    //             0.1_f64.powi((vakint.settings.run_time_decimal_precision - 4) as i32)
+    //         ))
+    //         .to_canonical_string()
+    // );
     assert_eq!(
-        numerical_partial_eval.rationalize_coefficients(&Fraction::from(
-            0.1_f64.powi((vakint.settings.run_time_decimal_precision - 4) as i32)
-        )),
-        vakint_parse!("-2879700/536411*𝑖*g(1,2)+3726809/395976*𝑖*ε*g(1,2)+1075967/436073*𝑖*ε^-1*g(1,2)-4041047/334810*𝑖*ε^2*g(1,2)").unwrap()
+        numerical_partial_eval.rationalize_coefficients(&fractional_precision),
+       vakint_parse!("-2879700𝑖/536411*g(1,2)+3726809𝑖/395976*ε*g(1,2)+1075967𝑖/436073*ε^-1*g(1,2)-4041047𝑖/334810*ε^2*g(1,2)").unwrap()
     );
 
     let prec = Fraction::from(0.1.pow((vakint.settings.run_time_decimal_precision - 4) as u64));
-    compare_output(
+    _ = compare_output(
         Ok(numerical_partial_eval
             .rationalize_coefficients(&prec)
             .as_view()),
         vakint_parse!(format!(
-            "-5.36845814123893`{prec}*𝑖*g(1,2)\
-                +9.4117042447109682`{prec}*𝑖*ε*g(1,2)\
-                +2.46740110027234`{prec}*𝑖*ε^-1*g(1,2)\
-                -12.0696723514860`{prec}*𝑖*ε^2*g(1,2)",
+            "-5.36845814123893`{prec}𝑖*g(1,2)\
+             +9.4117042447109682`{prec}𝑖*ε*g(1,2)\
+             +2.46740110027234`{prec}𝑖*ε^-1*g(1,2)\
+             -12.0696723514860`{prec}𝑖*ε^2*g(1,2)",
             prec = vakint.settings.run_time_decimal_precision - 1
         )
         .as_str())
@@ -116,6 +131,7 @@ fn test_integrate_1l_a() {
         &vakint.settings,
         evaluated_integral.as_view(),
         &params,
+        &HashMap::default(),
         None,
     );
     let numerical_full_eval_ref = numerical_full_eval.as_ref();

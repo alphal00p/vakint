@@ -5,8 +5,8 @@ use log::{debug, info};
 use symbolica::{
     atom::{Atom, AtomView},
     domains::float::{Complex, Float},
-    parse,
     printer::{AtomPrinter, PrintOptions},
+    try_parse,
 };
 
 use std::collections::HashMap;
@@ -24,7 +24,7 @@ pub fn get_vakint(vakint_settings: VakintSettings) -> Vakint {
 pub fn compare_output(output: Result<AtomView, &VakintError>, expected_output: Atom) -> Atom {
     match output {
         Ok(r) => {
-            let r_processed = parse!(AtomPrinter::new_with_options(
+            let r_processed = try_parse!(AtomPrinter::new_with_options(
                 r,
                 PrintOptions {
                     hide_namespace: Some("tests"),
@@ -117,7 +117,7 @@ pub fn compare_two_evaluations(
     vakint_default_settings: VakintSettings,
     evaluation_orders: ((&EvaluationOrder, bool), (&EvaluationOrder, bool)),
     integra_view: AtomView,
-    numerical_masses: HashMap<String, Complex<Float>, ahash::RandomState>,
+    numerical_masses: HashMap<String, Float, ahash::RandomState>,
     numerical_external_momenta: HashMap<usize, Momentum, ahash::RandomState>,
     rel_threshold: f64,
     max_pull: f64,
@@ -130,6 +130,7 @@ pub fn compare_two_evaluations(
             Some(quiet),
             rel_threshold * 1.0e-2,
             &numerical_masses,
+            &HashMap::default(),
             &numerical_external_momenta,
         );
     }
@@ -196,6 +197,7 @@ pub fn compare_two_evaluations(
         &vakint.settings,
         benchmark_evaluated_integral.as_view(),
         &eval_params,
+        &HashMap::default(),
         Some(&numerical_external_momenta),
     ) {
         Ok(eval) => eval,
@@ -244,6 +246,7 @@ pub fn compare_two_evaluations(
         &vakint.settings,
         comparison_eval.as_view(),
         &eval_params,
+        &HashMap::default(),
         Some(&numerical_external_momenta),
     ) {
         Ok(eval) => eval,
@@ -345,7 +348,7 @@ pub fn compare_vakint_evaluation_vs_reference(
     vakint_default_settings: VakintSettings,
     evaluation_order: EvaluationOrder,
     integra_view: AtomView,
-    numerical_masses: HashMap<String, Complex<Float>, ahash::RandomState>,
+    numerical_masses: HashMap<String, Float, ahash::RandomState>,
     numerical_external_momenta: HashMap<usize, Momentum, ahash::RandomState>,
     expected_output: Vec<(i64, (String, String))>,
     prec: u32,
@@ -357,6 +360,7 @@ pub fn compare_vakint_evaluation_vs_reference(
         None,
         10.0_f64.powi(-(prec as i32)),
         &numerical_masses,
+        &HashMap::default(),
         &numerical_external_momenta,
     );
 
@@ -385,6 +389,7 @@ pub fn compare_vakint_evaluation_vs_reference(
         &vakint.settings,
         integral.as_view(),
         &numerical_masses,
+        &HashMap::default(),
         Some(&numerical_external_momenta),
     )
     .unwrap();

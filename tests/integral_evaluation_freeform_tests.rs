@@ -3,7 +3,7 @@ use vakint::{EvaluationMethod, EvaluationOrder, LoopNormalizationFactor, PySecDe
 
 use std::vec;
 
-use symbolica::parse;
+use symbolica::try_parse;
 use vakint::{Vakint, VakintSettings};
 
 use crate::test_utils::compare_vakint_evaluation_vs_reference;
@@ -22,7 +22,7 @@ fn test_integrate_1l_decorated_indices_alphaloop() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{number_of_terms_in_epsilon_expansion: 3, integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::alphaloop_only(),
-        parse!(
+        try_parse!(
             "( user_space::sigma(user_space::some_args)*vk::p(1,user_space::mink4(4,33))*vk::p(2,user_space::mink4(4,33))*vk::p(1,user_space::mink4(4,11))*vk::p(2,user_space::mink4(4,22))+vk::k(3,user_space::mink4(4,11))*vk::k(3,user_space::mink4(4,22)) + vk::k(3,user_space::mink4(4,77))*vk::p(1,user_space::mink4(4,77)) ) \
              * vk::topo( vk::prop(9,vk::edge(66,66),vk::k(3),user_space::MUVsq,1 ))\
             ")
@@ -57,7 +57,7 @@ fn test_integrate_1l_decorated_indices_matad() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{number_of_terms_in_epsilon_expansion: 3, integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::matad_only(None),
-        parse!(
+        try_parse!(
             "( user_space::sigma(user_space::some_args)*vk::p(1,user_space::mink4(4,33))*vk::p(2,user_space::mink4(4,33))*vk::p(1,user_space::mink4(4,11))*vk::p(2,user_space::mink4(4,22))+vk::k(3,user_space::mink4(4,11))*vk::k(3,user_space::mink4(4,22)) + vk::k(3,user_space::mink4(4,77))*vk::p(1,user_space::mink4(4,77)) ) \
              * vk::topo( vk::prop(9,vk::edge(66,66),vk::k(3),user_space::MUVsq,1 ))\
             ")
@@ -93,7 +93,7 @@ fn test_integrate_1l_decorated_indices_fmft() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{number_of_terms_in_epsilon_expansion: 5, integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::fmft_only(None),
-        parse!(
+        try_parse!(
             "( user_space::sigma(user_space::some_args)*vk::p(1,user_space::mink4(4,33))*vk::p(2,user_space::mink4(4,33))*vk::p(1,user_space::mink4(4,11))*vk::p(2,user_space::mink4(4,22))+vk::k(3,user_space::mink4(4,11))*vk::k(3,user_space::mink4(4,22)) + vk::k(3,user_space::mink4(4,77))*vk::p(1,user_space::mink4(4,77)) ) \
              * vk::topo( 
                   vk::prop(9,vk::edge(66,66),vk::k(1),user_space::MUVsq,1 )
@@ -135,7 +135,7 @@ fn test_integrate_1l_decorated_indices_pysecdec() {
     compare_vakint_evaluation_vs_reference(
         VakintSettings{number_of_terms_in_epsilon_expansion: 5, integral_normalization_factor: LoopNormalizationFactor::MSbar, ..VakintSettings::default()},
         EvaluationOrder(vec![EvaluationMethod::PySecDec(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/test_integrate_1l_decorated_indices_pysecdec".into()) ,..PySecDecOptions::default() })]),
-        parse!(
+        try_parse!(
             "(user_space::sigma*vk::k(1,user_space::mink4(4,11))*vk::p(1,user_space::mink4(4,11))*vk::k(1,user_space::mink4(4,12))*vk::p(1,user_space::mink4(4,12)))*vk::topo(\
                 vk::prop(1,vk::edge(1,1),vk::k(1),user_space::muvsq,2)\
              )"

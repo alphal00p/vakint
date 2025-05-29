@@ -11,7 +11,7 @@ fn main() {
     }))
     .unwrap();
 
-    let mut integral = symbolica::parse!(
+    let mut integral = symbolica::try_parse!(
         "(
               vk::k(3,mink4(4,11))*vk::k(3,mink4(4,22))
             + vk::k(3,mink4(4,77))*vk::p(8,mink4(4,77))
@@ -49,8 +49,13 @@ fn main() {
     );
     params.insert("vk::mursq".into(), vakint.settings.real_to_prec("1.0"));
 
-    let numerical_partial_eval =
-        Vakint::partial_numerical_evaluation(&vakint.settings, integral.as_view(), &params, None);
+    let numerical_partial_eval = Vakint::partial_numerical_evaluation(
+        &vakint.settings,
+        integral.as_view(),
+        &params,
+        &HashMap::default(),
+        None,
+    );
     println!("Partial eval:\n{}\n", numerical_partial_eval);
 
     let externals = vakint.externals_from_f64(
@@ -85,6 +90,7 @@ fn main() {
         &vakint.settings,
         integral.as_view(),
         &params,
+        &HashMap::default(),
         Some(&externals),
     )
     .unwrap();

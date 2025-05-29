@@ -1,5 +1,6 @@
 mod test_utils;
 
+use ahash::HashMap;
 use log::debug;
 use symbolica::{
     atom::{Atom, AtomCore, AtomView},
@@ -239,7 +240,12 @@ pub fn evaluate_expression_with_matad(
     } else {
         integral = matad.expand_matad_masters(integral.as_view()).unwrap();
     }
-
+    // println!(
+    //     "NEW vakint.settings.number_of_terms_in_epsilon_expansion:\n{}",
+    //     vakint.settings.number_of_terms_in_epsilon_expansion
+    // );
+    // println!("NEW Integral:\n{}", integral);
+    // integral = integral.expand()
     integral = integral
         .series(
             vakint_symbol!("ep"),
@@ -270,13 +276,13 @@ pub fn evaluate_expression_with_matad(
     let muv_sq_symbol = vakint_symbol!("muvsq");
     let log_muv_mu_sq = function!(
         Atom::LOG,
-        Atom::new_var(muv_sq_symbol)
-            / Atom::new_var(vakint_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+        Atom::var(muv_sq_symbol)
+            / Atom::var(vakint_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
     );
 
     let log_mu_sq = function!(
         Atom::LOG,
-        Atom::new_var(vakint_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+        Atom::var(vakint_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
     );
 
     integral = integral
@@ -296,11 +302,16 @@ pub fn evaluate_expression_with_matad(
 
     integral = integral
         .replace(vakint_parse!("ep").unwrap().to_pattern())
-        .with(Atom::new_var(vakint_symbol!(vakint.settings.epsilon_symbol.as_str())).to_pattern());
+        .with(Atom::var(vakint_symbol!(vakint.settings.epsilon_symbol.as_str())).to_pattern());
 
-    let (res, _error) =
-        Vakint::full_numerical_evaluation(&vakint.settings, integral.as_view(), &test_params, None)
-            .unwrap();
+    let (res, _error) = Vakint::full_numerical_evaluation(
+        &vakint.settings,
+        integral.as_view(),
+        &test_params,
+        &HashMap::default(),
+        None,
+    )
+    .unwrap();
 
     res
 }

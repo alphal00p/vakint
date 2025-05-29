@@ -1,3 +1,4 @@
+use ahash::HashMap;
 use vakint::{
     vakint_parse, vakint_symbol, EvaluationOrder, LoopNormalizationFactor,
     NumericalEvaluationResult, Vakint, VakintExpression, VakintSettings,
@@ -65,7 +66,12 @@ fn main() {
     );
 
     let (eval, error) = vakint
-        .numerical_evaluation(integral.as_view(), &params, Some(&externals))
+        .numerical_evaluation(
+            integral.as_view(),
+            &params,
+            &HashMap::default(),
+            Some(&externals),
+        )
         .unwrap();
     println!("Numerical evaluation:\n{}\n", eval);
     let eval_atom = eval.to_atom(vakint_symbol!(vakint.settings.epsilon_symbol.clone()));
