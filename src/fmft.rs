@@ -410,12 +410,16 @@ impl Vakint {
             .join("*");
 
         // Replace functions with 1 and get all remaining symbols
-        let mut numerator_additional_symbols = input_numerator
-            .replace(vk_parse!("f_(args__)").unwrap().to_pattern())
-            .with(vk_parse!("1").unwrap().to_pattern())
-            .get_all_symbols(false);
-        let eps_symbol = vk_symbol!(vakint.settings.epsilon_symbol.clone());
-        numerator_additional_symbols.retain(|&s| s != eps_symbol);
+        // let mut numerator_additional_symbols = input_numerator
+        //     .replace(vk_parse!("f_(args__)").unwrap().to_pattern())
+        //     .with(vk_parse!("1").unwrap().to_pattern())
+        //     .get_all_symbols(false);
+        // let eps_symbol = vk_symbol!(vakint.settings.epsilon_symbol.clone());
+        // numerator_additional_symbols.retain(|&s| s != eps_symbol);
+        let numerator_additional_symbols: std::collections::HashSet<
+            symbolica::atom::Symbol,
+            ahash::RandomState,
+        > = std::collections::HashSet::default();
 
         let template = Template::parse_template(TEMPLATES.get("run_fmft.txt").unwrap()).unwrap();
         let mut vars: HashMap<String, String> = HashMap::new();

@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::{collections::HashMap, sync::LazyLock};
 
 use crate::matad_numerics::DIRECT_SUBSTITUTIONS;
@@ -531,12 +532,19 @@ impl Vakint {
         //println!("MATAD input string: {}", format!("({})*({})", numerator_string, integral_string));
 
         // Replace functions with 1 and get all remaining symbols
-        let mut numerator_additional_symbols = input_numerator
-            .replace(vk_parse!("f_(args__)").unwrap().to_pattern())
-            .with(vk_parse!("1").unwrap().to_pattern())
-            .get_all_symbols(false);
-        let eps_symbol = vk_symbol!(vakint.settings.epsilon_symbol.clone());
-        numerator_additional_symbols.retain(|&s| s != eps_symbol);
+        // let mut numerator_additional_symbols: std::collections::HashSet<
+        //     symbolica::atom::Symbol,
+        //     ahash::RandomState,
+        // > = input_numerator
+        //     .replace(vk_parse!("f_(args__)").unwrap().to_pattern())
+        //     .with(vk_parse!("1").unwrap().to_pattern())
+        //     .get_all_symbols(false);
+        // let eps_symbol = vk_symbol!(vakint.settings.epsilon_symbol.clone());
+        // numerator_additional_symbols.retain(|&s| s != eps_symbol);
+        let numerator_additional_symbols: std::collections::HashSet<
+            symbolica::atom::Symbol,
+            ahash::RandomState,
+        > = HashSet::default();
 
         let template = Template::parse_template(TEMPLATES.get("run_matad.txt").unwrap()).unwrap();
         let mut vars: HashMap<String, String> = HashMap::new();

@@ -4436,13 +4436,16 @@ impl Vakint {
         for user_f in user_functions.iter() {
             let litteral_form_name = format!("[{}]", user_f.get_name());
             processed_str = processed_str.replace(user_f.get_name(), &litteral_form_name);
+            processed_str = processed_str.replace(user_f.get_stripped_name(), &litteral_form_name);
             form_header_functions.push(litteral_form_name);
         }
         for user_v in user_variables.iter() {
             let litteral_form_name = format!("[{}]", user_v.get_name());
             processed_str = processed_str.replace(user_v.get_name(), &litteral_form_name);
+            processed_str = processed_str.replace(user_v.get_stripped_name(), &litteral_form_name);
             form_header_symbols.push(litteral_form_name);
         }
+        form_header_symbols.push(self.settings.mu_r_sq_symbol.clone());
         let mut form_header_additions = vec![];
         if !form_header_functions.is_empty() {
             form_header_additions.push(format!("CF {};", form_header_functions.join(", ")));
@@ -4459,6 +4462,7 @@ impl Vakint {
         if !substitute_indices {
             indices.clear();
         }
+        processed_str = processed_str.replace("𝑖", " i_");
         Ok((form_header_additions.join("\n"), processed_str, indices))
     }
 
