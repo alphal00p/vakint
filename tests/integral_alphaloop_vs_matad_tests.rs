@@ -246,6 +246,13 @@ pub fn evaluate_expression_with_matad(
     // );
     // println!("NEW Integral:\n{}", integral);
     // integral = integral.expand()
+    /*
+    println!(
+        "OLD vakint.settings.number_of_terms_in_epsilon_expansion:\n{}",
+        vakint.settings.number_of_terms_in_epsilon_expansion
+    );
+    println!("OLD Integral:\n{}", integral);
+    */
     integral = integral
         .series(
             vakint_symbol!("ep"),

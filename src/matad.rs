@@ -15,6 +15,7 @@ use log::debug;
 use regex::Regex;
 use string_template_plus::{Render, RenderOptions, Template};
 use symbolica::printer::{AtomPrinter, PrintOptions};
+use symbolica::symbol;
 use symbolica::{
     atom::{Atom, AtomCore, AtomView},
     domains::{integer::Integer, rational::Rational},
@@ -539,7 +540,7 @@ impl Vakint {
         //     .replace(vk_parse!("f_(args__)").unwrap().to_pattern())
         //     .with(vk_parse!("1").unwrap().to_pattern())
         //     .get_all_symbols(false);
-        // let eps_symbol = vk_symbol!(vakint.settings.epsilon_symbol.clone());
+        // let eps_symbol = symbol!(vakint.settings.epsilon_symbol.clone());
         // numerator_additional_symbols.retain(|&s| s != eps_symbol);
         let numerator_additional_symbols: std::collections::HashSet<
             symbolica::atom::Symbol,
@@ -745,13 +746,12 @@ impl Vakint {
 
         let log_muv_mu_sq = function!(
             Atom::LOG,
-            Atom::var(muv_sq_symbol)
-                / Atom::var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            Atom::var(muv_sq_symbol) / Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         let log_mu_sq = function!(
             Atom::LOG,
-            Atom::var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         evaluated_integral = evaluated_integral

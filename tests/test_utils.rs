@@ -368,7 +368,7 @@ pub fn compare_vakint_evaluation_vs_reference(
     let mut vakint_settings = VakintSettings {
         allow_unknown_integrals: true,
         use_dot_product_notation: true,
-        mu_r_sq_symbol: "vk::mursq".into(),
+        mu_r_sq_symbol: "vakint::mursq".into(),
         run_time_decimal_precision: prec,
         evaluation_order: mod_evaluation_order.clone(),
         ..vakint_default_settings

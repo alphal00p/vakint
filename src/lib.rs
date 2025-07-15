@@ -30,6 +30,7 @@ use std::{
     vec,
 };
 use string_template_plus::{Render, RenderOptions, Template};
+use symbolica::symbol;
 
 #[allow(unused)]
 use symbolica::{
@@ -79,7 +80,7 @@ pub type RealMomentum = (Float, Float, Float, Float);
 
 pub static FORM_REPLACEMENT_INDEX_SHIFT: u64 = 13370000;
 
-pub static NAMESPACE: &str = "vk";
+pub static NAMESPACE: &str = "vakint";
 pub static PYSECDEC_NAMESPACE_SEPARATOR: &str = "NAMESPACESEP";
 
 static MINIMAL_FORM_VERSION: &str = "4.2.1";
@@ -1997,8 +1998,8 @@ impl TryFrom<&LoopNormalizationFactor> for Atom {
 impl Default for VakintSettings {
     fn default() -> Self {
         VakintSettings {
-            epsilon_symbol: "ε".into(),
-            mu_r_sq_symbol: "mursq".into(),
+            epsilon_symbol: format!("{}::ε", NAMESPACE),
+            mu_r_sq_symbol: format!("{}::mursq", NAMESPACE),
             form_exe_path: env::var("FORM_PATH").unwrap_or("form".into()),
             python_exe_path: env::var("PYTHON_BIN_PATH").unwrap_or("python3".into()),
             verify_numerator_identification: false,
@@ -3238,7 +3239,7 @@ impl Vakint {
                 .replace(vk_parse!("f_(args__)").unwrap().to_pattern())
                 .with(vk_parse!("1").unwrap().to_pattern())
                 .get_all_symbols(false);
-            let eps_symbol: Symbol = vk_symbol!(vakint.settings.epsilon_symbol.clone());
+            let eps_symbol: Symbol = symbol!(vakint.settings.epsilon_symbol.clone());
             numerator_additional_symbols.retain(|&s| s != eps_symbol);
 
             // Convert back from dot notation
@@ -3458,7 +3459,7 @@ impl Vakint {
             // Expand the numerator around epsilon=0 to make sure it is polynomial
             processed_numerator = processed_numerator
                 .series(
-                    vk_symbol!(vakint.settings.epsilon_symbol.as_str()),
+                    symbol!(vakint.settings.epsilon_symbol.as_str()),
                     Atom::Zero.as_atom_view(),
                     Rational::from(
                         vakint.settings.number_of_terms_in_epsilon_expansion
@@ -3715,7 +3716,7 @@ impl Vakint {
 
         let log_mu_sq = function!(
             Atom::LOG,
-            Atom::var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         let pysecdec_normalization_correction = vk_parse!(format!(
@@ -3747,7 +3748,7 @@ impl Vakint {
                             .with(Atom::num(integral.n_loops as i64).to_pattern());
 
                     let expanded_evaluation = match processed.series(
-                        vk_symbol!(vakint.settings.epsilon_symbol.as_str()),
+                        symbol!(vakint.settings.epsilon_symbol.as_str()),
                         Atom::Zero.as_atom_view(),
                         Rational::from(
                             vakint.settings.number_of_terms_in_epsilon_expansion
@@ -3973,13 +3974,12 @@ impl Vakint {
 
         let log_muv_mu_sq = function!(
             Atom::LOG,
-            Atom::var(muv_sq_symbol)
-                / Atom::var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            Atom::var(muv_sq_symbol) / Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         let log_mu_sq = function!(
             Atom::LOG,
-            Atom::var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         //*((2*𝜋)^(2*{eps}))\
@@ -4013,7 +4013,7 @@ impl Vakint {
                 .with(Atom::num(integral.n_loops as i64).to_pattern());
 
         let expanded_evaluation = match evaluated_integral.series(
-            vk_symbol!(vakint.settings.epsilon_symbol.as_str()),
+            symbol!(vakint.settings.epsilon_symbol.as_str()),
             Atom::Zero.as_atom_view(),
             Rational::from(
                 vakint.settings.number_of_terms_in_epsilon_expansion

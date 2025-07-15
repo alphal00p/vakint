@@ -129,6 +129,6 @@ yielding:
 
 ## Disclaimer about Symbolica namespace
 
-In the current version of `Vakint`, the interface to `FORM` is such that the namespace of all `Symbolica` symbols from your input expression will be overwritten to be the `Vakint` one, i.e. `vk::<symbol>`.
+In the current version of `Vakint`, the interface to `FORM` is such that the namespace of all `Symbolica` symbols from your input expression will be overwritten to be the `Vakint` one, i.e. `vakint::<symbol>`.
 For now, the user sensitive to namespaces is responsible for renaming the symbols in their input expression to avoid conflicts, and possibly remap them afterwards to their original namespaces.
 For simple usage, it is recommended to parse the input expression with the macro `vakint_parse!` which will automatically assign `vk` as the namespace of all your symbols with unspecified namespaces. 

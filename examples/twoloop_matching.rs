@@ -11,15 +11,15 @@ fn main() {
     //println!("Supported topologies:\n{}", vakint.topologies);
 
     let input = try_parse!(
-        "(vk::k(11,2)*vk::k(11,2)+vk::k(11,77)*vk::k(22,77)+vk::k(22,33)*p(42,33))*vk::topo(\
-                    vk::prop(9,vk::edge(7,10),vk::k(11),mUVsqA,1)*\
-                    vk::prop(33,vk::edge(7,10),vk::k(22),mUVsqA,2)*\
-                    vk::prop(55,vk::edge(7,10),vk::k(11)+vk::k(22),mUVsqA,1)\
+        "(vakint::k(11,2)*vakint::k(11,2)+vakint::k(11,77)*vakint::k(22,77)+vakint::k(22,33)*p(42,33))*vakint::topo(\
+                    vakint::prop(9,vakint::edge(7,10),vakint::k(11),mUVsqA,1)*\
+                    vakint::prop(33,vakint::edge(7,10),vakint::k(22),mUVsqA,2)*\
+                    vakint::prop(55,vakint::edge(7,10),vakint::k(11)+vakint::k(22),mUVsqA,1)\
                 )+\
-                (2*vk::k(33,2)*vk::k(33,2)+17*vk::k(44,33)*p(17,33))*vk::topo(\
-                    vk::prop(7,vk::edge(9,21),vk::k(33),mUVsqB,1)*\
-                    vk::prop(13,vk::edge(9,21),vk::k(44),mUVsqB,2)*\
-                    vk::prop(17,vk::edge(9,21),vk::k(33)+vk::k(44),mUVsqB,1)\
+                (2*vakint::k(33,2)*vakint::k(33,2)+17*vakint::k(44,33)*p(17,33))*vakint::topo(\
+                    vakint::prop(7,vakint::edge(9,21),vakint::k(33),mUVsqB,1)*\
+                    vakint::prop(13,vakint::edge(9,21),vakint::k(44),mUVsqB,2)*\
+                    vakint::prop(17,vakint::edge(9,21),vakint::k(33)+vakint::k(44),mUVsqB,1)\
                 )"
     )
     .unwrap();

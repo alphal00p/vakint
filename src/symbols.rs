@@ -48,6 +48,11 @@ pub struct VakintSymbols {
     pub lambda: Symbol,
     pub cmplx_i: Symbol,
     pub lambda_a: Atom,
+    pub prop: Symbol,
+    pub edge: Symbol,
+    pub mom: Symbol,
+    pub topo: Symbol,
+    pub metric: Symbol,
 }
 
 pub static S: LazyLock<VakintSymbols> = LazyLock::new(|| VakintSymbols {
@@ -91,4 +96,9 @@ pub static S: LazyLock<VakintSymbols> = LazyLock::new(|| VakintSymbols {
     cmplx_i: vk_symbol!("𝑖"),
     lambda: vk_symbol!("VakintLambdaScalingAnalysis"),
     lambda_a: Atom::var(vk_symbol!("VakintLambdaScalingAnalysis")),
+    prop: vk_symbol!("prop"),
+    edge: vk_symbol!("edge"),
+    mom: vk_symbol!("k"),
+    topo: vk_symbol!("topo"),
+    metric: vk_symbol!("g"),
 });

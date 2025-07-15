@@ -11,17 +11,48 @@ fn main() {
     }))
     .unwrap();
 
+    // let mut integral = symbolica::try_parse!(
+    //     "(
+    //           vakint::k(3,mink4(4,11))*vakint::k(3,mink4(4,22))
+    //         + vakint::k(3,mink4(4,77))*vakint::p(8,mink4(4,77))
+    //         + vakint::p(1,mink4(4,77))*vakint::p(2,mink4(4,77))
+    //         + vakint::p(1,mink4(4,99))*vakint::p(2,mink4(4,101))
+    //     )*vakint::topo(\
+    //     vakint::prop(9,vakint::edge(66,66),vakint::k(3),MUVsq,1)\
+    // )"
+    // )
+    // .unwrap();
+
+    // let mut integral = symbolica::try_parse!(
+    //     "(
+    //           vakint::k(3,mink4(4,11))*vakint::k(3,mink4(4,22))
+    //         + vakint::p(1,mink4(4,11))*vakint::p(2,mink4(4,11))
+    //     )*vakint::topo(\
+    //     vakint::prop(9,vakint::edge(66,66),vakint::k(3),MUVsq,1)\
+    // )"
+    // )
+    // .unwrap();
+
     let mut integral = symbolica::try_parse!(
         "(
-              vk::k(3,mink4(4,11))*vk::k(3,mink4(4,22))
-            + vk::k(3,mink4(4,77))*vk::p(8,mink4(4,77))
-            + vk::p(1,mink4(4,77))*vk::p(2,mink4(4,77))
-            + vk::p(1,mink4(4,99))*vk::p(2,mink4(4,101))
-        )*vk::topo(\
-        vk::prop(9,vk::edge(66,66),vk::k(3),MUVsq,1)\
+             ((vakint::k(3,mink4(4,11))+vakint::p(1,mink4(4,11)))*(vakint::k(3,mink4(4,22))+vakint::p(2,mink4(4,22))))^2
+        )*vakint::topo(\
+        vakint::prop(9,vakint::edge(66,66),vakint::k(3),MUVsq,1)\
     )"
     )
     .unwrap();
+    /*
+        let mut integral = symbolica::try_parse!(
+            "(
+                  vakint::k(3,mink4(4,11))*vakint::k(3,mink4(4,11))
+                + vakint::p(1,mink4(4,12))*vakint::p(2,mink4(4,12))
+            )*vakint::topo(\
+            vakint::prop(9,vakint::edge(66,66),vakint::k(3),MUVsq,1)\
+        )"
+        )
+        .unwrap();
+    */
+
     println!(
         "\nInput integral:\n{}\n",
         VakintExpression::try_from(integral.clone()).unwrap()
@@ -47,7 +78,7 @@ fn main() {
         "oneloop_evaluation::MUVsq".into(),
         vakint.settings.real_to_prec("1.0"),
     );
-    params.insert("vk::mursq".into(), vakint.settings.real_to_prec("1.0"));
+    params.insert("vakint::mursq".into(), vakint.settings.real_to_prec("1.0"));
 
     let numerical_partial_eval = Vakint::partial_numerical_evaluation(
         &vakint.settings,
@@ -75,15 +106,15 @@ fn main() {
     );
 
     params.insert(
-        "vk::g(oneloop_evaluation::mink4(4,22),oneloop_evaluation::mink4(4,11))".into(),
+        "vakint::g(oneloop_evaluation::mink4(4,22),oneloop_evaluation::mink4(4,11))".into(),
         vakint.settings.real_to_prec("1.0"),
     );
     params.insert(
-        "vk::p(1,oneloop_evaluation::mink4(4,99))".into(),
+        "vakint::p(1,oneloop_evaluation::mink4(4,99))".into(),
         vakint.settings.real_to_prec("1.0"),
     );
     params.insert(
-        "vk::p(2,oneloop_evaluation::mink4(4,101))".into(),
+        "vakint::p(2,oneloop_evaluation::mink4(4,101))".into(),
         vakint.settings.real_to_prec("1.0"),
     );
     let numerical_full_eval = Vakint::full_numerical_evaluation_without_error(

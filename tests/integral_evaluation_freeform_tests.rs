@@ -23,16 +23,16 @@ fn test_integrate_1l_decorated_indices_alphaloop() {
         VakintSettings{number_of_terms_in_epsilon_expansion: 3, integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::alphaloop_only(),
         try_parse!(
-            "( user_space::sigma(user_space::some_args)*vk::p(1,user_space::mink4(4,33))*vk::p(2,user_space::mink4(4,33))*vk::p(1,user_space::mink4(4,11))*vk::p(2,user_space::mink4(4,22))+vk::k(3,user_space::mink4(4,11))*vk::k(3,user_space::mink4(4,22)) + vk::k(3,user_space::mink4(4,77))*vk::p(1,user_space::mink4(4,77)) ) \
-             * vk::topo( vk::prop(9,vk::edge(66,66),vk::k(3),user_space::MUVsq,1 ))\
+            "( user_space::sigma(user_space::some_args)*vakint::p(1,user_space::mink4(4,33))*vakint::p(2,user_space::mink4(4,33))*vakint::p(1,user_space::mink4(4,11))*vakint::p(2,user_space::mink4(4,22))+vakint::k(3,user_space::mink4(4,11))*vakint::k(3,user_space::mink4(4,22)) + vakint::k(3,user_space::mink4(4,77))*vakint::p(1,user_space::mink4(4,77)) ) \
+             * vakint::topo( vakint::prop(9,vakint::edge(66,66),vakint::k(3),user_space::MUVsq,1 ))\
             ")
         .unwrap()
         .as_view(),
         params_from_f64(&[
-            ("user_space::MUVsq".into(), 1.0), ("vk::mursq".into(), 1.0),
-            ("vk::g(user_space::mink4(4,22),user_space::mink4(4,11))".into(), 1.0),
-            ("vk::p(1,user_space::mink4(4,11))".into(), 1.0),
-            ("vk::p(2,user_space::mink4(4,22))".into(), 1.0),
+            ("user_space::MUVsq".into(), 1.0), ("vakint::mursq".into(), 1.0),
+            ("vakint::g(user_space::mink4(4,22),user_space::mink4(4,11))".into(), 1.0),
+            ("vakint::p(1,user_space::mink4(4,11))".into(), 1.0),
+            ("vakint::p(2,user_space::mink4(4,22))".into(), 1.0),
             ("user_space::sigma(user_space::some_args)".into(), 1.0),
             ].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
@@ -58,16 +58,16 @@ fn test_integrate_1l_decorated_indices_matad() {
         VakintSettings{number_of_terms_in_epsilon_expansion: 3, integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::matad_only(None),
         try_parse!(
-            "( user_space::sigma(user_space::some_args)*vk::p(1,user_space::mink4(4,33))*vk::p(2,user_space::mink4(4,33))*vk::p(1,user_space::mink4(4,11))*vk::p(2,user_space::mink4(4,22))+vk::k(3,user_space::mink4(4,11))*vk::k(3,user_space::mink4(4,22)) + vk::k(3,user_space::mink4(4,77))*vk::p(1,user_space::mink4(4,77)) ) \
-             * vk::topo( vk::prop(9,vk::edge(66,66),vk::k(3),user_space::MUVsq,1 ))\
+            "( user_space::sigma(user_space::some_args)*vakint::p(1,user_space::mink4(4,33))*vakint::p(2,user_space::mink4(4,33))*vakint::p(1,user_space::mink4(4,11))*vakint::p(2,user_space::mink4(4,22))+vakint::k(3,user_space::mink4(4,11))*vakint::k(3,user_space::mink4(4,22)) + vakint::k(3,user_space::mink4(4,77))*vakint::p(1,user_space::mink4(4,77)) ) \
+             * vakint::topo( vakint::prop(9,vakint::edge(66,66),vakint::k(3),user_space::MUVsq,1 ))\
             ")
         .unwrap()
         .as_view(),
         params_from_f64(&[
-            ("user_space::MUVsq".into(), 1.0), ("vk::mursq".into(), 1.0),
-            ("vk::g(user_space::mink4(4,22),user_space::mink4(4,11))".into(), 1.0),
-            ("vk::p(1,user_space::mink4(4,11))".into(), 1.0),
-            ("vk::p(2,user_space::mink4(4,22))".into(), 1.0),
+            ("user_space::MUVsq".into(), 1.0), ("vakint::mursq".into(), 1.0),
+            ("vakint::g(user_space::mink4(4,22),user_space::mink4(4,11))".into(), 1.0),
+            ("vakint::p(1,user_space::mink4(4,11))".into(), 1.0),
+            ("vakint::p(2,user_space::mink4(4,22))".into(), 1.0),
             ("user_space::sigma(user_space::some_args)".into(), 1.0),
             ].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
@@ -94,21 +94,21 @@ fn test_integrate_1l_decorated_indices_fmft() {
         VakintSettings{number_of_terms_in_epsilon_expansion: 5, integral_normalization_factor: LoopNormalizationFactor::MSbar,..VakintSettings::default()},
         EvaluationOrder::fmft_only(None),
         try_parse!(
-            "( user_space::sigma(user_space::some_args)*vk::p(1,user_space::mink4(4,33))*vk::p(2,user_space::mink4(4,33))*vk::p(1,user_space::mink4(4,11))*vk::p(2,user_space::mink4(4,22))+vk::k(3,user_space::mink4(4,11))*vk::k(3,user_space::mink4(4,22)) + vk::k(3,user_space::mink4(4,77))*vk::p(1,user_space::mink4(4,77)) ) \
-             * vk::topo( 
-                  vk::prop(9,vk::edge(66,66),vk::k(1),user_space::MUVsq,1 )
-                * vk::prop(9,vk::edge(66,66),vk::k(2),user_space::MUVsq,1 )
-                * vk::prop(9,vk::edge(66,66),vk::k(3),user_space::MUVsq,1 )
-                * vk::prop(9,vk::edge(66,66),vk::k(4),user_space::MUVsq,1 )
+            "( user_space::sigma(user_space::some_args)*vakint::p(1,user_space::mink4(4,33))*vakint::p(2,user_space::mink4(4,33))*vakint::p(1,user_space::mink4(4,11))*vakint::p(2,user_space::mink4(4,22))+vakint::k(3,user_space::mink4(4,11))*vakint::k(3,user_space::mink4(4,22)) + vakint::k(3,user_space::mink4(4,77))*vakint::p(1,user_space::mink4(4,77)) ) \
+             * vakint::topo( 
+                  vakint::prop(9,vakint::edge(66,66),vakint::k(1),user_space::MUVsq,1 )
+                * vakint::prop(9,vakint::edge(66,66),vakint::k(2),user_space::MUVsq,1 )
+                * vakint::prop(9,vakint::edge(66,66),vakint::k(3),user_space::MUVsq,1 )
+                * vakint::prop(9,vakint::edge(66,66),vakint::k(4),user_space::MUVsq,1 )
             )\
             ")
         .unwrap()
         .as_view(),
         params_from_f64(&[
-            ("user_space::MUVsq".into(), 1.0), ("vk::mursq".into(), 1.0),
-            ("vk::g(user_space::mink4(4,22),user_space::mink4(4,11))".into(), 1.0),
-            ("vk::p(1,user_space::mink4(4,11))".into(), 1.0),
-            ("vk::p(2,user_space::mink4(4,22))".into(), 1.0),
+            ("user_space::MUVsq".into(), 1.0), ("vakint::mursq".into(), 1.0),
+            ("vakint::g(user_space::mink4(4,22),user_space::mink4(4,11))".into(), 1.0),
+            ("vakint::p(1,user_space::mink4(4,11))".into(), 1.0),
+            ("vakint::p(2,user_space::mink4(4,22))".into(), 1.0),
             ("user_space::sigma(user_space::some_args)".into(), 1.0),
             ].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
@@ -136,8 +136,8 @@ fn test_integrate_1l_decorated_indices_pysecdec() {
         VakintSettings{number_of_terms_in_epsilon_expansion: 5, integral_normalization_factor: LoopNormalizationFactor::MSbar, ..VakintSettings::default()},
         EvaluationOrder(vec![EvaluationMethod::PySecDec(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/test_integrate_1l_decorated_indices_pysecdec".into()) ,..PySecDecOptions::default() })]),
         try_parse!(
-            "(user_space::sigma*vk::k(1,user_space::mink4(4,11))*vk::p(1,user_space::mink4(4,11))*vk::k(1,user_space::mink4(4,12))*vk::p(1,user_space::mink4(4,12)))*vk::topo(\
-                vk::prop(1,vk::edge(1,1),vk::k(1),user_space::muvsq,2)\
+            "(user_space::sigma*vakint::k(1,user_space::mink4(4,11))*vakint::p(1,user_space::mink4(4,11))*vakint::k(1,user_space::mink4(4,12))*vakint::p(1,user_space::mink4(4,12)))*vakint::topo(\
+                vakint::prop(1,vakint::edge(1,1),vakint::k(1),user_space::muvsq,2)\
              )"
         )
         .unwrap()
@@ -145,7 +145,7 @@ fn test_integrate_1l_decorated_indices_pysecdec() {
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
         params_from_f64(&[
             ("user_space::muvsq".into(), 1.0), 
-            ("vk::mursq".into(), 1.0),
+            ("vakint::mursq".into(), 1.0),
             ("user_space::sigma".into(), 1.0)
             ].iter().cloned().collect(),
             N_DIGITS_PYSECDEC_EVALUATION_FOR_TESTS),
