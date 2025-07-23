@@ -4411,6 +4411,7 @@ impl Vakint {
             processed_str = expression_no_indices.to_canonical_string();
         }
         processed_str = processed_str.replace(&format!("{}::", NAMESPACE), "");
+
         // println!("processed_str= {}", processed_str);
         let user_symbols = expression_no_indices.get_all_symbols(true);
         let mut user_variables = expression_no_indices.get_all_symbols(false);
@@ -4434,23 +4435,34 @@ impl Vakint {
         let mut form_header_symbols = vec![];
 
         user_variables.insert(vk_symbol!(self.settings.mu_r_sq_symbol.clone()));
+
+        let mut string_replacements: HashMap<String, String, ahash::RandomState> =
+            HashMap::default();
         for user_f in user_functions.iter() {
             let litteral_form_name = format!("[{}]", user_f.get_name());
             if user_f.get_namespace() == NAMESPACE || user_f.get_namespace() == "symbolica" {
-                processed_str =
-                    processed_str.replace(user_f.get_stripped_name(), &litteral_form_name);
+                string_replacements.insert(
+                    user_f.get_stripped_name().into(),
+                    litteral_form_name.clone(),
+                );
+                // processed_str = processed_str.replace(user_f.get_stripped_name(), &litteral_form_name);
             } else {
-                processed_str = processed_str.replace(user_f.get_name(), &litteral_form_name);
+                string_replacements.insert(user_f.get_name().into(), litteral_form_name.clone());
+                // processed_str = processed_str.replace(user_f.get_name(), &litteral_form_name);
             }
             form_header_functions.push(litteral_form_name);
         }
         for user_v in user_variables.iter() {
             let litteral_form_name = format!("[{}]", user_v.get_name());
             if user_v.get_namespace() == NAMESPACE || user_v.get_namespace() == "symbolica" {
-                processed_str =
-                    processed_str.replace(user_v.get_stripped_name(), &litteral_form_name);
+                string_replacements.insert(
+                    user_v.get_stripped_name().into(),
+                    litteral_form_name.clone(),
+                );
+                // processed_str = processed_str.replace(user_v.get_stripped_name(), &litteral_form_name);
             } else {
-                processed_str = processed_str.replace(user_v.get_name(), &litteral_form_name);
+                string_replacements.insert(user_v.get_name().into(), litteral_form_name.clone());
+                // processed_str = processed_str.replace(user_v.get_name(), &litteral_form_name);
             }
             form_header_symbols.push(litteral_form_name);
         }
@@ -4470,7 +4482,9 @@ impl Vakint {
         if !substitute_indices {
             indices.clear();
         }
-        processed_str = processed_str.replace("𝑖", " i_");
+        string_replacements.insert("𝑖".into(), "*i_".into());
+        //processed_str = processed_str.replace("𝑖", " i_");
+        processed_str = utils::multi_string_replace(processed_str, &string_replacements);
         Ok((form_header_additions.join("\n"), processed_str, indices))
     }
 
@@ -4503,7 +4517,7 @@ impl Vakint {
         let processed_form_str = form_output
             .replace("[", "")
             .replace("]", "")
-            .replace("i_", "𝑖")
+            .replace("i_", "1𝑖")
             .replace("\\\n", "\n")
             .split("\n")
             .map(|s| s.trim())
@@ -4773,6 +4787,7 @@ impl Vakint {
         } else {
             debug!("Running {} with command: {:?}", "FORM".green(), cmd);
         }
+        //println!("Running {} with command: {:?}", "FORM".green(), cmd);
         let output = cmd.stderr(Stdio::piped()).stdout(Stdio::piped()).output()?;
         if !ExitStatus::success(&output.status) {
             return Err(VakintError::FormError(

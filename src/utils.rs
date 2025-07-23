@@ -1,4 +1,5 @@
 use ahash::HashMap;
+use regex::Regex;
 use symbolica::{
     atom::{Atom, AtomCore, AtomView, Symbol},
     coefficient::CoefficientView,
@@ -158,6 +159,27 @@ pub fn simplify_real(input: AtomView) -> Atom {
     // Collect in EulerGamma to explicitly realise the MSbar cancellation
     res = res.collect::<i8>(vakint_parse!("EulerGamma").unwrap(), None, None);
     res
+}
+
+pub fn multi_string_replace(text: String, repls: &HashMap<String, String>) -> String {
+    // 1. Collect and sort patterns by decreasing length
+    let mut patterns: Vec<String> = repls.keys().cloned().collect();
+    patterns.sort_unstable_by_key(|s| std::cmp::Reverse(s.len()));
+
+    // 2. Build an alternation like "longer_pattern|shorter"
+    let alternation = patterns
+        .iter()
+        .map(|pat| regex::escape(pat))
+        .collect::<Vec<_>>()
+        .join("|");
+    let re = Regex::new(&alternation).unwrap();
+
+    // 3. Replace all in one go, using the closure to look up the right replacement
+    re.replace_all(&text, |caps: &regex::Captures| {
+        let m = caps.get(0).unwrap().as_str();
+        repls[m].clone()
+    })
+    .into_owned()
 }
 
 pub fn could_match(pattern: &Pattern, target: AtomView) -> bool {
