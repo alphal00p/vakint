@@ -293,8 +293,8 @@ fn propagators_condition() -> WildcardRestriction {
         let pattern = vk_parse!("prop(propID_,uedge(nl_,nr_),q_,mUVsq_,pow_)")
             .unwrap()
             .to_pattern();
-        let number_node_condition = Condition::from((vk_symbol!("nl_"), gt_condition(0)))
-            & Condition::from((vk_symbol!("nr_"), gt_condition(0)))
+        let number_node_condition = Condition::from((vk_symbol!("nl_"), ge_condition(0)))
+            & Condition::from((vk_symbol!("nr_"), ge_condition(0)))
             & Condition::from((vk_symbol!("propID_"), gt_condition(0)))
             & Condition::from((vk_symbol!("mUVsq_"), symbol_or_number()))
             & Condition::from((vk_symbol!("pow_"), symbol_or_number()));
@@ -314,6 +314,16 @@ fn gt_condition(value: i64) -> WildcardRestriction {
     WildcardRestriction::Filter(Box::new(move |m| {
         if let Match::Single(AtomView::Num(a)) = m {
             a.get_coeff_view() > InlineNum::new(value, 1).as_num_view().get_coeff_view()
+        } else {
+            false
+        }
+    }))
+}
+
+fn ge_condition(value: i64) -> WildcardRestriction {
+    WildcardRestriction::Filter(Box::new(move |m| {
+        if let Match::Single(AtomView::Num(a)) = m {
+            a.get_coeff_view() >= InlineNum::new(value, 1).as_num_view().get_coeff_view()
         } else {
             false
         }
@@ -693,8 +703,8 @@ fn get_prop_with_id(
         vk_parse!(format!("prop({},edge(nl_,nr_),q_,mUVsq_,pow_)", prop_id).as_str())
             .unwrap()
             .to_pattern();
-    let number_node_condition = Condition::from((vk_symbol!("nl_"), gt_condition(0)))
-        & Condition::from((vk_symbol!("nr_"), gt_condition(0)));
+    let number_node_condition = Condition::from((vk_symbol!("nl_"), ge_condition(0)))
+        & Condition::from((vk_symbol!("nr_"), ge_condition(0)));
     expression
         .pattern_match(&pattern, Some(&number_node_condition), None)
         .next()
