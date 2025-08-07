@@ -295,7 +295,7 @@ fn propagators_condition() -> WildcardRestriction {
             .to_pattern();
         let number_node_condition = Condition::from((vk_symbol!("nl_"), ge_condition(0)))
             & Condition::from((vk_symbol!("nr_"), ge_condition(0)))
-            & Condition::from((vk_symbol!("propID_"), gt_condition(0)))
+            & Condition::from((vk_symbol!("propID_"), ge_condition(0)))
             & Condition::from((vk_symbol!("mUVsq_"), symbol_or_number()))
             & Condition::from((vk_symbol!("pow_"), symbol_or_number()));
         for p in props {
