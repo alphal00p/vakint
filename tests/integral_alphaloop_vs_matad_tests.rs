@@ -3,7 +3,7 @@ mod test_utils;
 use ahash::HashMap;
 use log::debug;
 use symbolica::{
-    atom::{Atom, AtomCore, AtomView},
+    atom::{Atom, AtomCore, AtomView, Symbol},
     domains::rational::Rational,
     function,
 };
@@ -282,13 +282,13 @@ pub fn evaluate_expression_with_matad(
     }
     let muv_sq_symbol = vakint_symbol!("muvsq");
     let log_muv_mu_sq = function!(
-        Atom::LOG,
+        Symbol::LOG,
         Atom::var(muv_sq_symbol)
             / Atom::var(vakint_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
     );
 
     let log_mu_sq = function!(
-        Atom::LOG,
+        Symbol::LOG,
         Atom::var(vakint_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
     );
 

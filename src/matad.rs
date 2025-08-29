@@ -14,6 +14,7 @@ use colored::Colorize;
 use log::debug;
 use regex::Regex;
 use string_template_plus::{Render, RenderOptions, Template};
+use symbolica::atom::Symbol;
 use symbolica::printer::{AtomPrinter, PrintOptions};
 use symbolica::symbol;
 use symbolica::{
@@ -745,12 +746,12 @@ impl Vakint {
         }
 
         let log_muv_mu_sq = function!(
-            Atom::LOG,
+            Symbol::LOG,
             Atom::var(muv_sq_symbol) / Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         let log_mu_sq = function!(
-            Atom::LOG,
+            Symbol::LOG,
             Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 

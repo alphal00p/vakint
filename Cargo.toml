@@ -4,7 +4,7 @@ version = "1.0.0"
 edition = "2021"
 
 [dependencies]
-symbolica = { version = "0.17.0", default-features = false }
+symbolica = { version = "0.18.0", default-features = false }
 #symbolica = "0.14.0"
 #symbolica = { git = "https://github.com/benruijl/symbolica.git", rev = "c10688d92271dd061fc71bfe81eb3157e59830d6" }
 #symbolica = { git = "https://github.com/benruijl/symbolica.git", branch = "main", rev = "c10688d92271dd061fc71bfe81eb3157e59830d6" }

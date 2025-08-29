@@ -582,10 +582,7 @@ impl fmt::Display for Integral {
 }
 
 fn get_integer_from_atom(n: AtomView) -> Option<i64> {
-    match n.try_into() {
-        Ok(res) => Some(res),
-        Err(_) => None,
-    }
+    n.try_into().ok()
     /*
     if let Match::Single(AtomView::Num(a)) = m {
         match a.get_coeff_view() {
@@ -1909,7 +1906,7 @@ impl LoopNormalizationFactor {
 
         let mut expanded_expr_atom = expanded_expr.to_atom();
         let log_mu_sq = function!(
-            Atom::LOG,
+            Symbol::LOG,
             Atom::var(vk_symbol!(settings.mu_r_sq_symbol.as_str()))
         );
         expanded_expr_atom = expanded_expr_atom
@@ -1992,7 +1989,7 @@ impl TryFrom<&LoopNormalizationFactor> for Atom {
                     .with(Atom::var(S.cmplx_i).to_pattern());
                 processed_a = processed_a
                     .replace(vk_parse!("pi").unwrap().to_pattern())
-                    .with(Atom::var(Atom::PI).to_pattern());
+                    .with(Atom::var(Symbol::PI).to_pattern());
                 Ok(processed_a)
             }
             Err(e) => Err(VakintError::InvalidLoopNormalization(
@@ -2958,7 +2955,7 @@ impl Vakint {
 
         let binary_prec = settings.get_binary_precision();
         const_map_real.insert(
-            Atom::from(Var::new(Atom::PI)),
+            Atom::from(Var::new(Symbol::PI)),
             Float::with_val(binary_prec, Constant::Pi),
         );
 
@@ -3021,7 +3018,7 @@ impl Vakint {
         );
 
         const_map_real.insert(
-            function!(Atom::LOG, Atom::num(2)),
+            function!(Symbol::LOG, Atom::num(2)),
             Float::with_val(binary_prec, Constant::Log2),
         );
 
@@ -3725,7 +3722,7 @@ impl Vakint {
         */
 
         let log_mu_sq = function!(
-            Atom::LOG,
+            Symbol::LOG,
             Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
@@ -3983,12 +3980,12 @@ impl Vakint {
             );
 
         let log_muv_mu_sq = function!(
-            Atom::LOG,
+            Symbol::LOG,
             Atom::var(muv_sq_symbol) / Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         let log_mu_sq = function!(
-            Atom::LOG,
+            Symbol::LOG,
             Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
@@ -4568,7 +4565,7 @@ impl Vakint {
                     );
                 processed = processed
                     .replace(vk_parse!("pi").unwrap().to_pattern())
-                    .with(Atom::var(Atom::PI).to_pattern());
+                    .with(Atom::var(Symbol::PI).to_pattern());
 
                 processed = processed
                     .replace(vk_parse!("g(idx1_,idx2_)").unwrap().to_pattern())

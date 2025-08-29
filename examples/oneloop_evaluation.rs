@@ -1,12 +1,15 @@
 use ahash::HashMap;
+use test_log::env_logger;
 use vakint::{Vakint, VakintExpression, VakintSettings};
 
 fn main() {
+    env_logger::init();
     let vakint = Vakint::new(Some(VakintSettings {
         allow_unknown_integrals: false,
         use_dot_product_notation: true,
         integral_normalization_factor: vakint::LoopNormalizationFactor::MSbar,
         run_time_decimal_precision: 16,
+        mu_r_sq_symbol: "test::mu_r_sq".to_string(),
         ..VakintSettings::default()
     }))
     .unwrap();
@@ -35,7 +38,7 @@ fn main() {
 
     let mut integral = symbolica::try_parse!(
         "(
-             ((vakint::k(3,mink4(4,11))+vakint::p(1,mink4(4,11)))*(vakint::k(3,mink4(4,22))+vakint::p(2,mink4(4,22))))^2
+             (3+1𝑖)*test::myMUVI*test::myMUV*((vakint::k(3,mink4(4,11))+vakint::p(1,mink4(4,11)))*(vakint::k(3,mink4(4,22))+vakint::p(2,mink4(4,22))))^2
         )*vakint::topo(\
         vakint::prop(9,vakint::edge(66,66),vakint::k(3),MUVsq,1)\
     )"
@@ -78,8 +81,9 @@ fn main() {
         "oneloop_evaluation::MUVsq".into(),
         vakint.settings.real_to_prec("1.0"),
     );
-    params.insert("vakint::mursq".into(), vakint.settings.real_to_prec("1.0"));
-
+    params.insert("test::myMUV".into(), vakint.settings.real_to_prec("1.0"));
+    params.insert("test::myMUVI".into(), vakint.settings.real_to_prec("1.0"));
+    params.insert("test::mu_r_sq".into(), vakint.settings.real_to_prec("1.0"));
     let numerical_partial_eval = Vakint::partial_numerical_evaluation(
         &vakint.settings,
         integral.as_view(),
