@@ -32,7 +32,7 @@ use std::{
 use string_template_plus::{Render, RenderOptions, Template};
 use symbolica::symbol;
 #[cfg(feature = "symbolica_community_module")]
-mod symbolica_community_module;
+pub mod symbolica_community_module;
 
 #[allow(unused)]
 use symbolica::{
