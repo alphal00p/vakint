@@ -153,6 +153,7 @@ impl<'a> FromPyObject<'a> for VakintExpressionWrapper {
     }
 }
 
+#[cfg_attr(feature = "python_stubgen", gen_stub_pymethods)]
 #[pymethods]
 impl VakintExpressionWrapper {
     pub fn __str__(&self) -> PyResult<String> {
@@ -194,6 +195,7 @@ impl<'a> FromPyObject<'a> for VakintEvaluationMethodWrapper {
     }
 }
 
+#[cfg_attr(feature = "python_stubgen", gen_stub_pymethods)]
 #[pymethods]
 impl VakintEvaluationMethodWrapper {
     pub fn __str__(&self) -> PyResult<String> {
@@ -275,6 +277,7 @@ impl VakintEvaluationMethodWrapper {
     }
 }
 
+#[cfg_attr(feature = "python_stubgen", gen_stub_pymethods)]
 #[pymethods]
 impl VakintWrapper {
     #[pyo3(signature = (run_time_decimal_precision = None, evaluation_order = None, epsilon_symbol = None, mu_r_sq_symbol = None, form_exe_path = None, python_exe_path = None, verify_numerator_identification = None, integral_normalization_factor = None, allow_unknown_integrals = None, clean_tmp_dir = None, number_of_terms_in_epsilon_expansion = None, use_dot_product_notation = None, temporary_directory = None))]

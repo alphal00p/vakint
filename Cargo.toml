@@ -37,7 +37,7 @@ test-log = "*"
 
 
 [features]
-symbolica_community_module = ["dep:pyo3", "dep:pyo3-stub-gen"]
+symbolica_community_module = ["dep:pyo3"]
 python_stubgen = ["symbolica/python_stubgen", "dep:pyo3-stub-gen"]
 #default = ["symbolica_community_module", "python_stubgen"]
 
