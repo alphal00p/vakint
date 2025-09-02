@@ -1,7 +1,7 @@
 [package]
 name = "vakint"
 version = "1.0.0"
-edition = "2021"
+edition = "2024"
 
 [profile.dev-optim]
 inherits = "dev"
@@ -9,7 +9,7 @@ opt-level = 2
 #lto=true
 
 [dependencies]
-symbolica = { version = "0.18.0", features = ["python_export"] }
+symbolica = { version = "0.18.0" }
 #symbolica = "0.14.0"
 #symbolica = { git = "https://github.com/benruijl/symbolica.git", rev = "c10688d92271dd061fc71bfe81eb3157e59830d6" }
 #symbolica = { git = "https://github.com/benruijl/symbolica.git", branch = "main", rev = "c10688d92271dd061fc71bfe81eb3157e59830d6" }
@@ -37,8 +37,12 @@ test-log = "*"
 
 
 [features]
-symbolica_community_module = ["dep:pyo3"]
-python_stubgen = ["symbolica/python_stubgen", "dep:pyo3-stub-gen"]
+symbolica_community_module = ["dep:pyo3", "symbolica/python_export"]
+python_stubgen = [
+    "symbolica/python_stubgen",
+    "symbolica/python_export",
+    "dep:pyo3-stub-gen",
+]
 #default = ["symbolica_community_module", "python_stubgen"]
 
 #[patch.crates-io]
