@@ -246,12 +246,12 @@ impl VakintExpressionWrapper {
     ///
     /// ## Examples
     /// ```python
-    /// integral = VakintExpression(E("""
+    /// integral = VakintExpression(E('''
     ///         (
     ///             k(1,11)*k(1,11)
     ///         )*topo(
     ///              prop(1,edge(1,1),k(1),muvsq,1)
-    /// )""", default_namespace="vakint"))
+    /// )''', default_namespace="vakint"))
     /// str(integral)
     /// # (k(1,11)^2) x topo(prop(1,edge(1,1),k(1),muvsq,1))
     /// ```
@@ -265,7 +265,7 @@ impl VakintExpressionWrapper {
     ///
     /// ## Examples
     /// ```python
-    /// integral=E("""
+    /// integral=E('''
     ///         (
     ///             k(1,11)*k(2,11)*k(1,22)*k(2,22)
     ///           + p(1,11)*k(3,11)*k(3,22)*p(2,22)
@@ -277,7 +277,7 @@ impl VakintExpressionWrapper {
     ///             * prop(4,edge(1,4),k(3)-k(1),muvsq,1)
     ///             * prop(5,edge(2,4),k(1)-k(2),muvsq,1)
     ///             * prop(6,edge(3,4),k(2)-k(3),muvsq,1)
-    /// )""", default_namespace="vakint")
+    /// )''', default_namespace="vakint")
     /// print(VakintExpression(integral))
     /// # ((k(1,22)+k(2,22))*k(2,22)*p(1,11)*p(2,11)+k(1,11)*k(1,22)*k(2,11)*k(2,22)+k(3,11)*k(3,22)*p(1,11)*p(2,22)) x topo(prop(1,edge(1,2),k(1),muvsq,1)*prop(2,edge(2,3),k(2),muvsq,1)*prop(3,edge(3,1),k(3),muvsq,1)*prop(4,edge(1,4),-k(1)+k(3),muvsq,1)*prop(5,edge(2,4),k(1)-k(2),muvsq,1)*prop(6,edge(3,4),k(2)-k(3),muvsq,1))
     /// ```
