@@ -9,8 +9,8 @@ use symbolica::{
 };
 use test_utils::compare_two_evaluations;
 use vakint::{
-    matad::MATAD, vakint_parse, vakint_symbol, EvaluationOrder, NumericalEvaluationResult, Vakint,
-    VakintSettings,
+    EvaluationOrder, NumericalEvaluationResult, Vakint, VakintSettings, matad::MATAD, vakint_parse,
+    vakint_symbol,
 };
 
 use vakint::{externals_from_f64, params_from_f64};
@@ -34,6 +34,33 @@ fn test_integrate_1l_no_numerator() {
                 )",pow).as_str()
             ).unwrap().as_view(),
             params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION),
+            externals_from_f64(
+            &(1..=2)
+                .map(|i| (i, (0.17*((i+1) as f64), 0.4*((i+2) as f64), 0.3*((i+3) as f64), 0.12*((i+4) as f64))))
+                //.map(|i| (i, (17.0*((0) as f64), 4.0*((0) as f64), 3.0*((0) as f64), 12.0*((0) as f64))))
+                .collect(),
+                N_DIGITS_ANLYTICAL_EVALUATION),
+            COMPARISON_REL_THRESHOLD, MAX_PULL,
+            true,
+        );
+    }
+}
+
+#[test_log::test]
+fn test_integrate_1l_no_numerator_squared_mass() {
+    for pow in 1..=2 {
+        #[rustfmt::skip]
+        compare_two_evaluations(
+            VakintSettings { run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION, number_of_terms_in_epsilon_expansion: 4, ..VakintSettings::default()},
+            ((&EvaluationOrder::alphaloop_only() ,true),(&EvaluationOrder::matad_only(None) ,true)),
+            vakint_parse!(
+                format!("( 2*user_space::muv - user_space::muv^2 )
+                *topo(\
+                    prop(1,edge(1,1),k(1),user_space::muv^2,{})
+                )",pow).as_str()
+            ).unwrap().as_view(),
+            params_from_f64(&[("user_space::muv".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION),
             externals_from_f64(
             &(1..=2)

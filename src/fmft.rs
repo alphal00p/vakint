@@ -23,8 +23,8 @@ use symbolica::{
 };
 
 use crate::{
-    get_integer_from_atom, number_condition, symbol_condition, symbols::S, FMFTOptions, NAMESPACE,
-    TEMPLATES,
+    FMFTOptions, NAMESPACE, TEMPLATES, get_integer_from_atom, number_condition, symbol_condition,
+    symbols::S,
 };
 
 use crate::{ReplacementRules, Vakint, VakintError, VakintSettings};
@@ -98,13 +98,12 @@ impl FMFT {
             .pattern_match(&vk_parse!("GammaArgs(x_,y_)").unwrap().into(), None, None)
             .next()
         {
-            return Err(VakintError::FMFTError(
-            format!("FMFT result contains a Gamma function whose numerical evaluation is not implemented in vakint: Gamma({}+{}*{})",
+            return Err(VakintError::FMFTError(format!(
+                "FMFT result contains a Gamma function whose numerical evaluation is not implemented in vakint: Gamma({}+{}*{})",
                 m.get(&S.x_).unwrap(),
                 m.get(&S.y_).unwrap(),
                 self.settings.epsilon_symbol
-            ),
-        ));
+            )));
         }
         Ok(r)
     }
@@ -176,12 +175,11 @@ impl FMFT {
             .pattern_match(&vk_parse!("PolyGamma(x_,y_)").unwrap().into(), None, None)
             .next()
         {
-            return Err(VakintError::FMFTError(
-            format!("FMFT result contains a PolyGamma function whose numerical evaluation is not implemented in vakint: PolyGamma({},{})",
+            return Err(VakintError::FMFTError(format!(
+                "FMFT result contains a PolyGamma function whose numerical evaluation is not implemented in vakint: PolyGamma({},{})",
                 m.get(&S.x_).unwrap(),
                 m.get(&S.y_).unwrap()
-            ),
-        ));
+            )));
         }
         Ok(r)
     }
@@ -257,35 +255,8 @@ impl Vakint {
             return err;
         };
 
-        let muv_sq_symbol = if let Some(m) = integral
-            .short_expression
-            .as_ref()
-            .unwrap()
-            .pattern_match(
-                &function!(S.fun_, S.x_a, S.any_a___).to_pattern(),
-                Some(
-                    &(Condition::from((S.x_, symbol_condition()))
-                        & Condition::from((S.fun_, symbol_condition()))),
-                ),
-                None,
-            )
-            .next()
-        {
-            match m.get(&S.x_).unwrap() {
-                Atom::Var(s) => s.get_symbol(),
-                _ => {
-                    return Err(VakintError::MalformedGraph(format!(
-                        "Could not find muV in graph:\n{}",
-                        integral.short_expression.as_ref().unwrap()
-                    )));
-                }
-            }
-        } else {
-            return Err(VakintError::MalformedGraph(format!(
-                "Could not find muV in graph:\n{}",
-                integral.short_expression.as_ref().unwrap()
-            )));
-        };
+        let (muv_atom, muv_sq_atom) =
+            Vakint::identify_uv_mass_symbols(integral.canonical_expression.as_ref().unwrap())?;
 
         // Here we map the propagators in the correct order for the definition of the topology in FMFT
         let vakint_to_fmft_edge_map = match integral_name.as_str().split("_pinch_").next().unwrap()
@@ -298,7 +269,7 @@ impl Vakint {
                 return Err(VakintError::InvalidGenericExpression(format!(
                     "Integral {} is not supported by FMFT.",
                     integral_name
-                )))
+                )));
             }
         };
 
@@ -308,9 +279,10 @@ impl Vakint {
             &function!(S.dot, function!(S.p, S.id1_a), function!(S.k, S.id2_a)).to_pattern(),
             numerator.as_view(),
         ) {
-            return Err(VakintError::InvalidNumerator(
-                format!("Make sure the numerator has been tensor-reduced before being processed by FMFT : {}", numerator)
-            ));
+            return Err(VakintError::InvalidNumerator(format!(
+                "Make sure the numerator has been tensor-reduced before being processed by FMFT : {}",
+                numerator
+            )));
         }
 
         // Now map all exterior dot products into a special function `vkdot` so that it does not interfere with FMFT
@@ -341,6 +313,7 @@ impl Vakint {
         }
 
         let vakint_to_fmft_edge_map_copy = vakint_to_fmft_edge_map.clone();
+        let muv_sq_atom_clone = muv_sq_atom.clone();
         numerator = numerator.replace(
                 function!(S.dot, function!(S.k, S.id1_a), function!(S.k, S.id2_a))
             .to_pattern()).when(&(Condition::from((S.id1_, number_condition()))
@@ -368,7 +341,7 @@ impl Vakint {
                     // The outter dot will be converted to an inner dot in the next step
                     // Again we must normalize by the dimensionality muv^2
                     vk_parse!(format!("dot(p{},p{})", i_edge1, i_edge2).as_str()).unwrap()
-                        * (Atom::var(muv_sq_symbol))
+                        * (muv_sq_atom_clone.clone())
                 }
             );
 
@@ -381,8 +354,18 @@ impl Vakint {
             )
             .with(vk_parse!("(4-d)/2").unwrap().to_pattern());
 
+        let muv_symbol = match (muv_atom.as_view(), muv_sq_atom.as_view()) {
+            (AtomView::Var(s), _) => s.get_symbol(),
+            (_, AtomView::Var(s2)) => s2.get_symbol(),
+            _ => {
+                return Err(VakintError::MalformedGraph(
+                    "Could not identify the UV mass symbol in the integral.".into(),
+                ));
+            }
+        };
+
         let (form_header_additions, expression_str, indices) =
-            self.sanitize_user_expressions(numerator.as_view(), true)?;
+            self.sanitize_user_expressions(numerator.as_view(), true, &[muv_symbol])?;
 
         // let expression_str =
         //     &AtomPrinter::new_with_options(numerator.as_view(), PrintOptions::file_no_namespace())
@@ -427,7 +410,16 @@ impl Vakint {
         let mut vars: HashMap<String, String> = HashMap::new();
         vars.insert("numerator".into(), numerator_string);
         vars.insert("integral".into(), integral_string);
-        vars.insert("symbols".into(), muv_sq_symbol.to_string());
+        // match (muv_atom.as_view(), muv_sq_atom.as_view()) {
+        //     (AtomView::Var(s), _) => vars.insert("symbols".into(), s.get_symbol().to_string()),
+        //     (_, AtomView::Var(s2)) => vars.insert("symbols".into(), s2.get_symbol().to_string()),
+        //     _ => {
+        //         return Err(VakintError::MalformedGraph(
+        //             "Could not identify the UV mass symbol in the integral.".into(),
+        //         ));
+        //     }
+        // };
+        vars.insert("symbols".into(), "NOPREDEDUBEDVAKINTSYMBOL".into());
 
         let mut additional_symbols_str = if !numerator_additional_symbols.is_empty() {
             format!(
@@ -485,20 +477,28 @@ impl Vakint {
         // Offset dimensionality by the denominators
         let muv_sq_dimension = 2 * (integral.n_loops as i64) - powers.iter().sum::<i64>();
 
-        evaluated_integral *=
-            vk_parse!(format!("{}^{}", muv_sq_symbol.get_name(), muv_sq_dimension).as_str())
-                .unwrap();
+        evaluated_integral *= vk_parse!(
+            format!(
+                "({})^{}",
+                muv_sq_atom.to_canonical_string(),
+                muv_sq_dimension
+            )
+            .as_str()
+        )
+        .unwrap();
 
-        let fmft_normalization_correction = vk_parse!(format!(
-            "( 
+        let fmft_normalization_correction = vk_parse!(
+            format!(
+                "( 
                 (𝑖*(𝜋^((4-2*{eps})/2)))\
               * (exp(-EulerGamma))^({eps})\
               * (exp(-logmUVmu-log_mu_sq))^({eps})\
              )^{n_loops}",
-            eps = self.settings.epsilon_symbol,
-            n_loops = integral.n_loops
+                eps = self.settings.epsilon_symbol,
+                n_loops = integral.n_loops
+            )
+            .as_str()
         )
-        .as_str())
         .unwrap();
 
         // Adjust normalization factor
@@ -556,7 +556,10 @@ impl Vakint {
             }
 
             if options.susbstitute_masters {
-                debug!("{}: Substituting master integrals coefficient with their numerical evaluations...", "FMFT".green());
+                debug!(
+                    "{}: Substituting master integrals coefficient with their numerical evaluations...",
+                    "FMFT".green()
+                );
                 evaluated_integral = fmft.substitute_masters(evaluated_integral.as_view())?;
                 debug!(
                     "{}: Substituting PolyGamma and period constants...",
@@ -591,7 +594,7 @@ impl Vakint {
 
         let log_muv_mu_sq = function!(
             Symbol::LOG,
-            Atom::var(muv_sq_symbol) / Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            muv_sq_atom / Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         let log_mu_sq = function!(

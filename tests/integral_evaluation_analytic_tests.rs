@@ -54,12 +54,24 @@ fn test_integrate_1l_a() {
     let mut targets: HashMap<Atom, Atom> = HashMap::default();
 
     for (eps_term, trgt) in [
-        ("ε^-1","1/4*𝜋^2*𝑖*muvsq^2*g(1,2)"),
-        ("1",   "1/4*vakint::muvsq^2*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+3/8*𝜋^2*vakint::𝑖*vakint::muvsq^2*vakint::g(1,2)-1/4*𝜋^2*vakint::𝑖*vakint::muvsq^2*log(vakint::muvsq)*vakint::g(1,2)"),
-        ("ε",   "-(1/4*vakint::muvsq^2*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+3/8*𝜋^2*vakint::𝑖*vakint::muvsq^2*vakint::g(1,2))*log(vakint::muvsq)+𝜋^2*vakint::𝑖*(7/16*vakint::muvsq^2*vakint::g(1,2)+1/48*𝜋^2*vakint::muvsq^2*vakint::g(1,2))+3/8*vakint::muvsq^2*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+1/4*vakint::muvsq^2*(1/2*𝜋^2*vakint::𝑖*log(𝜋)^2+1/2*𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq)^2-𝜋^2*vakint::𝑖*log(𝜋)*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+1/8*𝜋^2*vakint::𝑖*vakint::muvsq^2*log(vakint::muvsq)^2*vakint::g(1,2)"),
-        ("ε^2", "(7/16*vakint::muvsq^2*vakint::g(1,2)+1/48*𝜋^2*vakint::muvsq^2*vakint::g(1,2))*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))+1/2*(1/4*vakint::muvsq^2*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+3/8*𝜋^2*vakint::𝑖*vakint::muvsq^2*vakint::g(1,2))*log(vakint::muvsq)^2-(𝜋^2*vakint::𝑖*(7/16*vakint::muvsq^2*vakint::g(1,2)+1/48*𝜋^2*vakint::muvsq^2*vakint::g(1,2))+3/8*vakint::muvsq^2*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+1/4*vakint::muvsq^2*(1/2*𝜋^2*vakint::𝑖*log(𝜋)^2+1/2*𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq)^2-𝜋^2*vakint::𝑖*log(𝜋)*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2))*log(vakint::muvsq)+𝜋^2*vakint::𝑖*(151190863202516241/410199796539607264*vakint::muvsq^2*vakint::g(1,2)+1/32*𝜋^2*vakint::muvsq^2*vakint::g(1,2))+3/8*vakint::muvsq^2*(1/2*𝜋^2*vakint::𝑖*log(𝜋)^2+1/2*𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq)^2-𝜋^2*vakint::𝑖*log(𝜋)*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+1/4*vakint::muvsq^2*(-1/6*𝜋^2*vakint::𝑖*log(𝜋)^3+1/6*𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq)^3+1/2*𝜋^2*vakint::𝑖*log(𝜋)^2*log(1/4*𝜋^-1*vakint::mursq)-1/2*𝜋^2*vakint::𝑖*log(𝜋)*log(1/4*𝜋^-1*vakint::mursq)^2)*vakint::g(1,2)-1/24*𝜋^2*vakint::𝑖*vakint::muvsq^2*log(vakint::muvsq)^3*vakint::g(1,2)")
-        ] {
-        targets.insert(vakint_parse!(eps_term).unwrap(),vakint_parse!(trgt).unwrap());
+        ("ε^-1", "1/4*𝜋^2*𝑖*muvsq^2*g(1,2)"),
+        (
+            "1",
+            "1/4*vakint::muvsq^2*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+3/8*𝜋^2*vakint::𝑖*vakint::muvsq^2*vakint::g(1,2)-1/4*𝜋^2*vakint::𝑖*vakint::muvsq^2*log(vakint::muvsq)*vakint::g(1,2)",
+        ),
+        (
+            "ε",
+            "-(1/4*vakint::muvsq^2*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+3/8*𝜋^2*vakint::𝑖*vakint::muvsq^2*vakint::g(1,2))*log(vakint::muvsq)+𝜋^2*vakint::𝑖*(7/16*vakint::muvsq^2*vakint::g(1,2)+1/48*𝜋^2*vakint::muvsq^2*vakint::g(1,2))+3/8*vakint::muvsq^2*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+1/4*vakint::muvsq^2*(1/2*𝜋^2*vakint::𝑖*log(𝜋)^2+1/2*𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq)^2-𝜋^2*vakint::𝑖*log(𝜋)*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+1/8*𝜋^2*vakint::𝑖*vakint::muvsq^2*log(vakint::muvsq)^2*vakint::g(1,2)",
+        ),
+        (
+            "ε^2",
+            "(7/16*vakint::muvsq^2*vakint::g(1,2)+1/48*𝜋^2*vakint::muvsq^2*vakint::g(1,2))*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))+1/2*(1/4*vakint::muvsq^2*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+3/8*𝜋^2*vakint::𝑖*vakint::muvsq^2*vakint::g(1,2))*log(vakint::muvsq)^2-(𝜋^2*vakint::𝑖*(7/16*vakint::muvsq^2*vakint::g(1,2)+1/48*𝜋^2*vakint::muvsq^2*vakint::g(1,2))+3/8*vakint::muvsq^2*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+1/4*vakint::muvsq^2*(1/2*𝜋^2*vakint::𝑖*log(𝜋)^2+1/2*𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq)^2-𝜋^2*vakint::𝑖*log(𝜋)*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2))*log(vakint::muvsq)+𝜋^2*vakint::𝑖*(151190863202516241/410199796539607264*vakint::muvsq^2*vakint::g(1,2)+1/32*𝜋^2*vakint::muvsq^2*vakint::g(1,2))+3/8*vakint::muvsq^2*(1/2*𝜋^2*vakint::𝑖*log(𝜋)^2+1/2*𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq)^2-𝜋^2*vakint::𝑖*log(𝜋)*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+1/4*vakint::muvsq^2*(-1/6*𝜋^2*vakint::𝑖*log(𝜋)^3+1/6*𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq)^3+1/2*𝜋^2*vakint::𝑖*log(𝜋)^2*log(1/4*𝜋^-1*vakint::mursq)-1/2*𝜋^2*vakint::𝑖*log(𝜋)*log(1/4*𝜋^-1*vakint::mursq)^2)*vakint::g(1,2)-1/24*𝜋^2*vakint::𝑖*vakint::muvsq^2*log(vakint::muvsq)^3*vakint::g(1,2)",
+        ),
+    ] {
+        targets.insert(
+            vakint_parse!(eps_term).unwrap(),
+            vakint_parse!(trgt).unwrap(),
+        );
     }
     for (v, c) in evaluated_integral
         .coefficient_list::<i8>(&[vakint_parse!("ε").unwrap()])
@@ -114,14 +126,16 @@ fn test_integrate_1l_a() {
         Ok(numerical_partial_eval
             .rationalize_coefficients(&prec)
             .as_view()),
-        vakint_parse!(format!(
-            "-5.36845814123893`{prec}𝑖*g(1,2)\
+        vakint_parse!(
+            format!(
+                "-5.36845814123893`{prec}𝑖*g(1,2)\
              +9.4117042447109682`{prec}𝑖*ε*g(1,2)\
              +2.46740110027234`{prec}𝑖*ε^-1*g(1,2)\
              -12.0696723514860`{prec}𝑖*ε^2*g(1,2)",
-            prec = vakint.settings.run_time_decimal_precision - 1
+                prec = vakint.settings.run_time_decimal_precision - 1
+            )
+            .as_str()
         )
-        .as_str())
         .unwrap()
         .rationalize_coefficients(&prec),
     );
@@ -165,6 +179,30 @@ fn test_integrate_1l_simple() {
         .unwrap()
         .as_view(),
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        HashMap::default(),
+        vec![
+            (-1, ("1.0".into(), "0.0".into()),),
+            (0,  ("4.227843350984671393934879099176e-1".into(),  "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
+fn test_integrate_1l_simple_squared_mass() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings{number_of_terms_in_epsilon_expansion: 2, integral_normalization_factor: LoopNormalizationFactor::pySecDec,..VakintSettings::default()},
+        EvaluationOrder::analytic_only(),
+        vakint_parse!(
+            "(  2*user_space::muv - user_space::muv^2 )*topo(\
+                prop(1,edge(1,1),k(1),user_space::muv^2,1)\
+            )"
+        )
+        .unwrap()
+        .as_view(),
+        params_from_f64(&[("user_space::muv".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         HashMap::default(),
         vec![
@@ -547,6 +585,41 @@ fn test_integrate_4l_h() {
         ).unwrap().as_view(),
         // Masses chosen equal on purpose here so as to have a reliable target analytical result
         params_from_f64(&[("muvsq".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        externals_from_f64(
+        &(1..=1)
+            .map(|i| (i, (17.0*((i+1) as f64), 4.0*((i+2) as f64), 3.0*((i+3) as f64), 12.0*((i+4) as f64))))
+            .collect(),
+            N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
+        vec![
+            // This does not have an analytical expression yet (FMFT not implemented yet)
+            (0,  ("-12799.53514305961548130719263292".into(), "0.0".into()),),
+        ],
+        N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
+    );
+}
+
+#[test_log::test]
+fn test_integrate_4l_h_squared_mass() {
+    #[rustfmt::skip]
+    compare_vakint_evaluation_vs_reference(
+        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::MSbar, number_of_terms_in_epsilon_expansion: 5, run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
+        EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
+        vakint_parse!(
+            "( 2*user_space::muv - user_space::muv^2 )*topo(\
+                 prop(1,edge(5,1),k(1),user_space::muv^2,1)\
+                *prop(2,edge(2,6),k(2),user_space::muv^2,1)\
+                *prop(3,edge(6,5),k(3),user_space::muv^2,1)\
+                *prop(4,edge(3,4),k(4),user_space::muv^2,1)\
+                *prop(5,edge(4,5),k(1)-k(3),user_space::muv^2,1)\
+                *prop(6,edge(6,3),k(2)-k(3),user_space::muv^2,1)\
+                *prop(7,edge(4,1),k(3)-k(1)+k(4),user_space::muv^2,1)\
+                *prop(8,edge(2,3),k(3)-k(2)+k(4),user_space::muv^2,1)\
+                *prop(9,edge(1,2),k(3)+k(4),user_space::muv^2,1)\
+            )"
+        ).unwrap().as_view(),
+        // Masses chosen equal on purpose here so as to have a reliable target analytical result
+        params_from_f64(&[("user_space::muv".into(), 1.0), ("mursq".into(), 1.0)].iter().cloned().collect(),
             N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS),
         externals_from_f64(
         &(1..=1)

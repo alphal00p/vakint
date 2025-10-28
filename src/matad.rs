@@ -6,15 +6,15 @@ use crate::utils::set_precision_in_float_atom;
 use crate::utils::vakint_macros::{vk_parse, vk_symbol};
 use crate::utils::{self, set_precision_in_polynomial_atom};
 use crate::{
-    gt_condition,
+    NAMESPACE, gt_condition,
     matad_numerics::{ADDITIONAL_CONSTANTS, HPL_SUBSTITUTIONS, POLY_GAMMA_SUBSTITUTIONS},
-    NAMESPACE,
 };
 use colored::Colorize;
 use log::debug;
 use regex::Regex;
 use string_template_plus::{Render, RenderOptions, Template};
 use symbolica::atom::Symbol;
+use symbolica::id::Replacement;
 use symbolica::printer::{AtomPrinter, PrintOptions};
 use symbolica::symbol;
 use symbolica::{
@@ -25,8 +25,8 @@ use symbolica::{
 };
 
 use crate::{
-    even_condition, get_integer_from_atom, number_condition, symbol_condition, symbols::S,
-    MATADOptions, TEMPLATES,
+    MATADOptions, TEMPLATES, even_condition, get_integer_from_atom, number_condition,
+    odd_condition, symbol_condition, symbols::S,
 };
 
 use crate::{ReplacementRules, Vakint, VakintError, VakintSettings};
@@ -205,13 +205,12 @@ impl MATAD {
             )
             .next()
         {
-            return Err(VakintError::MATADError(
-            format!("MATAD result contains a Gamma function whose numerical evaluation is not implemented in vakint: Gamma({}+{}*{})",
+            return Err(VakintError::MATADError(format!(
+                "MATAD result contains a Gamma function whose numerical evaluation is not implemented in vakint: Gamma({}+{}*{})",
                 m.get(&S.x_).unwrap(),
                 m.get(&S.y_).unwrap(),
                 self.settings.epsilon_symbol
-            ),
-        ));
+            )));
         }
         Ok(r)
     }
@@ -265,12 +264,11 @@ impl MATAD {
             )
             .next()
         {
-            return Err(VakintError::MATADError(
-            format!("MATAD result contains a PolyGamma function whose numerical evaluation is not implemented in vakint: PolyGamma({},{})",
+            return Err(VakintError::MATADError(format!(
+                "MATAD result contains a PolyGamma function whose numerical evaluation is not implemented in vakint: PolyGamma({},{})",
                 m.get(&S.x_).unwrap(),
                 m.get(&S.y_).unwrap()
-            ),
-        ));
+            )));
         }
         Ok(r)
     }
@@ -369,35 +367,8 @@ impl Vakint {
             return err;
         };
 
-        let muv_sq_symbol = if let Some(m) = integral
-            .short_expression
-            .as_ref()
-            .unwrap()
-            .pattern_match(
-                &function!(S.fun_, S.x_a, S.any_a___).to_pattern(),
-                Some(
-                    &(Condition::from((S.x_, symbol_condition()))
-                        & Condition::from((S.fun_, symbol_condition()))),
-                ),
-                None,
-            )
-            .next()
-        {
-            match m.get(&S.x_).unwrap() {
-                Atom::Var(s) => s.get_symbol(),
-                _ => {
-                    return Err(VakintError::MalformedGraph(format!(
-                        "Could not find muV in graph:\n{}",
-                        integral.short_expression.as_ref().unwrap()
-                    )));
-                }
-            }
-        } else {
-            return Err(VakintError::MalformedGraph(format!(
-                "Could not find muV in graph:\n{}",
-                integral.short_expression.as_ref().unwrap()
-            )));
-        };
+        let (muv_atom, muv_sq_atom) =
+            Vakint::identify_uv_mass_symbols(integral.canonical_expression.as_ref().unwrap())?;
 
         // Here we map the propagators in the correct order for the definition of the topology in MATAD
         let vakint_to_matad_edge_map = match integral_name.as_str().split("_pinch_").next().unwrap()
@@ -409,24 +380,29 @@ impl Vakint {
                 return Err(VakintError::InvalidGenericExpression(format!(
                     "Integral {} is not supported by MATAD.",
                     integral_name
-                )))
+                )));
             }
         };
 
         let mut numerator = Vakint::convert_to_dot_notation(input_numerator);
 
         // println!("Numerator before processing: {}", numerator);
+        numerator = numerator.replace_multiple(&[
+            Replacement::new(
+                muv_sq_atom.to_pattern(),
+                vk_parse!("M^2").unwrap().to_pattern(),
+            ),
+            Replacement::new(muv_atom.to_pattern(), vk_parse!("M").unwrap().to_pattern()),
+        ]);
 
-        numerator = numerator
-            .replace(Atom::var(muv_sq_symbol).to_pattern())
-            .with(vk_parse!("M^2").unwrap().to_pattern());
         if utils::could_match(
             &function!(S.dot, function!(S.p, S.id1_a), function!(S.k, S.id2_a)).to_pattern(),
             numerator.as_view(),
         ) {
-            return Err(VakintError::InvalidNumerator(
-                format!("Make sure the numerator has been tensor-reduced before being processed by MATAD : {}", numerator)
-            ));
+            return Err(VakintError::InvalidNumerator(format!(
+                "Make sure the numerator has been tensor-reduced before being processed by MATAD : {}",
+                numerator
+            )));
         }
 
         // Now map all exterior dot products into a special function `vkdot` so that it does not interfere with MATAD
@@ -496,6 +472,16 @@ impl Vakint {
             )
             .with(vk_parse!("(4-d)/2").unwrap().to_pattern());
 
+        let muv_symbol = match (muv_atom.as_view(), muv_sq_atom.as_view()) {
+            (AtomView::Var(s), _) => s.get_symbol(),
+            (_, AtomView::Var(s2)) => s2.get_symbol(),
+            _ => {
+                return Err(VakintError::MalformedGraph(
+                    "Could not identify the UV mass symbol in the integral.".into(),
+                ));
+            }
+        };
+
         // let indices = Vakint::identify_vector_indices(numerator.as_view())?;
         // for (i_index, user_i) in indices.iter().enumerate() {
         //     numerator = numerator.replace(user_i.to_pattern()).with(Atom::num(
@@ -503,7 +489,7 @@ impl Vakint {
         //     ));
         // }
         let (form_header_additions, expression_str, indices) =
-            self.sanitize_user_expressions(numerator.as_view(), true)?;
+            self.sanitize_user_expressions(numerator.as_view(), true, &[muv_symbol])?;
 
         // let expression_str =
         //     &AtomPrinter::new_with_options(numerator.as_view(), PrintOptions::file_no_namespace())
@@ -551,7 +537,21 @@ impl Vakint {
         let template = Template::parse_template(TEMPLATES.get("run_matad.txt").unwrap()).unwrap();
         let mut vars: HashMap<String, String> = HashMap::new();
         vars.insert("numerator".into(), numerator_string);
-        vars.insert("symbols".into(), muv_sq_symbol.get_stripped_name().into());
+
+        // match (muv_atom.as_view(), muv_sq_atom.as_view()) {
+        //     (AtomView::Var(s), _) => {
+        //         vars.insert("symbols".into(), s.get_symbol().get_name().into())
+        //     }
+        //     (_, AtomView::Var(s2)) => {
+        //         vars.insert("symbols".into(), s2.get_symbol().get_name().into())
+        //     }
+        //     _ => {
+        //         return Err(VakintError::MalformedGraph(
+        //             "Could not identify the UV mass symbol in the integral.".into(),
+        //         ));
+        //     }
+        // };
+        vars.insert("symbols".into(), "NOPREDEDUBEDVAKINTSYMBOL".into());
         vars.insert("integral".into(), integral_string);
         vars.insert("n_loops".into(), format!("{}", integral.n_loops));
         let mut additional_symbols_str = if !numerator_additional_symbols.is_empty() {
@@ -608,20 +608,39 @@ impl Vakint {
             .replace(vk_parse!("M^pow_").unwrap().to_pattern())
             .when(Condition::from((S.pow_, even_condition())))
             .with(
-                vk_parse!(format!("{}^(pow_/2)", muv_sq_symbol.get_name()).as_str())
+                vk_parse!(format!("({})^(pow_/2)", muv_sq_atom.to_canonical_string()).as_str())
                     .unwrap()
                     .to_pattern(),
             );
-        let mut matad_normalization_correction = vk_parse!(format!(
-            "( 
+        // Use may have "stupidly" also kept odd powers in the numerator
+        evaluated_integral = evaluated_integral
+            .replace(vk_parse!("M^pow_").unwrap().to_pattern())
+            .when(Condition::from((S.pow_, odd_condition())))
+            .with(
+                vk_parse!(format!("({})^pow_", muv_atom.to_canonical_string()).as_str())
+                    .unwrap()
+                    .to_pattern(),
+            );
+        evaluated_integral = evaluated_integral
+            .replace(vk_parse!("M").unwrap().to_pattern())
+            .when(Condition::from((S.pow_, odd_condition())))
+            .with(
+                vk_parse!(format!("{}", muv_atom.to_canonical_string()).as_str())
+                    .unwrap()
+                    .to_pattern(),
+            );
+        let mut matad_normalization_correction = vk_parse!(
+            format!(
+                "( 
                     (𝑖*(𝜋^((4-2*{eps})/2)))\
                   * (exp(-EulerGamma))^({eps})\
                   * (exp(-logmUVmu-log_mu_sq))^({eps})\
                  )^{n_loops}",
-            eps = self.settings.epsilon_symbol,
-            n_loops = integral.n_loops
+                eps = self.settings.epsilon_symbol,
+                n_loops = integral.n_loops
+            )
+            .as_str()
         )
-        .as_str())
         .unwrap();
 
         // Since MATAD uses euclidean denominator, we must adjust the overall sign by (-1) per quadratic denominator with power one.
@@ -747,7 +766,7 @@ impl Vakint {
 
         let log_muv_mu_sq = function!(
             Symbol::LOG,
-            Atom::var(muv_sq_symbol) / Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            muv_sq_atom / Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         let log_mu_sq = function!(

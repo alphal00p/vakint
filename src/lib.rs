@@ -17,7 +17,7 @@ use log::{debug, info, warn};
 use regex::Regex;
 use rug::float::Constant;
 use std::{
-    collections::{hash_map::Entry, HashMap, HashSet},
+    collections::{HashMap, HashSet, hash_map::Entry},
     env,
     f64::consts::LOG2_10,
     fmt,
@@ -37,8 +37,8 @@ pub mod symbolica_community_module;
 #[allow(unused)]
 use symbolica::{
     atom::{
-        representation::InlineNum, Atom, AtomCore, AtomView, FunctionBuilder, SliceType, Symbol,
-        Var,
+        Atom, AtomCore, AtomView, FunctionBuilder, SliceType, Symbol, Var,
+        representation::InlineNum,
     },
     domains::{
         atom::AtomField,
@@ -60,7 +60,7 @@ use utils::vakint_macros::{vk_parse, vk_symbol};
 
 use thiserror::Error;
 use topologies::{Topologies, Topology};
-use version_compare::{compare_to, Cmp};
+use version_compare::{Cmp, compare_to};
 
 use symbols::{EXTERNAL_MOMENTUM_SYMBOL, LOOP_MOMENTUM_SYMBOL, METRIC_SYMBOL, S};
 
@@ -159,7 +159,9 @@ pub enum VakintError {
         \nLeft-over: {1}"
     )]
     NumeratorNotReplaced(String, String),
-    #[error("FORM run crashed with the following error:\nstderr: {0}\nstdout: {1}\nYou can rerun the script using:\n{2}")]
+    #[error(
+        "FORM run crashed with the following error:\nstderr: {0}\nstdout: {1}\nYou can rerun the script using:\n{2}"
+    )]
     FormError(String, String, String, String),
     #[error("{0}")]
     FormVersion(String),
@@ -169,9 +171,13 @@ pub enum VakintError {
     PySecDecError(String),
     #[error("{0}")]
     PySecDecVersion(String),
-    #[error("PySecDec is not installed in your system and required for vakint to evaluate with PySecDec. Install it with 'pip install pysecdec'")]
+    #[error(
+        "PySecDec is not installed in your system and required for vakint to evaluate with PySecDec. Install it with 'pip install pysecdec'"
+    )]
     PySecDecUnavailable,
-    #[error("Could not find FORM output file 'out.txt':\nstderr: {0}\nYou can rerun the script using:\n{1}")]
+    #[error(
+        "Could not find FORM output file 'out.txt':\nstderr: {0}\nYou can rerun the script using:\n{1}"
+    )]
     MissingFormOutput(String, String, String),
     #[error("Symbolica could not parse PySecDec output:\n{0}\nError:{1}")]
     PySecDecOutputParsingError(String, String),
@@ -181,7 +187,9 @@ pub enum VakintError {
     IoError(#[from] std::io::Error), // Add this variant to convert std::io::Error to VakintError
     #[error("{0}")]
     MalformedGraph(String),
-    #[error("Invalid loop normalization factor specified: {0}.\nError: {1}\nNote that the following symbols are allowed in the expression: {2}")]
+    #[error(
+        "Invalid loop normalization factor specified: {0}.\nError: {1}\nNote that the following symbols are allowed in the expression: {2}"
+    )]
     InvalidLoopNormalization(String, String, String),
     #[error("Symbolica error: {0}")]
     SymbolicaError(String),
@@ -298,7 +306,8 @@ fn propagators_condition() -> WildcardRestriction {
         let number_node_condition = Condition::from((vk_symbol!("nl_"), ge_condition(0)))
             & Condition::from((vk_symbol!("nr_"), ge_condition(0)))
             & Condition::from((vk_symbol!("propID_"), ge_condition(0)))
-            & Condition::from((vk_symbol!("mUVsq_"), symbol_or_number()))
+            // DO NOT REQUIRE MASS TO BE A SYMBOL
+            // & Condition::from((vk_symbol!("mUVsq_"), symbol_or_number()))
             & Condition::from((vk_symbol!("pow_"), symbol_or_number()));
         for p in props {
             if p.pattern_match(&pattern, Some(&number_node_condition), None)
@@ -375,6 +384,17 @@ fn even_condition() -> WildcardRestriction {
         #[allow(warnings)]
         if let Match::Single(AtomView::Num(_)) = m {
             get_integer_from_atom(m.to_atom().as_view()).unwrap() % 2 == 0
+        } else {
+            false
+        }
+    }))
+}
+
+fn odd_condition() -> WildcardRestriction {
+    WildcardRestriction::Filter(Box::new(move |m| {
+        #[allow(warnings)]
+        if let Match::Single(AtomView::Num(_)) = m {
+            get_integer_from_atom(m.to_atom().as_view()).unwrap() % 2 == 1
         } else {
             false
         }
@@ -567,18 +587,24 @@ impl fmt::Display for Integral {
         write!(
             f,
             "name='{}', n_loops={}, n_props_top_topo={}\n   | canonical_expression='{}',\n   | canonical_pattern='{}',\n   | short_expression='{}'",
-            if self.name=="UNKNOWN" {self.name.red()} else {self.name.green()},
+            if self.name == "UNKNOWN" {
+                self.name.red()
+            } else {
+                self.name.green()
+            },
             self.n_loops,
             self.n_props,
             self.canonical_expression
                 .as_ref()
                 .map(|e| format!("{}", e))
-                .unwrap_or("N/A".into()).blue(),
-            format!("{}",self.generic_pattern.pattern.to_atom().unwrap()).blue(),
+                .unwrap_or("N/A".into())
+                .blue(),
+            format!("{}", self.generic_pattern.pattern.to_atom().unwrap()).blue(),
             self.short_expression
                 .as_ref()
                 .map(|e| format!("{}", e))
-                .unwrap_or("N/A".into()).green()
+                .unwrap_or("N/A".into())
+                .green()
         )
     }
 }
@@ -795,9 +821,10 @@ impl Integral {
                             .unwrap()
                         )
                     } else {
-                        return Err(VakintError::InvalidGenericExpression(
-                            format!("Generic expression does not have masses formatted as msq(integer in [1,n_props]): {}",a),
-                        ));
+                        return Err(VakintError::InvalidGenericExpression(format!(
+                            "Generic expression does not have masses formatted as msq(integer in [1,n_props]): {}",
+                            a
+                        )));
                     }
                 } else {
                     return Err(VakintError::InvalidGenericExpression(
@@ -831,9 +858,10 @@ impl Integral {
                                 .unwrap()
                         )
                     } else {
-                        return Err(VakintError::InvalidGenericExpression(
-                            format!("Generic expression does not have powers formatted as pow(integer in [1,n_props]): {}",a),
-                        ));
+                        return Err(VakintError::InvalidGenericExpression(format!(
+                            "Generic expression does not have powers formatted as pow(integer in [1,n_props]): {}",
+                            a
+                        )));
                     }
                 };
 
@@ -849,7 +877,8 @@ impl Integral {
 
                 let (id_node_left, id_node_right) = get_node_ids(&m)?;
 
-                generic_expression *= vk_parse!(format!(
+                generic_expression *=
+                    vk_parse!(format!(
                     "prop(id{id}_,uedge(n{id_l_node}l_,n{id_r_node}r_),q{id}__,{mass},{power})",
                     id = i_prop,
                     id_l_node = id_node_left,
@@ -858,8 +887,9 @@ impl Integral {
                     power = pow_symbol_string
                 )
                 .as_str())
-                .unwrap();
-                unoriented_generic_expression *= vk_parse!(format!(
+                    .unwrap();
+                unoriented_generic_expression *=
+                    vk_parse!(format!(
                     "prop(id{id}_,uedge(n{id_l_node}_,n{id_r_node}_),q{id}__,{mass},{power})",
                     id = i_prop,
                     id_l_node = id_node_left,
@@ -868,18 +898,21 @@ impl Integral {
                     power = pow_symbol_string
                 )
                 .as_str())
-                .unwrap();
+                    .unwrap();
 
-                let new_conditions =
-                    Condition::from((vk_symbol!(mass_symbol_string.clone()), symbol_or_number()))
-                        & Condition::from((
-                            vk_symbol!(format!("pow{}_", i_prop).as_str()),
-                            number_condition(),
-                        ))
-                        & Condition::from((
-                            vk_symbol!(format!("id{}_", i_prop).as_str()),
-                            number_condition(),
-                        ));
+                let new_conditions = Condition::from((
+                    vk_symbol!(format!("pow{}_", i_prop).as_str()),
+                    number_condition(),
+                )) 
+                // DO NOT REQUIRE MASS TO BE A SYMBOL
+                // & Condition::from((
+                //     vk_symbol!(mass_symbol_string.clone()),
+                //     symbol_or_number(),
+                // )) 
+                & Condition::from((
+                    vk_symbol!(format!("id{}_", i_prop).as_str()),
+                    number_condition(),
+                ));
                 generic_condition = generic_condition
                     & new_conditions.clone()
                     & apply_restriction_to_symbols(
@@ -920,8 +953,9 @@ impl Integral {
 
         if next_atom != vk_parse!("topo(1)").unwrap() {
             return Err(VakintError::InvalidGenericExpression(format!(
-                "Not all propagators of the generic expression supplied have been successfully identified. Left-over: {}",next_atom)
-            ));
+                "Not all propagators of the generic expression supplied have been successfully identified. Left-over: {}",
+                next_atom
+            )));
         }
         generic_expression = function!(vk_symbol!("topo"), &generic_expression);
         let generic_pattern = FullPattern {
@@ -1041,9 +1075,9 @@ impl Integral {
             {
                 let mut replacement_rules = ReplacementRules::default();
                 for i_prop in 1..=self.n_props {
-                    if let Some(Match::Single(a)) =
-                        m1.match_stack
-                            .get(vk_symbol!(format!("pow{}_", i_prop).as_str()))
+                    if let Some(Match::Single(a)) = m1
+                        .match_stack
+                        .get(vk_symbol!(format!("pow{}_", i_prop).as_str()))
                     {
                         // NO: We do not want to match propagators with zero powers in the short form,
                         // as these should be matched to the pinched version with a hardcoded zero power
@@ -1183,9 +1217,9 @@ impl Integral {
                     prop_id,
                 ) {
                     for var_prop_id in 1..=self.n_props {
-                        if let Some(mtmp) =
-                            m1.match_stack
-                                .get(vk_symbol!(format!("pow{}_", var_prop_id).as_str()))
+                        if let Some(mtmp) = m1
+                            .match_stack
+                            .get(vk_symbol!(format!("pow{}_", var_prop_id).as_str()))
                         {
                             if let Entry::Vacant(e) = replacement_rules
                                 .canonical_expression_substitutions
@@ -1520,7 +1554,10 @@ impl fmt::Display for MATADOptions {
         write!(
             f,
             "expand_masters={}, susbstitute_masters={}, substitute_hpls={}, direct_numerical_substition={}",
-            self.expand_masters, self.susbstitute_masters, self.substitute_hpls, self.direct_numerical_substition
+            self.expand_masters,
+            self.susbstitute_masters,
+            self.substitute_hpls,
+            self.direct_numerical_substition
         )
     }
 }
@@ -1935,7 +1972,7 @@ impl LoopNormalizationFactor {
                     expr.to_canonical_string(),
                     e.to_string(),
                     LoopNormalizationFactor::allowed_symbols(settings).join(","),
-                ))
+                ));
             }
         };
         Ok((expr, expanded_expr, num_res))
@@ -2284,17 +2321,19 @@ impl VakintTerm {
                         .to_pattern(),
                 )
                 .with(
-                    vk_parse!(format!(
-                        "vec{}({}{},idx_)",
-                        if *vec == EXTERNAL_MOMENTUM_SYMBOL {
-                            "1"
-                        } else {
-                            ""
-                        },
-                        vec,
-                        id
+                    vk_parse!(
+                        format!(
+                            "vec{}({}{},idx_)",
+                            if *vec == EXTERNAL_MOMENTUM_SYMBOL {
+                                "1"
+                            } else {
+                                ""
+                            },
+                            vec,
+                            id
+                        )
+                        .as_str()
                     )
-                    .as_str())
                     .unwrap()
                     .to_pattern(),
                 );
@@ -2740,7 +2779,11 @@ impl NumericalEvaluationResult {
                             false,
                             format!(
                                 "{} part of ε^{} coefficient does not match within max pull: {} != {} (pull = {})",
-                                part, power, r, o, delta/err.norm()
+                                part,
+                                power,
+                                r,
+                                o,
+                                delta / err.norm()
                             ),
                         );
                     }
@@ -2820,10 +2863,11 @@ impl Vakint {
                         );
                     } else {
                         return Err(VakintError::FormVersion(format!(
-                        "{} version installed on your system does not meet minimal requirements: {}<{}",
-                        "FORM".red(),
-                        form_version.red(), MINIMAL_FORM_VERSION
-                    )));
+                            "{} version installed on your system does not meet minimal requirements: {}<{}",
+                            "FORM".red(),
+                            form_version.red(),
+                            MINIMAL_FORM_VERSION
+                        )));
                     }
                 }
                 Err(_) => {
@@ -2831,7 +2875,7 @@ impl Vakint {
                         "Could not parse {} version '{}'.",
                         "FORM".red(),
                         form_version.red()
-                    )))
+                    )));
                 }
             };
         }
@@ -2856,7 +2900,8 @@ impl Vakint {
                         return Err(VakintError::FormVersion(format!(
                             "{} version installed on your system does not meet minimal requirements: {}<{}.",
                             "PySecDec".red(),
-                            pysecdec_version.red(), MINIMAL_PYSECDEC_VERSION
+                            pysecdec_version.red(),
+                            MINIMAL_PYSECDEC_VERSION
                         )));
                     }
                 }
@@ -2865,7 +2910,7 @@ impl Vakint {
                         "Could not parse {} version '{}'.",
                         "PySecDec".red(),
                         pysecdec_version.red()
-                    )))
+                    )));
                 }
             };
         }
@@ -3237,9 +3282,10 @@ impl Vakint {
                 .next()
                 .is_some()
             {
-                return Err(VakintError::InvalidNumerator(
-                format!("PySecDec can only handle scalar numerator. If you have open indices, make sure they are contracted with external momenta: {}",processed_numerator),
-            ));
+                return Err(VakintError::InvalidNumerator(format!(
+                    "PySecDec can only handle scalar numerator. If you have open indices, make sure they are contracted with external momenta: {}",
+                    processed_numerator
+                )));
             }
 
             // Check if numerator contains additional symbols
@@ -3283,11 +3329,13 @@ impl Vakint {
                                 .lock()
                                 .unwrap()
                                 .insert(format!("mu{}", a_in[4]));
-                            *a_out = vk_parse!(format!(
-                                "{}{}(mu{})*{}{}(mu{})",
-                                a_in[0], a_in[1], a_in[4], a_in[2], a_in[3], a_in[4],
+                            *a_out = vk_parse!(
+                                format!(
+                                    "{}{}(mu{})*{}{}(mu{})",
+                                    a_in[0], a_in[1], a_in[4], a_in[2], a_in[3], a_in[4],
+                                )
+                                .as_str()
                             )
-                            .as_str())
                             .unwrap();
                         };
 
@@ -3486,10 +3534,11 @@ impl Vakint {
             // .replace(vakint.settings.epsilon_symbol.as_str(), "eps");
             let mut numerator_string = processed_numerator
                 .to_canonical_string()
+                .replace(vakint.settings.epsilon_symbol.as_str(), "eps")
                 .replace(&format!("{}::", NAMESPACE), "")
                 .replace("::", PYSECDEC_NAMESPACE_SEPARATOR)
-                .replace("_", "UNDERSCORE")
-                .replace(vakint.settings.epsilon_symbol.as_str(), "eps");
+                .replace("_", "UNDERSCORE");
+
 
             // Powers higher than two cannot occur as different dummy indices would have been used in
             // the call 'processed_numerator = Vakint::convert_from_dot_notation(processed_numerator.as_view(), true)'
@@ -3569,7 +3618,10 @@ impl Vakint {
                 if let Some(f) = options.numerical_external_momenta.get(&p) {
                     default_external_momenta.push((p, f));
                 } else {
-                    return Err(VakintError::EvaluationError(format!("Missing specification of numerical value for external momentum '{}'. Specify it in the PySecDecOptions of Vakint.", p)));
+                    return Err(VakintError::EvaluationError(format!(
+                        "Missing specification of numerical value for external momentum '{}'. Specify it in the PySecDecOptions of Vakint.",
+                        p
+                    )));
                 }
             }
             vars.insert(
@@ -3605,7 +3657,10 @@ impl Vakint {
                 if let Some(num_m) = options.numerical_masses.get(&cooked_m_symbol) {
                     default_masses.push((m, num_m));
                 } else {
-                    return Err(VakintError::EvaluationError(format!("Missing specification of numerical value for mass '{}'. Specify it in the PySecDecOptions of Vakint.", cooked_m_symbol)));
+                    return Err(VakintError::EvaluationError(format!(
+                        "Missing specification of numerical value for mass '{}'. Specify it in the PySecDecOptions of Vakint.",
+                        cooked_m_symbol
+                    )));
                 }
             }
             for additional_param in sorted_additional_numerator_symbols.iter() {
@@ -3623,7 +3678,10 @@ impl Vakint {
                         num_additional_param,
                     ));
                 } else {
-                    return Err(VakintError::EvaluationError(format!("Missing specification of numerical value for additional numerator symbol '{}'. Specify it in the PySecDecOptions of Vakint.", additional_param)));
+                    return Err(VakintError::EvaluationError(format!(
+                        "Missing specification of numerical value for additional numerator symbol '{}'. Specify it in the PySecDecOptions of Vakint.",
+                        additional_param
+                    )));
                 }
             }
             vars.insert(
@@ -3728,13 +3786,15 @@ impl Vakint {
             Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
-        let pysecdec_normalization_correction = vk_parse!(format!(
-            "(  𝑖*(𝜋^((4-2*{eps})/2))\
+        let pysecdec_normalization_correction = vk_parse!(
+            format!(
+                "(  𝑖*(𝜋^((4-2*{eps})/2))\
                 )^{n_loops}",
-            eps = self.settings.epsilon_symbol,
-            n_loops = integral.n_loops
+                eps = self.settings.epsilon_symbol,
+                n_loops = integral.n_loops
+            )
+            .as_str()
         )
-        .as_str())
         .unwrap();
 
         let evaluated_integral = pysecdec_output
@@ -3785,6 +3845,61 @@ impl Vakint {
             + evaluated_integral[1].to_owned() * S.error_flag.to_owned())
     }
 
+    // Identify from the short canonical expression of the integral what is the UV mass and returns
+    // the atom for it and its square (one of the two will effectively be a symbol but the other one an expression).
+    // Throws an error if the identification fails.
+    fn identify_uv_mass_symbols(short_integral_expression: &Atom) -> Result<(Atom, Atom), VakintError> {
+
+        let (muv_atom, muv_sq_atom) = if let Some(m) = short_integral_expression
+            .pattern_match(
+                &vk_parse!("prop(args__,m_sq_,pow_)").unwrap().to_pattern(),
+                None,
+                None,
+            )
+            .next()
+        {
+            match m.get(&vk_symbol!("m_sq_")).unwrap() {
+                Atom::Var(s) => ( Atom::pow(&Atom::Var(s.clone()), Atom::num(1) / Atom::num(2)), Atom::Var(s.clone()) ),
+                Atom::Pow(m) => {
+                    let base = m.to_pow_view().get_base().to_owned();
+                    let exp = m.to_pow_view().get_exp();
+                    match base {
+                        Atom::Var(s) => {
+                            if exp == Atom::num(2).as_view() {
+                                (Atom::Var(s.clone()), Atom::Pow(m.clone()))
+                            } else {
+                                return Err(VakintError::MalformedGraph(format!(
+                                    "Could not find muV in graph:\n{}",
+                                    short_integral_expression.to_canonical_string()
+                                )));
+                            }
+                        },
+                        _ => {
+                            return Err(VakintError::MalformedGraph(format!(
+                                "Could not find muV in graph:\n{}",
+                                short_integral_expression.to_canonical_string()
+                            )));
+                        }
+                    }
+                },
+                _ => {
+                    return Err(VakintError::MalformedGraph(format!(
+                        "Could not find muV in graph:\n{}",
+                        short_integral_expression.to_canonical_string()
+                    )));
+                }
+            }
+        } else {
+            return Err(VakintError::MalformedGraph(format!(
+                "Could not find muV in graph:\n{}",
+                short_integral_expression.to_canonical_string()
+            )));
+        };
+
+
+        Ok((muv_atom, muv_sq_atom))
+    }
+
     fn alphaloop_evaluate(
         &self,
         vakint: &Vakint,
@@ -3799,39 +3914,18 @@ impl Vakint {
             integral
         );
 
-        let muv_sq_symbol = if let Some(m) = integral
-            .canonical_expression
-            .as_ref()
-            .unwrap()
-            .pattern_match(
-                &vk_parse!("prop(args__,m_,pow_)").unwrap().to_pattern(),
-                None,
-                None,
-            )
-            .next()
-        {
-            match m.get(&vk_symbol!("m_")).unwrap() {
-                Atom::Var(s) => s.get_symbol(),
-                _ => {
-                    return Err(VakintError::MalformedGraph(format!(
-                        "Could not find muV in graph:\n{}",
-                        integral.canonical_expression.as_ref().unwrap()
-                    )));
-                }
-            }
-        } else {
-            return Err(VakintError::MalformedGraph(format!(
-                "Could not find muV in graph:\n{}",
-                integral.canonical_expression.as_ref().unwrap()
-            )));
-        };
+        // DO NOT REQUIRE MASS TO BE A SYMBOL
+        let (muv_atom, muv_sq_atom) =
+            Vakint::identify_uv_mass_symbols(integral.canonical_expression.as_ref().unwrap())?;
 
         let alphaloop_expression = integral.alphaloop_expression.as_ref().unwrap().as_view();
 
         let mut numerator = numerator.to_owned();
         numerator = numerator
-            .replace(Atom::var(muv_sq_symbol).to_pattern())
-            .with(vk_parse!("mUV^2").unwrap().to_pattern());
+            .replace_multiple(&[
+                Replacement::new(muv_sq_atom.to_pattern(),vk_parse!("mUV^2").unwrap().to_pattern()),
+                Replacement::new(muv_atom.to_pattern(),vk_parse!("mUV").unwrap().to_pattern())
+            ]);
         // println!("Numerator : {}", numerator);
         // println!("Evaluating AlphaLoop : {}", alphaloop_expression);
         // println!("Graph:\n{}", integral.graph.to_graphviz());
@@ -3857,7 +3951,7 @@ impl Vakint {
                     return Err(VakintError::MalformedGraph(format!(
                         "Could not find v in graph:\n{}",
                         integral.canonical_expression.as_ref().unwrap()
-                    )))
+                    )));
                 }
             };
             if v != S.p && v != S.k {
@@ -3893,7 +3987,7 @@ impl Vakint {
                     return Err(VakintError::MalformedGraph(format!(
                         "Could not find v in graph:\n{}",
                         integral.canonical_expression.as_ref().unwrap()
-                    )))
+                    )));
                 }
             };
             if v != S.p && v != S.k {
@@ -3908,9 +4002,11 @@ impl Vakint {
                         .to_pattern(),
                 )
                 .with(
-                    vk_parse!(format!("vec1({}{},{})", v, v_id, idx.to_canonical_string()).as_str())
-                        .unwrap()
-                        .to_pattern(),
+                    vk_parse!(
+                        format!("vec1({}{},{})", v, v_id, idx.to_canonical_string()).as_str()
+                    )
+                    .unwrap()
+                    .to_pattern(),
                 );
             vector_mapping.insert(
                 vk_parse!(format!("{}{}({})", v, v_id, idx.to_canonical_string()).as_str())
@@ -3975,15 +4071,10 @@ impl Vakint {
 
         evaluated_integral = evaluated_integral
             .replace(vk_parse!("mUV").unwrap().to_pattern())
-            .with(
-                Atom::var(muv_sq_symbol)
-                    .pow((Atom::num(1) / Atom::num(2)).as_atom_view())
-                    .to_pattern(),
-            );
-
+            .with(muv_atom.to_pattern());
         let log_muv_mu_sq = function!(
             Symbol::LOG,
-            Atom::var(muv_sq_symbol) / Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            muv_sq_atom/ Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         let log_mu_sq = function!(
@@ -4000,16 +4091,18 @@ impl Vakint {
         // in the normalization choice.
         // We must keep the name logmUVmu as it is reserved in the alphaloop implementation and corresponds to log(mUV^2/mu^2)
         // This is also the reason we do not simplify the expression exp(-logmUVmu+log_mu_sq)
-        let alphaloop_normalization_correction = vk_parse!(format!(
-            "(\
+        let alphaloop_normalization_correction = vk_parse!(
+            format!(
+                "(\
                     𝑖*(𝜋^((4-2*{eps})/2))\
                  * (exp(-EulerGamma))^({eps})\
                  * (exp(-logmUVmu-log_mu_sq))^({eps})\
                  )^{n_loops}",
-            eps = self.settings.epsilon_symbol,
-            n_loops = integral.n_loops
+                eps = self.settings.epsilon_symbol,
+                n_loops = integral.n_loops
+            )
+            .as_str()
         )
-        .as_str())
         .unwrap();
 
         evaluated_integral = evaluated_integral
@@ -4213,11 +4306,13 @@ impl Vakint {
             };
 
             expr = expr.replace(m.target.to_pattern()).with(
-                vk_parse!(format!(
-                    "{}({},{})*{}({},{})",
-                    v1, id1, running_dummy_index, v2, id2, running_dummy_index
+                vk_parse!(
+                    format!(
+                        "{}({},{})*{}({},{})",
+                        v1, id1, running_dummy_index, v2, id2, running_dummy_index
+                    )
+                    .as_str()
                 )
-                .as_str())
                 .unwrap()
                 .to_pattern(),
             );
@@ -4331,6 +4426,7 @@ impl Vakint {
         &self,
         expression: AtomView,
         substitute_indices: bool,
+        additional_user_symbols: &[Symbol],
     ) -> Result<(String, String, Vec<Atom>), VakintError> {
         // let mut processed_str =
         //     AtomPrinter::new_with_options(processed.as_view(), PrintOptions::file_no_namespace())
@@ -4444,7 +4540,9 @@ impl Vakint {
         let mut form_header_symbols = vec![];
 
         user_variables.insert(vk_symbol!(self.settings.mu_r_sq_symbol.clone()));
-
+        for s in additional_user_symbols {
+            user_variables.insert(s.clone());
+        }
         let mut string_replacements: HashMap<String, String, ahash::RandomState> =
             HashMap::default();
         for user_f in user_functions.iter() {
@@ -4512,7 +4610,7 @@ impl Vakint {
             .with(vk_parse!("ep").unwrap().to_pattern());
 
         let (form_header_additions, expression_str, indices) =
-            self.sanitize_user_expressions(processed.as_view(), substitute_indices)?;
+            self.sanitize_user_expressions(processed.as_view(), substitute_indices, &[])?;
 
         Ok((form_header_additions, expression_str, indices))
     }
@@ -4684,7 +4782,10 @@ impl Vakint {
                         reused_path_specified.green()
                     )));
                 } else {
-                    warn!("User-specified directory '{}' not found, and was instead created and pySecDec sources will be regenerated.", reused_path_specified);
+                    warn!(
+                        "User-specified directory '{}' not found, and was instead created and pySecDec sources will be regenerated.",
+                        reused_path_specified
+                    );
                 }
             } else {
                 generate_pysecdec_sources = false;
@@ -4719,10 +4820,14 @@ impl Vakint {
 
         if !clean {
             info!("Running {} with command: {:?}", "PySecDec".green(), cmd);
-            info!("You can follow the run live with 'tail -f follow_run.txt' in that temporary directory");
+            info!(
+                "You can follow the run live with 'tail -f follow_run.txt' in that temporary directory"
+            );
         } else {
             debug!("Running {} with command: {:?}", "PySecDec".green(), cmd);
-            debug!("You can follow the run live with 'tail -f follow_run.txt' in that temporary directory");
+            debug!(
+                "You can follow the run live with 'tail -f follow_run.txt' in that temporary directory"
+            );
         }
 
         let mut child = cmd.stderr(Stdio::piped()).stdout(Stdio::piped()).spawn()?;

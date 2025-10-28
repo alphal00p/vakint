@@ -24,15 +24,17 @@ pub fn get_vakint(vakint_settings: VakintSettings) -> Vakint {
 pub fn compare_output(output: Result<AtomView, &VakintError>, expected_output: Atom) -> Atom {
     match output {
         Ok(r) => {
-            let r_processed = try_parse!(AtomPrinter::new_with_options(
-                r,
-                PrintOptions {
-                    hide_namespace: Some("tests"),
-                    ..PrintOptions::file()
-                }
+            let r_processed = try_parse!(
+                AtomPrinter::new_with_options(
+                    r,
+                    PrintOptions {
+                        hide_namespace: Some("tests"),
+                        ..PrintOptions::file()
+                    }
+                )
+                .to_string()
+                .as_str()
             )
-            .to_string()
-            .as_str())
             .unwrap();
             let r_processed_view = r_processed.as_view();
             if r != expected_output.as_view() {
@@ -100,7 +102,8 @@ pub fn compare_numerical_output(
                         "Output does not match expected output:\n{}\n!=\n{} (error: {} > target precision {})",
                         format!("{}", o).red(),
                         format!("{}", trgt).green(),
-                        o_prec, trgt_prec
+                        o_prec,
+                        trgt_prec
                     );
                 }
                 assert!(o_prec < trgt_prec);
@@ -123,8 +126,8 @@ pub fn compare_two_evaluations(
     max_pull: f64,
     quiet: bool,
 ) {
-    let mut mod_evaluation_order_a = evaluation_orders.0 .0.clone();
-    let mut mod_evaluation_order_b = evaluation_orders.1 .0.clone();
+    let mut mod_evaluation_order_a = evaluation_orders.0.0.clone();
+    let mut mod_evaluation_order_b = evaluation_orders.1.0.clone();
     for eval_order in [&mut mod_evaluation_order_a, &mut mod_evaluation_order_b] {
         eval_order.adjust(
             Some(quiet),
@@ -148,13 +151,23 @@ pub fn compare_two_evaluations(
     let mut vakint = get_vakint(vakint_analytic_settings);
 
     let mut eval_params = HashMap::default();
-    eval_params.insert(
-        "muvsq".into(),
-        numerical_masses
-            .get("muvsq")
-            .unwrap_or_else(|| panic!("muvsq not found in numerical_masses"))
-            .to_owned(),
-    );
+    if numerical_masses.contains_key("user_space::muv") {
+        eval_params.insert(
+            "user_space::muv".into(),
+            numerical_masses
+                .get("user_space::muv")
+                .unwrap_or_else(|| panic!("user_space::muv not found in numerical_masses"))
+                .to_owned(),
+        );
+    } else {
+        eval_params.insert(
+            "muvsq".into(),
+            numerical_masses
+                .get("muvsq")
+                .unwrap_or_else(|| panic!("muvsq not found in numerical_masses"))
+                .to_owned(),
+        );
+    }
     eval_params.insert(
         "mursq".into(),
         numerical_masses
@@ -178,7 +191,7 @@ pub fn compare_two_evaluations(
         "Evaluating integral with evaluation order: {}",
         format!("{}", mod_evaluation_order_a).green(),
     );
-    let benchmark_evaluated_integral = match vakint.evaluate_integral(if evaluation_orders.0 .1 {
+    let benchmark_evaluated_integral = match vakint.evaluate_integral(if evaluation_orders.0.1 {
         integral_reduced.as_view()
     } else {
         integral.as_view()
@@ -228,7 +241,7 @@ pub fn compare_two_evaluations(
         "Evaluating integral with evaluation order: {}",
         format!("{}", mod_evaluation_order_b).green(),
     );
-    let comparison_eval = match vakint.evaluate_integral(if evaluation_orders.1 .1 {
+    let comparison_eval = match vakint.evaluate_integral(if evaluation_orders.1.1 {
         integral_reduced.as_view()
     } else {
         integral.as_view()
