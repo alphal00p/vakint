@@ -3417,13 +3417,56 @@ impl Vakint {
                             )
                         },
                         {
-                            let m = mass_list_map.get(e_id).unwrap().to_owned();
+                            //let m = mass_list_map.get(e_id).unwrap().to_owned();
+                            let (m, m_sq) = match mass_list_map.get(e_id).unwrap().to_owned() {
+                                Atom::Var(s) => ( Atom::pow(&Atom::Var(s.clone()), Atom::num(1) / Atom::num(2)), Atom::Var(s.clone()) ),
+                                Atom::Pow(m) => {
+                                    let base = m.to_pow_view().get_base().to_owned();
+                                    let exp = m.to_pow_view().get_exp();
+                                    match base {
+                                        Atom::Var(s) => {
+                                            if exp == Atom::num(2).as_view() {
+                                                (Atom::Var(s.clone()), Atom::Pow(m.clone()))
+                                            } else {
+                                                panic!(
+                                                    "Could not find mass symbol in integral:\n{}",
+                                                    integral
+                                                );
+                                            }
+                                        },
+                                        _ => {
+                                            panic!(
+                                                "Could not find mass symbol in integral:\n{}",
+                                                integral
+                                            );
+                                        }
+                                    }
+                                },
+                                _ => {
+                                    panic!(
+                                        "Could not find mass symbol in integral:\n{}",
+                                        integral
+                                    );
+                                }
+                            };
+
                             if m.is_zero() {
                                 "".into()
                             } else {
+                                let mass_symbol_to_add = match (m.clone(), m_sq.clone()) {
+                                    (Atom::Var(a), _) => {
+                                        a.get_symbol()
+                                    },
+                                    (_,Atom::Var(asq)) => {
+                                        asq.get_symbol()
+                                    }
+                                    _ => panic!(
+                                        "Could not find mass symbol for integral:\n{}",
+                                        integral
+                                    ),
+                                };
                                 masses.insert(
-                                    m.get_symbol()
-                                        .unwrap()
+                                    mass_symbol_to_add
                                         .get_name()
                                         .replace(&format!("{}::", NAMESPACE), "")
                                         .replace("::", PYSECDEC_NAMESPACE_SEPARATOR)
@@ -3431,12 +3474,11 @@ impl Vakint {
                                 );
                                 format!(
                                     "-{}",
-                                    m.get_symbol()
-                                        .unwrap()
-                                        .get_name()
+                                    m_sq.to_canonical_string()
                                         .replace(&format!("{}::", NAMESPACE), "")
                                         .replace("::", PYSECDEC_NAMESPACE_SEPARATOR)
                                         .replace("_", "UNDERSCORE")
+                                        .replace("^", "**")
                                 )
                             }
                         }
@@ -3639,21 +3681,21 @@ impl Vakint {
                 ),
             );
             let mut default_masses = vec![];
-            println!(
-                "options.numerical_masses: {}",
-                options
-                    .numerical_masses
-                    .iter()
-                    .map(|(k, v)| format!("{}: {}", k, v))
-                    .collect::<Vec<_>>()
-                    .join(","),
-            );
+            // println!(
+            //     "options.numerical_masses: {}",
+            //     options
+            //         .numerical_masses
+            //         .iter()
+            //         .map(|(k, v)| format!("{}: {}", k, v))
+            //         .collect::<Vec<_>>()
+            //         .join(","),
+            // );
             for m in masses_vec {
                 let cooked_m_symbol = m
                     .replace(PYSECDEC_NAMESPACE_SEPARATOR, "::")
                     .replace(&format!("{}::", NAMESPACE), "")
                     .replace("UNDERSCORE", "_");
-                println!("Accessing: {}", cooked_m_symbol);
+                // println!("Accessing: {}", cooked_m_symbol);
                 if let Some(num_m) = options.numerical_masses.get(&cooked_m_symbol) {
                     default_masses.push((m, num_m));
                 } else {
