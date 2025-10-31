@@ -8,23 +8,45 @@ use symbolica::{
 };
 use vakint_macros::vk_parse;
 
-use crate::{eq_condition, VakintSettings};
+use crate::{
+    PYSECDEC_ATTRIBUTE_END, PYSECDEC_ATTRIBUTE_SEPARATOR, PYSECDEC_ATTRIBUTE_START,
+    PYSECDEC_NAMESPACE_SEPARATOR, PYSECDEC_UNDERSCORE, VAKINT_SYMBOL_UNDRESSING_RE, VakintError,
+    VakintSettings, eq_condition,
+};
 
 pub(crate) mod vakint_macros {
     macro_rules! vk_parse {
-        ($s: expr) => {{
-            symbolica::try_parse!($s, crate::NAMESPACE)
-        }};
-        ($s: expr, $ns: expr) => {{
-            symbolica::try_parse!($sm, $ns)
-        }};
+        ($s: expr) => {{ symbolica::try_parse!($s, crate::NAMESPACE) }};
+        ($s: expr, $ns: expr) => {{ symbolica::try_parse!($s, $ns) }};
     }
+    // macro_rules! vk_symbol {
+    //     ($s: expr) => {{
+    //         if format!("{}", $s).starts_with(format!("{}::", crate::NAMESPACE).as_str()) {
+    //             symbolica::symbol!($s)
+    //         } else {
+    //             symbolica::symbol!(format!("{}::{}", crate::NAMESPACE, $s))
+    //         }
+    //     }};
+    // }
+
     macro_rules! vk_symbol {
         ($s: expr) => {{
             if format!("{}", $s).starts_with(format!("{}::", crate::NAMESPACE).as_str()) {
-                symbolica::symbol!($s)
+                match symbolica::try_parse!($s) {
+                    Ok::<Atom, String>(a) => match a {
+                        Atom::Var(sym) => sym.get_symbol(),
+                        _ => panic!("Parsed atom is not a symbol: {}.", $s),
+                    },
+                    Err(e) => panic!("Could not parse symbol from string: {}, Error: {}", $s, e),
+                }
             } else {
-                symbolica::symbol!(format!("{}::{}", crate::NAMESPACE, $s))
+                match symbolica::try_parse!(format!("{}", $s), crate::NAMESPACE) {
+                    Ok::<Atom, String>(a) => match a {
+                        Atom::Var(sym) => sym.get_symbol(),
+                        _ => panic!("Parsed atom is not a symbol: {}.", $s),
+                    },
+                    Err(e) => panic!("Could not parse symbol from string: {}, Error: {}", $s, e),
+                }
             }
         }};
     }
@@ -34,21 +56,40 @@ pub(crate) mod vakint_macros {
 
 #[macro_export]
 macro_rules! vakint_parse {
-    ($s: expr) => {{
-        symbolica::try_parse!($s, $crate::NAMESPACE)
-    }};
-    ($s: expr, $ns: expr) => {{
-        symbolica::try_parse!($sm, $ns)
-    }};
+    ($s: expr) => {{ symbolica::try_parse!($s, $crate::NAMESPACE) }};
+    ($s: expr, $ns: expr) => {{ symbolica::try_parse!($sm, $ns) }};
 }
+
+// #[macro_export]
+// macro_rules! vakint_symbol {
+//     ($s: expr) => {{
+//         if format!("{}", $s).starts_with(format!("{}::", $crate::NAMESPACE).as_str()) {
+//             symbolica::symbol!($s)
+//         } else {
+//             symbolica::symbol!(format!("{}::{}", $crate::NAMESPACE, $s))
+//         }
+//     }};
+// }
 
 #[macro_export]
 macro_rules! vakint_symbol {
     ($s: expr) => {{
         if format!("{}", $s).starts_with(format!("{}::", $crate::NAMESPACE).as_str()) {
-            symbolica::symbol!($s)
+            match symbolica::try_parse!($s) {
+                Ok::<_, String>(a) => match a {
+                    symbolica::atom::Atom::Var(sym) => sym.get_symbol(),
+                    _ => panic!("Parsed atom is not a symbol: {}.", $s),
+                },
+                Err(e) => panic!("Could not parse symbol from string: {}, Error: {}", $s, e),
+            }
         } else {
-            symbolica::symbol!(format!("{}::{}", $crate::NAMESPACE, $s))
+            match symbolica::try_parse!(format!("{}", $s), $crate::NAMESPACE) {
+                Ok::<_, String>(a) => match a {
+                    symbolica::atom::Atom::Var(sym) => sym.get_symbol(),
+                    _ => panic!("Parsed atom is not a symbol: {}.", $s),
+                },
+                Err(e) => panic!("Could not parse symbol from string: {}, Error: {}", $s, e),
+            }
         }
     }};
 }
@@ -193,6 +234,16 @@ pub fn could_match(pattern: &Pattern, target: AtomView) -> bool {
         .is_some()
 }
 
+pub fn get_full_name(symbol: &Symbol) -> String {
+    Atom::var(symbol.clone()).to_canonical_string()
+}
+
+pub fn undress_vakint_symbols(expression: &str) -> String {
+    (*VAKINT_SYMBOL_UNDRESSING_RE)
+        .replace_all(expression, "")
+        .into_owned()
+}
+
 pub fn set_precision_in_float_atom(input: AtomView, settings: &VakintSettings) -> Atom {
     let binary_prec = settings.get_binary_precision();
     if let AtomView::Num(fl_view) = input {
@@ -226,12 +277,70 @@ pub fn set_precision_in_polynomial_atom(
     res
 }
 
+pub fn to_vk_symbol(s: &str) -> Result<Symbol, VakintError> {
+    match vk_parse!(s, crate::NAMESPACE) {
+        Ok::<Atom, String>(a) => match a {
+            Atom::Var(sym) => Ok(sym.get_symbol()),
+            _ => Err(VakintError::InvalidGenericExpression(format!(
+                "Parsed atom is not a symbol: {}",
+                a
+            ))),
+        },
+        Err(e) => Err(VakintError::InvalidGenericExpression(format!(
+            "Could not parse symbol from string: {}",
+            e
+        ))),
+    }
+}
+
+pub fn to_symbol(s: &str) -> Result<Symbol, VakintError> {
+    match vk_parse!(s) {
+        Ok::<Atom, String>(a) => match a {
+            Atom::Var(sym) => Ok(sym.get_symbol()),
+            _ => Err(VakintError::InvalidGenericExpression(format!(
+                "Parsed atom is not a symbol: {}",
+                a
+            ))),
+        },
+        Err(e) => Err(VakintError::InvalidGenericExpression(format!(
+            "Could not parse symbol from string: {}",
+            e
+        ))),
+    }
+}
+
+pub fn pysecdec_encode(expression: &str) -> String {
+    expression
+        .replace("::", PYSECDEC_NAMESPACE_SEPARATOR)
+        .replace("_", PYSECDEC_UNDERSCORE)
+        .replace("{", PYSECDEC_ATTRIBUTE_START)
+        .replace(",", PYSECDEC_ATTRIBUTE_SEPARATOR)
+        .replace("}", PYSECDEC_ATTRIBUTE_END)
+        .replace("^", "**")
+}
+
+pub fn pysecdec_decode(expression: &str) -> String {
+    expression
+        .replace(PYSECDEC_NAMESPACE_SEPARATOR, "::")
+        .replace(PYSECDEC_UNDERSCORE, "_")
+        .replace(PYSECDEC_ATTRIBUTE_START, "{")
+        .replace(PYSECDEC_ATTRIBUTE_SEPARATOR, ",")
+        .replace(PYSECDEC_ATTRIBUTE_END, "}")
+        .replace("**", "^")
+}
+
 pub fn split_linear_atom(a: AtomView, variable: AtomView) -> (Atom, Atom) {
     let split_atom: HashMap<_, _> = a.coefficient_list::<i8>(&[variable]).into_iter().collect();
     if split_atom.len() > 2 {
         panic!(
             "Could not split linear atom '{}' into at most two parts using variable '{}'. Split atom:\n{}",
-            a, variable, split_atom.iter().map(|(k, v)| format!("{}: {}", k, v)).collect::<Vec<_>>().join("\n")
+            a,
+            variable,
+            split_atom
+                .iter()
+                .map(|(k, v)| format!("{}: {}", k, v))
+                .collect::<Vec<_>>()
+                .join("\n")
         );
     } else {
         let res = (

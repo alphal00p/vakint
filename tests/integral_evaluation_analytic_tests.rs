@@ -117,14 +117,14 @@ fn test_integrate_1l_a() {
     //         .to_canonical_string()
     // );
     assert_eq!(
-        numerical_partial_eval.rationalize_coefficients(&fractional_precision),
+        numerical_partial_eval.rationalize(&fractional_precision),
        vakint_parse!("-2879700𝑖/536411*g(1,2)+3726809𝑖/395976*ε*g(1,2)+1075967𝑖/436073*ε^-1*g(1,2)-4041047𝑖/334810*ε^2*g(1,2)").unwrap()
     );
 
     let prec = Fraction::from(0.1.pow((vakint.settings.run_time_decimal_precision - 4) as u64));
     _ = compare_output(
         Ok(numerical_partial_eval
-            .rationalize_coefficients(&prec)
+            .rationalize(&prec)
             .as_view()),
         vakint_parse!(
             format!(
@@ -137,7 +137,7 @@ fn test_integrate_1l_a() {
             .as_str()
         )
         .unwrap()
-        .rationalize_coefficients(&prec),
+        .rationalize(&prec),
     );
 
     params.insert("g(1,2)".into(), vakint.settings.real_to_prec("1"));

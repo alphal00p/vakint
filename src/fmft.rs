@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use crate::fmft_numerics::{MASTERS_EXPANSION, MASTERS_NUMERIC_SUBSTITUTIONS};
-use crate::utils::set_precision_in_float_atom;
 use crate::utils::vakint_macros::{vk_parse, vk_symbol};
-use crate::utils::{self, set_precision_in_polynomial_atom};
+use crate::utils::{self, set_precision_in_polynomial_atom, undress_vakint_symbols};
+use crate::utils::{get_full_name, set_precision_in_float_atom};
 use crate::{
     fmft_numerics::{ADDITIONAL_CONSTANTS, POLY_GAMMA_SUBSTITUTIONS},
     gt_condition,
@@ -14,7 +14,6 @@ use regex::Regex;
 use string_template_plus::{Render, RenderOptions, Template};
 use symbolica::atom::Symbol;
 use symbolica::printer::{AtomPrinter, PrintOptions};
-use symbolica::symbol;
 use symbolica::{
     atom::{Atom, AtomCore, AtomView},
     domains::{integer::Integer, rational::Rational},
@@ -23,8 +22,7 @@ use symbolica::{
 };
 
 use crate::{
-    FMFTOptions, NAMESPACE, TEMPLATES, get_integer_from_atom, number_condition, symbol_condition,
-    symbols::S,
+    FMFTOptions, TEMPLATES, get_integer_from_atom, number_condition, symbol_condition, symbols::S,
 };
 
 use crate::{ReplacementRules, Vakint, VakintError, VakintSettings};
@@ -399,7 +397,7 @@ impl Vakint {
         //     .replace(vk_parse!("f_(args__)").unwrap().to_pattern())
         //     .with(vk_parse!("1").unwrap().to_pattern())
         //     .get_all_symbols(false);
-        // let eps_symbol = symbol!(vakint.settings.epsilon_symbol.clone());
+        // let eps_symbol = vk_symbol!(vakint.settings.epsilon_symbol.clone());
         // numerator_additional_symbols.retain(|&s| s != eps_symbol);
         let numerator_additional_symbols: std::collections::HashSet<
             symbolica::atom::Symbol,
@@ -436,7 +434,7 @@ impl Vakint {
         additional_symbols_str = format!(
             "{}\nCF {};",
             additional_symbols_str,
-            S.g.get_name().replace(&format!("{}::", NAMESPACE), "")
+            undress_vakint_symbols(&get_full_name(&S.g))
         );
         if !form_header_additions.is_empty() {
             if !additional_symbols_str.is_empty() {
@@ -594,12 +592,12 @@ impl Vakint {
 
         let log_muv_mu_sq = function!(
             Symbol::LOG,
-            muv_sq_atom / Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            muv_sq_atom / Atom::var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         let log_mu_sq = function!(
             Symbol::LOG,
-            Atom::var(symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            Atom::var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         evaluated_integral = evaluated_integral

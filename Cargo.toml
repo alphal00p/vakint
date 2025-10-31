@@ -9,14 +9,15 @@ opt-level = 2
 #lto=true
 
 [dependencies]
-symbolica = { version = "0.18.0" }
-#symbolica = "0.14.0"
+symbolica = { version = "0.19.2" }
 #symbolica = { git = "https://github.com/benruijl/symbolica.git", rev = "c10688d92271dd061fc71bfe81eb3157e59830d6" }
 #symbolica = { git = "https://github.com/benruijl/symbolica.git", branch = "main", rev = "c10688d92271dd061fc71bfe81eb3157e59830d6" }
-#symbolica = { path = "../gammaloop_main/python/gammaloop/dependencies/symbolica" }
 
-pyo3 = { version = "0.25", features = ["anyhow"], optional = true }
-pyo3-stub-gen = { version = "0.13", default-features = false, optional = true }
+# pyo3 = { version = "0.25", features = ["anyhow"], optional = true }
+# pyo3-stub-gen = { version = "0.13", default-features = false, optional = true }
+pyo3 = { version = "0.27", features = ["anyhow"], optional = true }
+pyo3-stub-gen = { version = "0.16", default-features = false, optional = true }
+
 
 anyhow = "1.0.86"
 thiserror = "1.0.63"
