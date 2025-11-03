@@ -926,12 +926,12 @@ impl Integral {
                 let new_conditions = Condition::from((
                     vk_symbol!(format!("pow{}_", i_prop).as_str()),
                     number_condition(),
-                )) 
+                ))
                 // DO NOT REQUIRE MASS TO BE A SYMBOL
                 // & Condition::from((
                 //     vk_symbol!(mass_symbol_string.clone()),
                 //     symbol_or_number(),
-                // )) 
+                // ))
                 & Condition::from((
                     vk_symbol!(format!("id{}_", i_prop).as_str()),
                     number_condition(),
@@ -4675,7 +4675,7 @@ impl Vakint {
 
         processed_str = utils::multi_string_replace(processed_str, &string_replacements);
         //println!("form_header_additions: {}", form_header_additions.join("\n"));
-       
+
         Ok((form_header_additions.join("\n"), processed_str, indices))
     }
 

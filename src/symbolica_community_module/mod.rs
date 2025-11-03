@@ -3,11 +3,11 @@ use symbolica::api::python::SymbolicaCommunityModule;
 use std::collections::HashMap;
 use std::env;
 
-use pyo3::types::{PyAnyMethods, PyModule, PyModuleMethods, PyType};
+use pyo3::types::{PyModule, PyModuleMethods, PyType};
 use pyo3::{
     Bound, FromPyObject, PyAny, PyClass, PyErr, PyRef, Python, exceptions, pyclass, pymethods,
 };
-use pyo3::{PyObject, PyResult};
+use pyo3::{Py, PyResult};
 use symbolica::api::python::PythonExpression;
 use symbolica::atom::{Atom, Symbol};
 use symbolica::domains::float::{Complex, Float, RealNumberLike};
@@ -75,9 +75,11 @@ pub struct NumericalEvaluationResultWrapper {
     pub value: NumericalEvaluationResult,
 }
 
-impl<'a> FromPyObject<'a> for NumericalEvaluationResultWrapper {
-    fn extract_bound(ob: &Bound<'a, PyAny>) -> PyResult<Self> {
-        if let Ok(a) = ob.downcast::<NumericalEvaluationResultWrapper>() {
+impl<'a, 'py> FromPyObject<'a, 'py> for NumericalEvaluationResultWrapper {
+    type Error = PyErr;
+
+    fn extract(ob: pyo3::Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(a) = ob.cast::<NumericalEvaluationResultWrapper>() {
             Ok(NumericalEvaluationResultWrapper {
                 value: a.borrow().value.clone(),
             })
@@ -221,8 +223,10 @@ pub struct VakintExpressionWrapper {
     pub value: VakintExpression,
 }
 
-impl<'a> FromPyObject<'a> for VakintExpressionWrapper {
-    fn extract_bound(ob: &Bound<'a, PyAny>) -> PyResult<Self> {
+impl<'a, 'py> FromPyObject<'a, 'py> for VakintExpressionWrapper {
+    type Error = PyErr;
+
+    fn extract(ob: pyo3::Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
         if let Ok(a) = ob.extract::<VakintExpressionWrapper>() {
             Ok(VakintExpressionWrapper { value: a.value })
         } else {
@@ -287,10 +291,12 @@ impl VakintExpressionWrapper {
     ///
     /// atom : Expression
     ///   A Symbolica Expression containing a vakint integral, i.e. a sum of terms, each a product of a numerator and a `vakint::topo(...)` structure.
-    pub fn new(atom: PyObject) -> PyResult<VakintExpressionWrapper> {
-        let a = Python::with_gil(|py| atom.extract::<PythonExpression>(py))?;
-        Ok(VakintExpressionWrapper {
-            value: VakintExpression::try_from(a.expr).map_err(vakint_to_python_error)?,
+    pub fn new(atom: Py<PyAny>) -> PyResult<VakintExpressionWrapper> {
+        Python::attach(|py| {
+            let a = atom.extract::<PythonExpression>(py)?;
+            Ok(VakintExpressionWrapper {
+                value: VakintExpression::try_from(a.expr).map_err(vakint_to_python_error)?,
+            })
         })
     }
 }
@@ -305,8 +311,10 @@ pub struct VakintEvaluationMethodWrapper {
     pub method: EvaluationMethod,
 }
 
-impl<'a> FromPyObject<'a> for VakintEvaluationMethodWrapper {
-    fn extract_bound(ob: &Bound<'a, PyAny>) -> PyResult<Self> {
+impl<'a, 'py> FromPyObject<'a, 'py> for VakintEvaluationMethodWrapper {
+    type Error = PyErr;
+
+    fn extract(ob: pyo3::Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
         if let Ok(a) = ob.extract::<VakintEvaluationMethodWrapper>() {
             Ok(VakintEvaluationMethodWrapper { method: a.method })
         } else {
@@ -685,32 +693,33 @@ impl VakintWrapper {
     ///   An optional dictionary mapping external momentum indices to their numerical 4-vector values.
     pub fn numerical_evaluation(
         &self,
-        evaluated_integral: PyObject,
+        evaluated_integral: Py<PyAny>,
         params: HashMap<String, f64>,
         externals: Option<HashMap<usize, (f64, f64, f64, f64)>>,
     ) -> PyResult<(
         NumericalEvaluationResultWrapper,
         Option<NumericalEvaluationResultWrapper>,
     )> {
-        let evaluated_integral_atom =
-            Python::with_gil(|py| evaluated_integral.extract::<PythonExpression>(py))?;
-        let p = self.vakint.params_from_f64(&params);
-        let e = externals.map(|ext| self.vakint.externals_from_f64(&ext));
-        let (numerical_result, numerical_error) = self
-            .vakint
-            .numerical_evaluation(
-                evaluated_integral_atom.expr.as_view(),
-                &p,
-                &HashMap::default(),
-                e.as_ref(),
-            )
-            .map_err(vakint_to_python_error)?;
-        Ok((
-            NumericalEvaluationResultWrapper {
-                value: numerical_result,
-            },
-            numerical_error.map(|ne| NumericalEvaluationResultWrapper { value: ne }),
-        ))
+        Python::attach(|py| {
+            let evaluated_integral_atom = evaluated_integral.extract::<PythonExpression>(py)?;
+            let p = self.vakint.params_from_f64(&params);
+            let e = externals.map(|ext| self.vakint.externals_from_f64(&ext));
+            let (numerical_result, numerical_error) = self
+                .vakint
+                .numerical_evaluation(
+                    evaluated_integral_atom.expr.as_view(),
+                    &p,
+                    &HashMap::default(),
+                    e.as_ref(),
+                )
+                .map_err(vakint_to_python_error)?;
+            Ok((
+                NumericalEvaluationResultWrapper {
+                    value: numerical_result,
+                },
+                numerical_error.map(|e| NumericalEvaluationResultWrapper { value: e }),
+            ))
+        })
     }
 
     #[pyo3(signature = (result))]
