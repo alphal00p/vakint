@@ -9,9 +9,9 @@ use symbolica::{
 };
 
 use crate::{
-    function_condition, get_individual_momenta, get_individual_momenta_from_atom, get_node_ids,
-    get_prop_with_id, graph::Graph, symbols::S, EvaluationOrder, Integral, ReplacementRules,
-    VakintError, VakintSettings,
+    EvaluationOrder, Integral, ReplacementRules, VakintError, VakintSettings, function_condition,
+    get_individual_momenta, get_individual_momenta_from_atom, get_node_ids, get_prop_with_id,
+    graph::Graph, symbols::S,
 };
 pub enum TopologyContractions {
     Custom(Vec<Vec<usize>>),
@@ -41,13 +41,15 @@ impl Topologies {
         // ==
         // One-loop topology
         // ==
-        let mut topologies = Topologies(vec![Integral::new(
-            1,
-            Some(vk_parse!("topo(prop(1,edge(1,1),k(1),msq(1),pow(1)))").unwrap()),
-            Some(vk_parse!("I1L(msq(1),pow(1))").unwrap()),
-            EvaluationOrder::all_but_fmft(),
-        )?
-        .into()]);
+        let mut topologies = Topologies(vec![
+            Integral::new(
+                1,
+                Some(vk_parse!("topo(prop(1,edge(1,1),k(1),msq(1),pow(1)))").unwrap()),
+                Some(vk_parse!("I1L(msq(1),pow(1))").unwrap()),
+                EvaluationOrder::all_but_fmft(),
+            )?
+            .into(),
+        ]);
         // ==
         // Two-loop topologies
         // ==
@@ -442,16 +444,18 @@ impl Topology {
                     } else {
                         panic!("Topology arguments must be wrapped in Symbolica Arg construction.");
                     };
-                    let mut res = FunctionBuilder::new(vk_symbol!(format!(
-                        "{}_pinch_{}",
-                        topo_name,
-                        contraction
-                            .iter()
-                            .map(|i| i.to_string())
-                            .collect::<Vec<_>>()
-                            .join("_")
-                    )
-                    .as_str()));
+                    let mut res = FunctionBuilder::new(vk_symbol!(
+                        format!(
+                            "{}_pinch_{}",
+                            topo_name,
+                            contraction
+                                .iter()
+                                .map(|i| i.to_string())
+                                .collect::<Vec<_>>()
+                                .join("_")
+                        )
+                        .as_str()
+                    ));
                     for a in args.iter() {
                         res = a.to_owned().add_arg_to_function_builder(res);
                     }
@@ -514,7 +518,8 @@ impl Topology {
         if lmb.len() != n_loops {
             return Err(VakintError::InvalidIntegralFormat(format!(
                 "Loop momentum basis identified does not have the same loop count ({}) as detected for this topology ({}).",
-                lmb.len(), n_loops
+                lmb.len(),
+                n_loops
             )));
         }
 
@@ -544,7 +549,7 @@ impl Topology {
                 {
                     q = q.replace(src).with(trgt.clone());
                 }
-                q -= Atom::var(mom_vecs_to_symbols[i_lmb].1 .1 .1);
+                q -= Atom::var(mom_vecs_to_symbols[i_lmb].1.1.1);
                 system.push(q);
             }
         }
@@ -572,7 +577,7 @@ impl Topology {
                 Ok(b) => b,
                 Err(e) => {
                     return Err(VakintError::InvalidIntegralFormat(format!(
-                        "Could not solve the linear system to force the loop momentum basis: {}",
+                        "Could not solve the linear system to force the loop momentum basis: {:?}",
                         e
                     )));
                 }
@@ -729,7 +734,7 @@ impl Topology {
                             if *mom_symbol != S.k {
                                 return Err(VakintError::InvalidIntegralFormat(format!(
                                     "Unknown integrals must have only loop momenta with symbol {}: {}",
-                                    S.k,mom_symbol
+                                    S.k, mom_symbol
                                 )));
                             }
                             if *mom_id < 1 {
