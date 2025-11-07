@@ -16,8 +16,8 @@ use crate::{
 
 pub(crate) mod vakint_macros {
     macro_rules! vk_parse {
-        ($s: expr) => {{ symbolica::try_parse!($s, crate::NAMESPACE) }};
-        ($s: expr, $ns: expr) => {{ symbolica::try_parse!($s, $ns) }};
+        ($s: expr) => {{ symbolica::try_parse!($s, default_namespace = crate::NAMESPACE) }};
+        ($s: expr, $ns: expr) => {{ symbolica::try_parse!($s, default_namespace = $ns) }};
     }
     // macro_rules! vk_symbol {
     //     ($s: expr) => {{
@@ -40,7 +40,8 @@ pub(crate) mod vakint_macros {
                     Err(e) => panic!("Could not parse symbol from string: {}, Error: {}", $s, e),
                 }
             } else {
-                match symbolica::try_parse!(format!("{}", $s), crate::NAMESPACE) {
+                match symbolica::try_parse!(format!("{}", $s), default_namespace = crate::NAMESPACE)
+                {
                     Ok::<Atom, String>(a) => match a {
                         Atom::Var(sym) => sym.get_symbol(),
                         _ => panic!("Parsed atom is not a symbol: {}.", $s),
@@ -56,8 +57,8 @@ pub(crate) mod vakint_macros {
 
 #[macro_export]
 macro_rules! vakint_parse {
-    ($s: expr) => {{ symbolica::try_parse!($s, $crate::NAMESPACE) }};
-    ($s: expr, $ns: expr) => {{ symbolica::try_parse!($sm, $ns) }};
+    ($s: expr) => {{ symbolica::try_parse!($s, default_namespace = $crate::NAMESPACE) }};
+    ($s: expr, $ns: expr) => {{ symbolica::try_parse!($sm, default_namespace = $ns) }};
 }
 
 // #[macro_export]
@@ -83,7 +84,7 @@ macro_rules! vakint_symbol {
                 Err(e) => panic!("Could not parse symbol from string: {}, Error: {}", $s, e),
             }
         } else {
-            match symbolica::try_parse!(format!("{}", $s), $crate::NAMESPACE) {
+            match symbolica::try_parse!(format!("{}", $s), default_namespace = $crate::NAMESPACE) {
                 Ok::<_, String>(a) => match a {
                     symbolica::atom::Atom::Var(sym) => sym.get_symbol(),
                     _ => panic!("Parsed atom is not a symbol: {}.", $s),

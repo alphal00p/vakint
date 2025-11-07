@@ -49,4 +49,4 @@ python_stubgen = [
 
 [patch.crates-io]
 # symbolica = { git = "https://github.com/benruijl/symbolica", branch = "complex_coeff" }
-symbolica = { git = "https://github.com/benruijl/symbolica", rev = "93680d5098e1bdc8a69dc2f59c548f653a46f9e7" }
+symbolica = { git = "https://github.com/benruijl/symbolica", rev = "f2eb0c1ddcc61c342f2ff9616c2d129141d433dc" }
