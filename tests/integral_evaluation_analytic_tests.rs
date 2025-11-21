@@ -8,9 +8,8 @@ use std::vec;
 use log::debug;
 use std::collections::HashMap;
 use symbolica::{
-    atom::Atom,
-    atom::AtomCore,
-    domains::{float::NumericalFloatLike, rational::Fraction},
+    atom::{Atom, AtomCore},
+    domains::rational::Rational,
 };
 use test_utils::{compare_numerical_output, compare_output, get_vakint};
 use vakint::{Vakint, VakintSettings};
@@ -106,8 +105,11 @@ fn test_integrate_1l_a() {
     //     numerical_partial_eval_canonical_str,
     //     "-12.0696723514860*g(1,2)*ε^2*𝑖+-5.36845814123893*g(1,2)*𝑖+2.46740110027234*g(1,2)*ε^-1*𝑖+9.41170424471097*g(1,2)*ε*𝑖"
     // );
-    let fractional_precision =
-        Fraction::from(0.1_f64.powi((vakint.settings.run_time_decimal_precision - 4) as i32));
+    let fractional_precision: Rational = (
+        1,
+        10_u64.pow((vakint.settings.run_time_decimal_precision - 4) as u32),
+    )
+        .into();
     // println!(
     //     "TARGET {}",
     //     numerical_partial_eval
@@ -121,11 +123,14 @@ fn test_integrate_1l_a() {
        vakint_parse!("-2879700𝑖/536411*g(1,2)+3726809𝑖/395976*ε*g(1,2)+1075967𝑖/436073*ε^-1*g(1,2)-4041047𝑖/334810*ε^2*g(1,2)").unwrap()
     );
 
-    let prec = Fraction::from(0.1.pow((vakint.settings.run_time_decimal_precision - 4) as u64));
+    let prec: Rational = (
+        1,
+        10_u64.pow((vakint.settings.run_time_decimal_precision - 4) as u32),
+    )
+        .into();
+
     _ = compare_output(
-        Ok(numerical_partial_eval
-            .rationalize(&prec)
-            .as_view()),
+        Ok(numerical_partial_eval.rationalize(&prec).as_view()),
         vakint_parse!(
             format!(
                 "-5.36845814123893`{prec}𝑖*g(1,2)\

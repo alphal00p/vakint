@@ -30,6 +30,7 @@ use std::{
     vec,
 };
 use string_template_plus::{Render, RenderOptions, Template};
+use symbolica::domains::float::{FloatLike, RealLike};
 #[cfg(feature = "symbolica_community_module")]
 pub mod symbolica_community_module;
 
@@ -41,7 +42,7 @@ use symbolica::{
     },
     domains::{
         atom::AtomField,
-        float::{Complex, Float, NumericalFloatLike, Real, RealNumberLike, SingleFloat},
+        float::{Complex, Float, Real, SingleFloat},
         integer::IntegerRing,
         rational::{Fraction, Rational},
     },
@@ -65,7 +66,9 @@ use symbols::{EXTERNAL_MOMENTUM_SYMBOL, LOOP_MOMENTUM_SYMBOL, METRIC_SYMBOL, S};
 
 use phf::phf_map;
 
-use crate::utils::{get_full_name, pysecdec_decode, pysecdec_encode, to_symbol, undress_vakint_symbols};
+use crate::utils::{
+    get_full_name, pysecdec_decode, pysecdec_encode, to_symbol, undress_vakint_symbols,
+};
 
 pub enum Momentum {
     Complex(ComplexMomentum),
@@ -94,7 +97,6 @@ pub static PYSECDEC_UNDERSCORE: &str = "PSDU";
 pub static PYSECDEC_ATTRIBUTE_START: &str = "PSDAB";
 pub static PYSECDEC_ATTRIBUTE_SEPARATOR: &str = "PSDAS";
 pub static PYSECDEC_ATTRIBUTE_END: &str = "PSDAE";
-
 
 // pub static VAKINT_SYMBOL_UNDRESSING_RE: LazyLock<Regex> = LazyLock::new(|| {
 //     Regex::new(&format!(r"{}::\{{[^{{}}]*\}}::", regex::escape(NAMESPACE)))
@@ -1159,7 +1161,6 @@ impl Integral {
         &self,
         input: AtomView,
     ) -> Result<Option<ReplacementRules>, VakintError> {
-
         // Check if the input is a short expression
         if let Ok(Some(a)) = self.match_integral_to_short_user_input(input) {
             return Ok(Some(a));
@@ -1978,8 +1979,7 @@ impl LoopNormalizationFactor {
 
         let mut params: HashMap<String, Float, _> = HashMap::default();
         params.insert(
-            get_full_name(&vk_symbol!(settings.mu_r_sq_symbol.as_str()))
-                .into(),
+            get_full_name(&vk_symbol!(settings.mu_r_sq_symbol.as_str())).into(),
             settings.real_to_prec("1"),
         );
         let num_res = match Vakint::full_numerical_evaluation_without_error(
@@ -3439,7 +3439,10 @@ impl Vakint {
                         {
                             //let m = mass_list_map.get(e_id).unwrap().to_owned();
                             let (m, m_sq) = match mass_list_map.get(e_id).unwrap().to_owned() {
-                                Atom::Var(s) => ( Atom::pow(&Atom::Var(s.clone()), Atom::num(1) / Atom::num(2)), Atom::Var(s.clone()) ),
+                                Atom::Var(s) => (
+                                    Atom::pow(&Atom::Var(s.clone()), Atom::num(1) / Atom::num(2)),
+                                    Atom::Var(s.clone()),
+                                ),
                                 Atom::Pow(m) => {
                                     let base = m.to_pow_view().get_base().to_owned();
                                     let exp = m.to_pow_view().get_exp();
@@ -3453,7 +3456,7 @@ impl Vakint {
                                                     integral
                                                 );
                                             }
-                                        },
+                                        }
                                         _ => {
                                             panic!(
                                                 "Could not find mass symbol in integral:\n{}",
@@ -3461,12 +3464,9 @@ impl Vakint {
                                             );
                                         }
                                     }
-                                },
+                                }
                                 _ => {
-                                    panic!(
-                                        "Could not find mass symbol in integral:\n{}",
-                                        integral
-                                    );
+                                    panic!("Could not find mass symbol in integral:\n{}", integral);
                                 }
                             };
 
@@ -3474,23 +3474,21 @@ impl Vakint {
                                 "".into()
                             } else {
                                 let mass_symbol_to_add = match (m.clone(), m_sq.clone()) {
-                                    (Atom::Var(a), _) => {
-                                        a.get_symbol()
-                                    },
-                                    (_,Atom::Var(asq)) => {
-                                        asq.get_symbol()
-                                    }
+                                    (Atom::Var(a), _) => a.get_symbol(),
+                                    (_, Atom::Var(asq)) => asq.get_symbol(),
                                     _ => panic!(
                                         "Could not find mass symbol for integral:\n{}",
                                         integral
                                     ),
                                 };
-                                masses.insert(
-                                    pysecdec_encode(&undress_vakint_symbols(&get_full_name(&mass_symbol_to_add))),
-                                );
+                                masses.insert(pysecdec_encode(&undress_vakint_symbols(
+                                    &get_full_name(&mass_symbol_to_add),
+                                )));
                                 format!(
                                     "-{}",
-                                    pysecdec_encode(&undress_vakint_symbols(&m_sq.to_canonical_string()))
+                                    pysecdec_encode(&undress_vakint_symbols(
+                                        &m_sq.to_canonical_string()
+                                    ))
                                 )
                             }
                         }
@@ -3586,8 +3584,12 @@ impl Vakint {
             // )
             // .to_string()
             // .replace(vakint.settings.epsilon_symbol.as_str(), "eps");
-            let mut numerator_string = pysecdec_encode(&undress_vakint_symbols(&processed_numerator
-                .to_canonical_string()).replace(&undress_vakint_symbols(vakint.settings.epsilon_symbol.as_str()), "eps"));
+            let mut numerator_string = pysecdec_encode(
+                &undress_vakint_symbols(&processed_numerator.to_canonical_string()).replace(
+                    &undress_vakint_symbols(vakint.settings.epsilon_symbol.as_str()),
+                    "eps",
+                ),
+            );
 
             // Powers higher than two cannot occur as different dummy indices would have been used in
             // the call 'processed_numerator = Vakint::convert_from_dot_notation(processed_numerator.as_view(), true)'
@@ -3632,7 +3634,6 @@ impl Vakint {
                     pysecdec_encode(&undress_vakint_symbols(&get_full_name(&additional_param)))
                 ));
             }
-
 
             // And the external momenta
             for iv1 in 0..external_momenta.len() {
@@ -3700,7 +3701,9 @@ impl Vakint {
             // );
             for m in masses_vec {
                 let cooked_m_symbol = undress_vakint_symbols(&pysecdec_decode(&m));
-                let alternative_form = to_symbol(&cooked_m_symbol)?.get_name().replace("::{}::","::");
+                let alternative_form = to_symbol(&cooked_m_symbol)?
+                    .get_name()
+                    .replace("::{}::", "::");
                 // Allow for both string representation: namespace::symbol_name *and namespace::{<attributes>}::symbol_name
                 // println!("Looking for mass symbol: {}", cooked_m_symbol);
                 // println!(
@@ -3708,8 +3711,10 @@ impl Vakint {
                 //     alternative_form
                 // );
                 let entry = options.numerical_masses.get(&cooked_m_symbol).map_or(
-                    options.numerical_masses.get(to_symbol(&alternative_form.clone())?.get_name()),
-                    |e| Some(e)
+                    options
+                        .numerical_masses
+                        .get(to_symbol(&alternative_form.clone())?.get_name()),
+                    |e| Some(e),
                 );
                 // println!("Accessing: {}", cooked_m_symbol);
                 if let Some(num_m) = entry {
@@ -3723,7 +3728,9 @@ impl Vakint {
             }
             for additional_param in sorted_additional_numerator_symbols.iter() {
                 let param_first_form = undress_vakint_symbols(&get_full_name(additional_param));
-                let alternative_form = vk_symbol!(&param_first_form.clone()).get_name().replace("::{}::","::");
+                let alternative_form = vk_symbol!(&param_first_form.clone())
+                    .get_name()
+                    .replace("::{}::", "::");
                 // Allow for both string representation: namespace::symbol_name *and namespace::{<attributes>}::symbol_name
                 // println!(
                 //     "Looking for additional numerator symbol: {}",
@@ -3732,12 +3739,10 @@ impl Vakint {
                 // println!("Also trying: {}",
                 //     alternative_form
                 // );
-                let entry = options.numerical_masses.get(
-                    &param_first_form,
-                ).map_or(
-                    options.numerical_masses.get(&alternative_form),
-                    |e| Some(e)
-                );
+                let entry = options
+                    .numerical_masses
+                    .get(&param_first_form)
+                    .map_or(options.numerical_masses.get(&alternative_form), |e| Some(e));
 
                 if let Some(num_additional_param) = entry {
                     default_masses.push((
@@ -3916,8 +3921,9 @@ impl Vakint {
     // Identify from the short canonical expression of the integral what is the UV mass and returns
     // the atom for it and its square (one of the two will effectively be a symbol but the other one an expression).
     // Throws an error if the identification fails.
-    fn identify_uv_mass_symbols(short_integral_expression: &Atom) -> Result<(Atom, Atom), VakintError> {
-
+    fn identify_uv_mass_symbols(
+        short_integral_expression: &Atom,
+    ) -> Result<(Atom, Atom), VakintError> {
         let (muv_atom, muv_sq_atom) = if let Some(m) = short_integral_expression
             .pattern_match(
                 &vk_parse!("prop(args__,m_sq_,pow_)").unwrap().to_pattern(),
@@ -3927,7 +3933,10 @@ impl Vakint {
             .next()
         {
             match m.get(&vk_symbol!("m_sq_")).unwrap() {
-                Atom::Var(s) => ( Atom::pow(&Atom::Var(s.clone()), Atom::num(1) / Atom::num(2)), Atom::Var(s.clone()) ),
+                Atom::Var(s) => (
+                    Atom::pow(&Atom::Var(s.clone()), Atom::num(1) / Atom::num(2)),
+                    Atom::Var(s.clone()),
+                ),
                 Atom::Pow(m) => {
                     let base = m.to_pow_view().get_base().to_owned();
                     let exp = m.to_pow_view().get_exp();
@@ -3941,7 +3950,7 @@ impl Vakint {
                                     short_integral_expression.to_canonical_string()
                                 )));
                             }
-                        },
+                        }
                         _ => {
                             return Err(VakintError::MalformedGraph(format!(
                                 "Could not find muV in graph:\n{}",
@@ -3949,7 +3958,7 @@ impl Vakint {
                             )));
                         }
                     }
-                },
+                }
                 _ => {
                     return Err(VakintError::MalformedGraph(format!(
                         "Could not find muV in graph:\n{}",
@@ -3963,7 +3972,6 @@ impl Vakint {
                 short_integral_expression.to_canonical_string()
             )));
         };
-
 
         Ok((muv_atom, muv_sq_atom))
     }
@@ -3989,11 +3997,16 @@ impl Vakint {
         let alphaloop_expression = integral.alphaloop_expression.as_ref().unwrap().as_view();
 
         let mut numerator = numerator.to_owned();
-        numerator = numerator
-            .replace_multiple(&[
-                Replacement::new(muv_sq_atom.to_pattern(),vk_parse!("mUV^2").unwrap().to_pattern()),
-                Replacement::new(muv_atom.to_pattern(),vk_parse!("mUV").unwrap().to_pattern())
-            ]);
+        numerator = numerator.replace_multiple(&[
+            Replacement::new(
+                muv_sq_atom.to_pattern(),
+                vk_parse!("mUV^2").unwrap().to_pattern(),
+            ),
+            Replacement::new(
+                muv_atom.to_pattern(),
+                vk_parse!("mUV").unwrap().to_pattern(),
+            ),
+        ]);
         // println!("Numerator : {}", numerator);
         // println!("Evaluating AlphaLoop : {}", alphaloop_expression);
         // println!("Graph:\n{}", integral.graph.to_graphviz());
@@ -4142,7 +4155,7 @@ impl Vakint {
             .with(muv_atom.to_pattern());
         let log_muv_mu_sq = function!(
             Symbol::LOG,
-            muv_sq_atom/ Atom::var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            muv_sq_atom / Atom::var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
         );
 
         let log_mu_sq = function!(
@@ -4604,17 +4617,16 @@ impl Vakint {
 
         user_variables = user_variables
             .iter()
-            .filter(|s| s.get_namespace() != NAMESPACE )
+            .filter(|s| s.get_namespace() != NAMESPACE)
             //            .filter(|s| s.get_namespace() != NAMESPACE || !s.get_attributes().is_empty() )
             .cloned()
             .collect::<HashSet<_, _>>();
         user_functions = user_functions
             .iter()
-            .filter(|s: &&Symbol| s.get_namespace() != NAMESPACE )
+            .filter(|s: &&Symbol| s.get_namespace() != NAMESPACE)
             //            .filter(|s: &&Symbol| s.get_namespace() != NAMESPACE || !s.get_attributes().is_empty() )
             .cloned()
             .collect::<HashSet<_, _>>();
-
 
         let mut form_header_functions = vec![];
         let mut form_header_symbols = vec![];
@@ -4628,28 +4640,30 @@ impl Vakint {
         for user_f in user_functions.iter() {
             let litteral_form_name = format!("[{}]", get_full_name(&user_f));
             if user_f.get_namespace() == NAMESPACE || user_f.get_namespace() == "symbolica" {
-//            if (user_f.get_namespace() == NAMESPACE || user_f.get_namespace() == "symbolica") && user_f.get_attributes().is_empty() {
+                //            if (user_f.get_namespace() == NAMESPACE || user_f.get_namespace() == "symbolica") && user_f.get_attributes().is_empty() {
                 string_replacements.insert(
                     user_f.get_stripped_name().into(),
                     litteral_form_name.clone(),
                 );
                 // processed_str = processed_str.replace(user_f.get_stripped_name(), &litteral_form_name);
             } else {
-                string_replacements.insert(get_full_name(&user_f).into(), litteral_form_name.clone());
+                string_replacements
+                    .insert(get_full_name(&user_f).into(), litteral_form_name.clone());
             }
             form_header_functions.push(litteral_form_name);
         }
         for user_v in user_variables.iter() {
             let litteral_form_name = format!("[{}]", get_full_name(&user_v));
             if user_v.get_namespace() == NAMESPACE || user_v.get_namespace() == "symbolica" {
-            //            if (user_v.get_namespace() == NAMESPACE || user_v.get_namespace() == "symbolica") && user_v.get_attributes().is_empty() {
+                //            if (user_v.get_namespace() == NAMESPACE || user_v.get_namespace() == "symbolica") && user_v.get_attributes().is_empty() {
                 string_replacements.insert(
                     user_v.get_stripped_name().into(),
                     litteral_form_name.clone(),
                 );
                 // processed_str = processed_str.replace(user_v.get_stripped_name(), &litteral_form_name);
             } else {
-                string_replacements.insert(get_full_name(&user_v).into(), litteral_form_name.clone());
+                string_replacements
+                    .insert(get_full_name(&user_v).into(), litteral_form_name.clone());
             }
             form_header_symbols.push(litteral_form_name);
         }

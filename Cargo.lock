@@ -404,6 +404,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "graphica"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "caf0c9829c525be1bac3f0ff1054d05a2f909cc1a5588f395a5d802be87e955f"
+dependencies = [
+ "ahash",
+ "dyn-clone",
+ "numerica",
+ "rand 0.9.2",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -545,12 +557,12 @@ checksum = "6a82ae493e598baaea5209805c49bbf2ea7de956d50d7da0da1164f9c6d28543"
 
 [[package]]
 name = "libloading"
-version = "0.8.8"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07033963ba89ebaf1584d767badaa2e8fcec21aedea6b8c0346d487d49c28667"
+checksum = "754ca22de805bb5744484a5b151a9e1a8e837d5dc232c2d7d8c2e3492edc8b60"
 dependencies = [
  "cfg-if",
- "windows-targets 0.53.3",
+ "windows-link 0.2.1",
 ]
 
 [[package]]
@@ -558,6 +570,16 @@ name = "libm"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9fbbcab51052fe104eb5e5d351cf728d30a5be1fe14d9be8a3b097481fb97de"
+
+[[package]]
+name = "libmimalloc-sys"
+version = "0.1.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "667f4fec20f29dfc6bc7357c582d91796c169ad7e2fce709468aefeb2c099870"
+dependencies = [
+ "cc",
+ "libc",
+]
 
 [[package]]
 name = "log"
@@ -664,6 +686,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mimalloc"
+version = "0.1.48"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1ee66a4b64c74f4ef288bcbb9192ad9c3feaad75193129ac8509af543894fd8"
+dependencies = [
+ "libmimalloc-sys",
+]
+
+[[package]]
 name = "ndarray"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -713,6 +744,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "numerica"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2edc99be47232732f49ee6dbf6efb5278269331636b0fecc012b3f5973638504"
+dependencies = [
+ "ahash",
+ "bincode",
+ "bincode-trait-derive",
+ "colored 3.0.0",
+ "dyn-clone",
+ "numpy",
+ "pyo3",
+ "pyo3-stub-gen",
+ "rand 0.9.2",
+ "rand_xoshiro",
+ "rug",
+ "smallvec",
+ "wide",
 ]
 
 [[package]]
@@ -1355,9 +1407,9 @@ dependencies = [
 
 [[package]]
 name = "symbolica"
-version = "0.20.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac102a364b3dd7384ef5e6912182189255dca5630581a4c8d826fe3f03099163"
+checksum = "ea45eb401af609079760cc40b6b97111158f7a557c214708938e9b60feb7d759"
 dependencies = [
  "ahash",
  "append-only-vec",
@@ -1368,7 +1420,10 @@ dependencies = [
  "bytes",
  "colored 3.0.0",
  "dyn-clone",
+ "graphica",
  "libloading",
+ "mimalloc",
+ "numerica",
  "numpy",
  "once_cell",
  "pyo3",
