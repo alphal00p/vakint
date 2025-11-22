@@ -10,7 +10,7 @@ use pyo3::{
 use pyo3::{Py, PyResult};
 use symbolica::api::python::PythonExpression;
 use symbolica::atom::{Atom, Symbol};
-use symbolica::domains::float::{Complex, Float, RealNumberLike};
+use symbolica::domains::float::{Complex, Float, RealLike};
 
 use crate::{
     EvaluationMethod, EvaluationOrder, FMFTOptions, LoopNormalizationFactor, MATADOptions,
