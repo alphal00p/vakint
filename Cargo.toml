@@ -17,7 +17,7 @@ symbolica = { version = "1.0" }
 # pyo3 = { version = "0.25", features = ["anyhow"], optional = true }
 # pyo3-stub-gen = { version = "0.13", default-features = false, optional = true }
 pyo3 = { version = "0.27", features = ["anyhow"], optional = true }
-pyo3-stub-gen = { version = "0.16", default-features = false, optional = true }
+pyo3-stub-gen = { version = "0.17", default-features = false, optional = true }
 
 
 anyhow = "1.0.86"
