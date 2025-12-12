@@ -1,6 +1,6 @@
 [package]
 name = "vakint"
-version = "1.0.0"
+version = "0.1.0"
 edition = "2024"
 license = "MIT"
 description = "Computation of single-scale vacuum integrals for High-Energy Physics"
@@ -26,18 +26,18 @@ anyhow = "1.0.86"
 thiserror = "1.0.63"
 arrayvec = "0.7.4"
 colored = "2.1.0"
-string-template-plus = "*"
-version-compare = "*"
-regex = "*"
-ahash = "*"
-log = "*"
-rug = "*"
+string-template-plus = "0.4.3"
+version-compare = "0.2.1"
+regex = "1.12.2"
+ahash = "0.8.12"
+log = "0.4.29"
+rug = "1.28.0"
 [dependencies.phf]
-version = "*"
+version = "0.13.1"
 features = ["macros"]
 
 [dev-dependencies]
-test-log = "*"
+test-log = "0.2.19"
 
 
 [features]
