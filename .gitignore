@@ -13,3 +13,6 @@ flake.lock
 .devenv*
 devenv*
 uv.lock
+tests_workspace/pysecdec_*
+tests_workspace/test_integrate_*
+.Cargo.toml.*
