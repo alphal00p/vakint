@@ -5,9 +5,9 @@ Library for the computation of (single-scale) vacuum integrals in High Energy Ph
 The code will perform the matching of user input onto known topologies, and then perform their computation either:
 
 * analytically, if the topology is known, using tensor reduction and parametric integration by parts.
-To this end, it uses a combination of `Symbolica` and `FORM` scripts, and `FMFT` for the four-loop case.
+To this end, it uses a combination of [`Symbolica`](https://symbolica.io/) and [`FORM`](https://arxiv.org/abs/1203.6543) scripts, as well as [`MATAD`](https://arxiv.org/abs/hep-ph/0009029) and [`FMFT`](https://arxiv.org/abs/1707.01710) for the four-loop case.
 
-* numerically, if the topology is not known, using the sector decomposition algorithm implemented in `pySecDec`.
+* numerically, if the topology is not known, using the sector decomposition algorithm implemented in `pySecDec`[https://arxiv.org/pdf/1703.09692].
 
 ## Python usage
 
@@ -127,8 +127,7 @@ yielding:
 
 ![result_evaluation](result_2_readme.png)
 
-## Disclaimer about Symbolica namespace
+## Symbolica license
 
-In the current version of `Vakint`, the interface to `FORM` is such that the namespace of all `Symbolica` symbols from your input expression will be overwritten to be the `Vakint` one, i.e. `vakint::<symbol>`.
-For now, the user sensitive to namespaces is responsible for renaming the symbols in their input expression to avoid conflicts, and possibly remap them afterwards to their original namespaces.
-For simple usage, it is recommended to parse the input expression with the macro `vakint_parse!` which will automatically assign `vk` as the namespace of all your symbols with unspecified namespaces. 
+This library uses `Symbolica` for some of its computations.
+`Symbolica` is licensed under a commercial license, *however* its usage is free for Hobbyist and also free under single-core restriction for Academic use.

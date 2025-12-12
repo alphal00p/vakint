@@ -2,6 +2,13 @@
 name = "vakint"
 version = "1.0.0"
 edition = "2024"
+license = "MIT"
+description = "Computation of single-scale vacuum integrals for High-Energy Physics"
+homepage = "https://alphal00p.github.io/"
+repository = "https://github.com/alphal00p/vakint"
+readme = "README.md"
+keywords = ["physics", "loop integral", "vaccuum", "quantum field theory"]
+categories = ["science"]
 
 [profile.dev-optim]
 inherits = "dev"
@@ -10,12 +17,7 @@ opt-level = 2
 
 [dependencies]
 symbolica = { version = "1.0" }
-# symbolica = { git = "https://github.com/benruijl/symbolica", rev = "2801141d9ee7c852727cef70f4dbc35cc26e6d5f" }
-#symbolica = { git = "https://github.com/benruijl/symbolica.git", rev = "c10688d92271dd061fc71bfe81eb3157e59830d6" }
-#symbolica = { git = "https://github.com/benruijl/symbolica.git", branch = "main", rev = "c10688d92271dd061fc71bfe81eb3157e59830d6" }
 
-# pyo3 = { version = "0.25", features = ["anyhow"], optional = true }
-# pyo3-stub-gen = { version = "0.13", default-features = false, optional = true }
 pyo3 = { version = "0.27", features = ["anyhow"], optional = true }
 pyo3-stub-gen = { version = "0.17", default-features = false, optional = true }
 
@@ -45,9 +47,3 @@ python_stubgen = [
     "symbolica/python_export",
     "dep:pyo3-stub-gen",
 ]
-#default = ["symbolica_community_module", "python_stubgen"]
-
-[patch.crates-io]
-# symbolica = { git = "https://github.com/benruijl/symbolica", branch = "complex_coeff" }
-
-#symbolica = { git = "https://github.com/benruijl/symbolica", rev = "af3f1b2043b270401920e4ff76d938217d995fc3" }
