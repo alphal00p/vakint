@@ -1,6 +1,6 @@
 [package]
 name = "vakint"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "MIT"
 description = "Computation of single-scale vacuum integrals for High-Energy Physics"
@@ -16,7 +16,7 @@ opt-level = 2
 #lto=true
 
 [dependencies]
-symbolica = { version = "1.0" }
+symbolica = { version = "1.1" }
 
 pyo3 = { version = "0.27", features = ["anyhow"], optional = true }
 pyo3-stub-gen = { version = "0.17", default-features = false, optional = true }
