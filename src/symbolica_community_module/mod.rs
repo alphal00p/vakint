@@ -53,10 +53,7 @@ fn vakint_to_python_error(vakint_error: VakintError) -> PyErr {
     exceptions::PyValueError::new_err(format!("Vakint error | {vakint_error}"))
 }
 
-#[cfg_attr(
-    feature = "python_stubgen",
-    gen_stub_pyclass(module = "symbolica.community.vakint")
-)]
+#[cfg_attr(feature = "python_stubgen", gen_stub_pyclass)]
 #[pyclass(name = "Vakint", module = "symbolica.community.vakint")]
 /// Base class of vakint engine, from which all vakint functions are initiated.
 /// It is best to create a single instance of this class and reuse it for multiple evaluations,
@@ -65,10 +62,7 @@ pub struct VakintWrapper {
     pub vakint: Vakint,
 }
 
-#[cfg_attr(
-    feature = "python_stubgen",
-    gen_stub_pyclass(module = "symbolica.community.vakint")
-)]
+#[cfg_attr(feature = "python_stubgen", gen_stub_pyclass)]
 #[pyclass(name = "VakintNumericalResult", module = "symbolica.community.vakint")]
 /// Container class storing the result of a numerical evaluation of a vakint expression as a Laurent series in the dimensional regularisation parameter epsilon.
 pub struct NumericalEvaluationResultWrapper {
@@ -214,10 +208,7 @@ impl NumericalEvaluationResultWrapper {
     }
 }
 
-#[cfg_attr(
-    feature = "python_stubgen",
-    gen_stub_pyclass(module = "symbolica.community.vakint")
-)]
+#[cfg_attr(feature = "python_stubgen", gen_stub_pyclass)]
 #[pyclass(name = "VakintExpression", module = "symbolica.community.vakint")]
 pub struct VakintExpressionWrapper {
     pub value: VakintExpression,
@@ -301,10 +292,7 @@ impl VakintExpressionWrapper {
     }
 }
 
-#[cfg_attr(
-    feature = "python_stubgen",
-    gen_stub_pyclass(module = "symbolica.community.vakint")
-)]
+#[cfg_attr(feature = "python_stubgen", gen_stub_pyclass)]
 #[pyclass(name = "VakintEvaluationMethod", module = "symbolica.community.vakint")]
 /// Class representing a vakint evaluation method, which can be used to specify the evaluation order in a Vakint instance.
 pub struct VakintEvaluationMethodWrapper {
