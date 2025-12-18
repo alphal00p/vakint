@@ -143,7 +143,7 @@ fn test_integrate_1l_decorated_indices_pysecdec() {
         EvaluationOrder(vec![EvaluationMethod::PySecDec(PySecDecOptions { reuse_existing_output: Some("./tests_workspace/test_integrate_1l_decorated_indices_pysecdec".into()) ,..PySecDecOptions::default() })]),
         try_parse!(
             "((user_space::{scalar,real}::AAsigma2+user_space::AAsigma)*vakint::k(1,user_space::mink4(4,11))*vakint::p(1,user_space::mink4(4,11))*vakint::k(1,user_space::mink4(4,12))*vakint::p(1,user_space::mink4(4,12)))*vakint::topo(\
-                vakint::prop(1,vakint::edge(1,1),vakint::k(1),user_space::{real}::AAmuvsq,2)\
+                vakint::prop(1,vakint::edge(1,1),vakint::k(1),user_space::{scalar,real}::AAmuvsq,2)\
              )"
         )
         .unwrap()

@@ -12,6 +12,7 @@ use symbolica::api::python::PythonExpression;
 use symbolica::atom::{Atom, Symbol};
 use symbolica::domains::float::{Complex, Float, RealLike};
 
+use crate::symbols::S;
 use crate::{
     EvaluationMethod, EvaluationOrder, FMFTOptions, LoopNormalizationFactor, MATADOptions,
     NumericalEvaluationResult, PySecDecOptions, Vakint, VakintError, VakintExpression,
@@ -28,6 +29,11 @@ impl SymbolicaCommunityModule for VakintWrapper {
 
     fn register_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
         initialize_vakint(m)
+    }
+
+    fn initialize(_py: Python) -> PyResult<()> {
+        let _ = S.dot;
+        Ok(())
     }
 }
 
