@@ -3210,13 +3210,16 @@ Evaluated (n_loops=1, mu_r=1) :
         params_complex: &HashMap<String, Complex<Float>, ahash::RandomState>,
         externals: Option<&HashMap<usize, Momentum, ahash::RandomState>>,
     ) -> Result<NumericalEvaluationResult, VakintError> {
-        let epsilon_coeffs = integral.coefficient_list::<i8>(&[Atom::var(vk_symbol!("ε"))]);
+        let epsilon_coeffs =
+            integral.coefficient_list::<i8>(&[Atom::var(vk_symbol!(&settings.epsilon_symbol))]);
         let epsilon_coeffs_vec = epsilon_coeffs
             .iter()
             .map(|(eps_atom, coeff)| {
                 if let Some(m) = eps_atom
                     .pattern_match(
-                        &vk_parse!("ε^n_").unwrap().to_pattern(),
+                        &vk_parse!(format!("{}^n_", settings.epsilon_symbol))
+                            .unwrap()
+                            .to_pattern(),
                         Some(&Condition::from((vk_symbol!("n_"), number_condition()))),
                         None,
                     )
@@ -3226,7 +3229,7 @@ Evaluated (n_loops=1, mu_r=1) :
                         get_integer_from_atom(m.get(&vk_symbol!("n_")).unwrap().as_view()).unwrap(),
                         coeff,
                     )
-                } else if *eps_atom == vk_parse!("ε").unwrap() {
+                } else if *eps_atom == vk_parse!(&settings.epsilon_symbol).unwrap() {
                     (1, coeff)
                 } else if *eps_atom == Atom::num(1) {
                     (0, coeff)
