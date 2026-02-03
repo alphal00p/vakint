@@ -208,7 +208,7 @@ impl FMFT {
 impl Vakint {
     pub fn fmft_evaluate(
         &self,
-        vakint: &Vakint,
+        settings: &VakintSettings,
         input_numerator: AtomView,
         integral_specs: &ReplacementRules,
         options: &FMFTOptions,
@@ -230,7 +230,7 @@ impl Vakint {
                 .unwrap_or("None".to_string())
         )));
 
-        let fmft = FMFT::with_settings(vakint.settings.clone());
+        let fmft = FMFT::with_settings(settings.clone());
 
         let integral_name = if let Some(short_expression) = integral.short_expression.as_ref() {
             if let Some(m) = short_expression
@@ -345,11 +345,7 @@ impl Vakint {
 
         // Substitute eps by (4-d)/2
         numerator = numerator
-            .replace(
-                vk_parse!(&vakint.settings.epsilon_symbol)
-                    .unwrap()
-                    .to_pattern(),
-            )
+            .replace(vk_parse!(&settings.epsilon_symbol).unwrap().to_pattern())
             .with(vk_parse!("(4-d)/2").unwrap().to_pattern());
 
         let muv_symbol = match (muv_atom.as_view(), muv_sq_atom.as_view()) {
@@ -363,7 +359,7 @@ impl Vakint {
         };
 
         let (form_header_additions, expression_str, indices) =
-            self.sanitize_user_expressions(numerator.as_view(), true, &[muv_symbol])?;
+            self.sanitize_user_expressions(settings, numerator.as_view(), true, &[muv_symbol])?;
 
         // let expression_str =
         //     &AtomPrinter::new_with_options(numerator.as_view(), PrintOptions::file_no_namespace())
@@ -397,7 +393,7 @@ impl Vakint {
         //     .replace(vk_parse!("f_(args__)").unwrap().to_pattern())
         //     .with(vk_parse!("1").unwrap().to_pattern())
         //     .get_all_symbols(false);
-        // let eps_symbol = vk_symbol!(vakint.settings.epsilon_symbol.clone());
+        // let eps_symbol = vk_symbol!(settings.epsilon_symbol.clone());
         // numerator_additional_symbols.retain(|&s| s != eps_symbol);
         let numerator_additional_symbols: std::collections::HashSet<
             symbolica::atom::Symbol,
@@ -453,16 +449,17 @@ impl Vakint {
             })
             .unwrap();
 
-        let form_result = vakint.run_form(
+        let form_result = self.run_form(
+            settings,
             &["fmft.frm".into()],
             ("run_fmft.frm".into(), rendered),
             vec![],
-            vakint.settings.clean_tmp_dir,
-            vakint.settings.temporary_directory.clone(),
+            settings.clean_tmp_dir,
+            settings.temporary_directory.clone(),
         )?;
 
         let processed_form_result =
-            self.process_form_output(form_result, indices, HashMap::new())?;
+            self.process_form_output(settings, form_result, indices, HashMap::new())?;
         let mut evaluated_integral = fmft.process_fmft_form_output(processed_form_result)?;
         debug!(
             "{}: raw result from FORM:\n{}",
@@ -487,12 +484,12 @@ impl Vakint {
 
         let fmft_normalization_correction = vk_parse!(
             format!(
-                "( 
+                "(
                 (𝑖*(𝜋^((4-2*{eps})/2)))\
               * (exp(-EulerGamma))^({eps})\
               * (exp(-logmUVmu-log_mu_sq))^({eps})\
              )^{n_loops}",
-                eps = self.settings.epsilon_symbol,
+                eps = settings.epsilon_symbol,
                 n_loops = integral.n_loops
             )
             .as_str()
@@ -501,25 +498,23 @@ impl Vakint {
 
         // Adjust normalization factor
         let mut complete_normalization = fmft_normalization_correction
-            * vakint
-                .settings
+            * settings
                 .get_integral_normalization_factor_atom()?
                 .replace(S.n_loops.to_pattern())
                 .with(Atom::num(integral.n_loops as i64).to_pattern());
         complete_normalization = complete_normalization
-            .replace(Atom::var(vk_symbol!(self.settings.epsilon_symbol.as_str())).to_pattern())
+            .replace(Atom::var(vk_symbol!(settings.epsilon_symbol.as_str())).to_pattern())
             .with(vk_parse!("ep").unwrap().to_pattern());
 
         evaluated_integral *= complete_normalization;
 
         if options.expand_masters {
-            let expansion_depth = vakint.settings.number_of_terms_in_epsilon_expansion
-                - (integral.n_loops as i64)
-                - 1;
+            let expansion_depth =
+                settings.number_of_terms_in_epsilon_expansion - (integral.n_loops as i64) - 1;
             debug!(
                 "{}: Expanding master integrals with terms up to and including {}^{} ...",
                 "FMFT".green(),
-                self.settings.epsilon_symbol,
+                settings.epsilon_symbol,
                 expansion_depth
             );
             evaluated_integral = fmft.expand_masters(evaluated_integral.as_view())?;
@@ -527,7 +522,7 @@ impl Vakint {
             debug!(
                 "{}: Series expansion of the result up to and including terms of order {}^{} ...",
                 "FMFT".green(),
-                self.settings.epsilon_symbol,
+                settings.epsilon_symbol,
                 expansion_depth
             );
             evaluated_integral = match evaluated_integral.series(
@@ -583,21 +578,21 @@ impl Vakint {
 
         evaluated_integral = evaluated_integral
             .replace(vk_parse!("ep").unwrap().to_pattern())
-            .with(Atom::var(vk_symbol!(self.settings.epsilon_symbol.as_str())).to_pattern());
+            .with(Atom::var(vk_symbol!(settings.epsilon_symbol.as_str())).to_pattern());
 
-        if !vakint.settings.use_dot_product_notation {
+        if !settings.use_dot_product_notation {
             evaluated_integral =
                 Vakint::convert_from_dot_notation(evaluated_integral.as_view(), false);
         }
 
         let log_muv_mu_sq = function!(
             Symbol::LOG,
-            muv_sq_atom / Atom::var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            muv_sq_atom / Atom::var(vk_symbol!(settings.mu_r_sq_symbol.as_str()))
         );
 
         let log_mu_sq = function!(
             Symbol::LOG,
-            Atom::var(vk_symbol!(vakint.settings.mu_r_sq_symbol.as_str()))
+            Atom::var(vk_symbol!(settings.mu_r_sq_symbol.as_str()))
         );
 
         evaluated_integral = evaluated_integral

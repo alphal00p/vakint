@@ -1,12 +1,14 @@
 use symbolica::try_parse;
-use vakint::{Vakint, VakintExpression, VakintSettings};
+use vakint::{EvaluationOrder, Vakint, VakintExpression, VakintSettings};
 
 fn main() {
-    let vakint = Vakint::new(Some(VakintSettings {
+    let settings = VakintSettings {
         allow_unknown_integrals: false,
+        evaluation_order: EvaluationOrder::alphaloop_only(),
         ..VakintSettings::default()
-    }))
-    .unwrap();
+    };
+    let vakint = Vakint::new().unwrap();
+    vakint.validate_settings(&settings).unwrap();
 
     //println!("Supported topologies:\n{}", vakint.topologies);
 
@@ -24,7 +26,9 @@ fn main() {
     )
     .unwrap();
 
-    let output = vakint.to_canonical(input.as_view(), true).unwrap();
+    let output = vakint
+        .to_canonical(&settings, input.as_view(), true)
+        .unwrap();
 
     println!(
         "\nInput:\n\n{}\n\nhas been matched to\n\n{}\n",

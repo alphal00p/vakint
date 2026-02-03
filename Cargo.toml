@@ -16,7 +16,7 @@ opt-level = 2
 #lto=true
 
 [dependencies]
-symbolica = { version = "1.2" }
+symbolica = { version = "1.2", default-features = false, features = ["tracing_max_level_info"] }
 
 pyo3 = { version = "0.27", features = ["anyhow"], optional = true }
 pyo3-stub-gen = { version = "0.17", default-features = false, optional = true }

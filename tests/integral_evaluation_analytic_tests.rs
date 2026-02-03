@@ -19,7 +19,6 @@ use vakint::{externals_from_f64, params_from_f64, vakint_parse};
 
 const N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS: u32 = 32;
 
-#[test_log::test]
 fn test_integrate_1l_a() {
     let vakint = get_vakint(VakintSettings {
         allow_unknown_integrals: false,
@@ -170,7 +169,6 @@ fn test_integrate_1l_a() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_1l_simple() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -194,7 +192,6 @@ fn test_integrate_1l_simple() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_1l_simple_squared_mass() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -218,7 +215,6 @@ fn test_integrate_1l_simple_squared_mass() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_1l_cross_product() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -249,7 +245,6 @@ fn test_integrate_1l_cross_product() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_1l_cross_product_with_additional_symbols_numerator() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -280,7 +275,6 @@ fn test_integrate_1l_cross_product_with_additional_symbols_numerator() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_1l_dot_product_external() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -310,7 +304,6 @@ fn test_integrate_1l_dot_product_external() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_2l() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -342,7 +335,6 @@ fn test_integrate_2l() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_3l() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -375,7 +367,6 @@ fn test_integrate_3l() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_3l_rank_4() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -413,7 +404,6 @@ fn test_integrate_3l_rank_4() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_3l_rank_4_additional_symbols_numerator() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -454,7 +444,6 @@ fn test_integrate_3l_rank_4_additional_symbols_numerator() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_3l_rank_4_matad() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -493,7 +482,6 @@ fn test_integrate_3l_rank_4_matad() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_3l_rank_4_matad_additional_symbols_numerator() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -535,7 +523,6 @@ fn test_integrate_3l_rank_4_matad_additional_symbols_numerator() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_3l_matad() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -569,7 +556,6 @@ fn test_integrate_3l_matad() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_4l_h() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -604,7 +590,6 @@ fn test_integrate_4l_h() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_4l_h_squared_mass() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -639,7 +624,6 @@ fn test_integrate_4l_h_squared_mass() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_4l_h_rank_4() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -681,7 +665,6 @@ fn test_integrate_4l_h_rank_4() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_4l_h_rank_4_additional_symbols_numerator() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -723,7 +706,6 @@ fn test_integrate_4l_h_rank_4_additional_symbols_numerator() {
     );
 }
 
-#[test_log::test]
 #[allow(non_snake_case)]
 fn test_integrate_4l_PR9d_from_H() {
     #[rustfmt::skip]
@@ -763,7 +745,6 @@ fn test_integrate_4l_PR9d_from_H() {
     );
 }
 
-#[test_log::test]
 #[allow(non_snake_case)]
 fn test_integrate_4l_PR9d_from_X() {
     #[rustfmt::skip]
@@ -803,7 +784,6 @@ fn test_integrate_4l_PR9d_from_X() {
     );
 }
 
-#[test_log::test]
 #[allow(non_snake_case)]
 fn test_integrate_4l_PR9d_from_H_pinch() {
     #[rustfmt::skip]
@@ -841,7 +821,6 @@ fn test_integrate_4l_PR9d_from_H_pinch() {
     );
 }
 
-#[test_log::test]
 #[allow(non_snake_case)]
 fn test_integrate_4l_PR9d_from_FG() {
     #[rustfmt::skip]
@@ -880,7 +859,6 @@ fn test_integrate_4l_PR9d_from_FG() {
     );
 }
 
-#[test_log::test]
 #[allow(non_snake_case)]
 fn test_integrate_4l_PR9d_from_FG_pinch() {
     #[rustfmt::skip]
@@ -918,7 +896,6 @@ fn test_integrate_4l_PR9d_from_FG_pinch() {
     );
 }
 
-#[test_log::test]
 #[allow(non_snake_case)]
 fn test_integrate_4l_PR11d() {
     #[rustfmt::skip]
@@ -952,7 +929,6 @@ fn test_integrate_4l_PR11d() {
     );
 }
 
-#[test_log::test]
 #[allow(non_snake_case)]
 fn test_integrate_4l_clover() {
     #[rustfmt::skip]
@@ -988,7 +964,6 @@ fn test_integrate_4l_clover() {
     );
 }
 
-#[test_log::test]
 #[allow(non_snake_case)]
 fn test_integrate_4l_clover_with_non_unit_scales() {
     #[rustfmt::skip]
@@ -1022,7 +997,6 @@ fn test_integrate_4l_clover_with_non_unit_scales() {
     );
 }
 
-#[test_log::test]
 #[allow(non_snake_case)]
 fn test_integrate_4l_dotted_clover() {
     #[rustfmt::skip]
@@ -1056,7 +1030,6 @@ fn test_integrate_4l_dotted_clover() {
     );
 }
 
-#[test_log::test]
 #[allow(non_snake_case)]
 fn test_integrate_4l_clover_with_numerator() {
     #[rustfmt::skip]
@@ -1096,4 +1069,35 @@ fn test_integrate_4l_clover_with_numerator() {
         ],
         N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, 1.0
     );
+}
+
+#[test_log::test]
+fn run_integral_evaluation_analytic_tests() {
+    test_integrate_1l_a();
+    test_integrate_1l_simple();
+    test_integrate_1l_simple_squared_mass();
+    test_integrate_1l_cross_product();
+    test_integrate_1l_cross_product_with_additional_symbols_numerator();
+    test_integrate_1l_dot_product_external();
+    test_integrate_2l();
+    test_integrate_3l();
+    test_integrate_3l_rank_4();
+    test_integrate_3l_rank_4_additional_symbols_numerator();
+    test_integrate_3l_rank_4_matad();
+    test_integrate_3l_rank_4_matad_additional_symbols_numerator();
+    test_integrate_3l_matad();
+    test_integrate_4l_h();
+    test_integrate_4l_h_squared_mass();
+    test_integrate_4l_h_rank_4();
+    test_integrate_4l_h_rank_4_additional_symbols_numerator();
+    test_integrate_4l_PR9d_from_H();
+    test_integrate_4l_PR9d_from_X();
+    test_integrate_4l_PR9d_from_H_pinch();
+    test_integrate_4l_PR9d_from_FG();
+    test_integrate_4l_PR9d_from_FG_pinch();
+    test_integrate_4l_PR11d();
+    test_integrate_4l_clover();
+    test_integrate_4l_clover_with_non_unit_scales();
+    test_integrate_4l_dotted_clover();
+    test_integrate_4l_clover_with_numerator();
 }

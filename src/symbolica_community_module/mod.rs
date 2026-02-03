@@ -66,6 +66,7 @@ fn vakint_to_python_error(vakint_error: VakintError) -> PyErr {
 /// as the setup of the instance can be time consuming since it involves the processing of all known topologies.
 pub struct VakintWrapper {
     pub vakint: Vakint,
+    pub settings: VakintSettings,
 }
 
 #[cfg_attr(feature = "python_stubgen", gen_stub_pyclass)]
@@ -600,7 +601,7 @@ impl VakintWrapper {
             "mursq".into()
         };
         #[allow(clippy::needless_update)]
-        let vakint = Vakint::new(Some(VakintSettings {
+        let settings = VakintSettings {
             run_time_decimal_precision: run_time_decimal_precision.unwrap_or(17),
             epsilon_symbol: eps_symbol,
             mu_r_sq_symbol: mu_r_sq_sym,
@@ -619,9 +620,12 @@ impl VakintWrapper {
             number_of_terms_in_epsilon_expansion: number_of_terms_in_epsilon_expansion.unwrap_or(4),
             use_dot_product_notation: use_dot_product_notation.unwrap_or(false),
             ..VakintSettings::default()
-        }))
-        .map_err(vakint_to_python_error)?;
-        let wrapper = VakintWrapper { vakint };
+        };
+        let vakint = Vakint::new().map_err(vakint_to_python_error)?;
+        vakint
+            .validate_settings(&settings)
+            .map_err(vakint_to_python_error)?;
+        let wrapper = VakintWrapper { vakint, settings };
         Ok(wrapper)
     }
 
@@ -648,8 +652,8 @@ impl VakintWrapper {
     ) -> PyResult<NumericalEvaluationResultWrapper> {
         let value = NumericalEvaluationResult::from_atom(
             expr.expr.as_view(),
-            vakint_symbol!(self.vakint.settings.epsilon_symbol.clone()),
-            &self.vakint.settings,
+            vakint_symbol!(self.settings.epsilon_symbol.clone()),
+            &self.settings,
         )
         .map_err(vakint_to_python_error)?;
         Ok(NumericalEvaluationResultWrapper { value })
@@ -696,11 +700,12 @@ impl VakintWrapper {
     )> {
         Python::attach(|py| {
             let evaluated_integral_atom = evaluated_integral.extract::<PythonExpression>(py)?;
-            let p = self.vakint.params_from_f64(&params);
-            let e = externals.map(|ext| self.vakint.externals_from_f64(&ext));
+            let p = self.vakint.params_from_f64(&self.settings, &params);
+            let e = externals.map(|ext| self.vakint.externals_from_f64(&self.settings, &ext));
             let (numerical_result, numerical_error) = self
                 .vakint
                 .numerical_evaluation(
+                    &self.settings,
                     evaluated_integral_atom.expr.as_view(),
                     &p,
                     &HashMap::default(),
@@ -738,7 +743,7 @@ impl VakintWrapper {
     ) -> PyResult<PythonExpression> {
         let value = result
             .value
-            .to_atom(vakint_symbol!(self.vakint.settings.epsilon_symbol.clone()));
+            .to_atom(vakint_symbol!(self.settings.epsilon_symbol.clone()));
 
         Ok(value.into())
     }
@@ -770,6 +775,7 @@ impl VakintWrapper {
         let result = self
             .vakint
             .to_canonical(
+                &self.settings,
                 integral_expression.expr.as_view(),
                 short_form.unwrap_or(false),
             )
@@ -798,7 +804,7 @@ impl VakintWrapper {
     ) -> PyResult<PythonExpression> {
         let result = self
             .vakint
-            .tensor_reduce(integral_expression.expr.as_view())
+            .tensor_reduce(&self.settings, integral_expression.expr.as_view())
             .map_err(vakint_to_python_error)?;
         Ok(result.into())
     }
@@ -826,7 +832,7 @@ impl VakintWrapper {
     ) -> PyResult<PythonExpression> {
         let result = self
             .vakint
-            .evaluate_integral(integral_expression.expr.as_view())
+            .evaluate_integral(&self.settings, integral_expression.expr.as_view())
             .map_err(vakint_to_python_error)?;
         Ok(result.into())
     }
@@ -851,7 +857,7 @@ impl VakintWrapper {
     pub fn evaluate(&self, integral_expression: PythonExpression) -> PyResult<PythonExpression> {
         let result = self
             .vakint
-            .evaluate(integral_expression.expr.as_view())
+            .evaluate(&self.settings, integral_expression.expr.as_view())
             .map_err(vakint_to_python_error)?;
         Ok(result.into())
     }

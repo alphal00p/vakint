@@ -7,7 +7,7 @@ use symbolica::{
     domains::rational::Rational,
     function,
 };
-use test_utils::compare_two_evaluations;
+use test_utils::{TestVakint, compare_two_evaluations, get_vakint};
 use vakint::{
     EvaluationOrder, NumericalEvaluationResult, Vakint, VakintSettings, matad::MATAD, vakint_parse,
     vakint_symbol,
@@ -20,7 +20,6 @@ const COMPARISON_REL_THRESHOLD: f64 = 1.0e-25;
 // No error on anylic expressions
 const MAX_PULL: f64 = 0.0e0;
 
-#[test_log::test]
 fn test_integrate_1l_no_numerator() {
     for pow in 1..=6 {
         #[rustfmt::skip]
@@ -47,7 +46,6 @@ fn test_integrate_1l_no_numerator() {
     }
 }
 
-#[test_log::test]
 fn test_integrate_1l_no_numerator_squared_mass() {
     for pow in 1..=2 {
         #[rustfmt::skip]
@@ -74,7 +72,6 @@ fn test_integrate_1l_no_numerator_squared_mass() {
     }
 }
 
-#[test_log::test]
 fn test_integrate_2l_no_numerator() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -100,7 +97,6 @@ fn test_integrate_2l_no_numerator() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_3l_basketball_a() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -127,7 +123,6 @@ fn test_integrate_3l_basketball_a() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_3l_basketball_b() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -154,7 +149,6 @@ fn test_integrate_3l_basketball_b() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_3l_no_numerator() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -184,7 +178,6 @@ fn test_integrate_3l_no_numerator() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_3l_rank_4() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -194,7 +187,7 @@ fn test_integrate_3l_rank_4() {
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + p(1,11)*k(3,11)*k(3,22)*p(2,22)
-                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22)
              )
             *topo(\
                  prop(1,edge(1,2),k(1),muvsq,1)\
@@ -218,7 +211,6 @@ fn test_integrate_3l_rank_4() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_3l_rank_4_different_scales() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -228,7 +220,7 @@ fn test_integrate_3l_rank_4_different_scales() {
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + p(1,11)*k(3,11)*k(3,22)*p(2,22)
-                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22)
              )
             *topo(\
                  prop(1,edge(1,2),k(1),muvsq,1)\
@@ -253,7 +245,7 @@ fn test_integrate_3l_rank_4_different_scales() {
 }
 
 pub fn evaluate_expression_with_matad(
-    vakint: &Vakint,
+    vakint: &TestVakint,
     input: AtomView,
     direct_masters_substitution: bool,
 ) -> NumericalEvaluationResult {
@@ -350,15 +342,13 @@ pub fn evaluate_expression_with_matad(
     res
 }
 
-#[test_log::test]
 pub fn test_eval_matad_masters() {
-    let mut vakint = Vakint::new(Some(VakintSettings {
+    let mut vakint = get_vakint(VakintSettings {
         evaluation_order: EvaluationOrder::empty(),
         run_time_decimal_precision: 40,
         number_of_terms_in_epsilon_expansion: 4,
         ..VakintSettings::default()
-    }))
-    .unwrap();
+    });
 
     #[rustfmt::skip]
     let expression_to_tests = vec![
@@ -548,15 +538,13 @@ pub fn test_eval_matad_masters() {
     }
 }
 
-#[test_log::test]
 pub fn test_eval_matad_one_master_combination() {
-    let vakint = Vakint::new(Some(VakintSettings {
+    let vakint = get_vakint(VakintSettings {
         evaluation_order: EvaluationOrder::empty(),
         run_time_decimal_precision: 40,
         number_of_terms_in_epsilon_expansion: 4,
         ..VakintSettings::default()
-    }))
-    .unwrap();
+    });
 
     let mut input = vakint_parse!("M^2*miD6+16*M^2*(1736*(-2*ep+4)^2-718*(-2*ep+4)^3+165*(-2*ep+4)^4-20*(-2*ep+4)^5+(-2*ep+4)^6-2208*(-2*ep+4)+1152)^-1*Gam(1,1)^3+4*M^2*miT111*((-2*ep+4)^2-7*(-2*ep+4)+12)^-1*Gam(1,1)+M^2*miD5*(2*(-2*ep+4)-6)^-1*(3*(-2*ep+4)-12)+M^2*miBN*(-3*(-2*ep+4)+8)*(8*(-2*ep+4)-24)^-1").unwrap();
     input = input
@@ -600,4 +588,19 @@ pub fn test_eval_matad_one_master_combination() {
         input, res
     );
     assert!(matches, "{}", msg);
+}
+
+#[test_log::test]
+fn run_integral_alphaloop_vs_matad_tests() {
+    // Single runner keeps Symbolica initialization single-threaded; helper tests stay plain fns.
+    test_integrate_1l_no_numerator();
+    test_integrate_1l_no_numerator_squared_mass();
+    test_integrate_2l_no_numerator();
+    test_integrate_3l_basketball_a();
+    test_integrate_3l_basketball_b();
+    test_integrate_3l_no_numerator();
+    test_integrate_3l_rank_4();
+    test_integrate_3l_rank_4_different_scales();
+    test_eval_matad_masters();
+    test_eval_matad_one_master_combination();
 }

@@ -1,9 +1,8 @@
 mod test_utils;
 use test_utils::{compare_output, get_vakint};
-use vakint::vakint_parse;
 use vakint::VakintSettings;
+use vakint::vakint_parse;
 
-#[test_log::test]
 fn test_reduction_1l_a() {
     let vakint = get_vakint(VakintSettings {
         allow_unknown_integrals: false,
@@ -38,7 +37,6 @@ fn test_reduction_1l_a() {
     );
 }
 
-#[test_log::test]
 fn test_reduction_1l_b() {
     let vakint = get_vakint(VakintSettings {
         allow_unknown_integrals: false,
@@ -73,7 +71,6 @@ fn test_reduction_1l_b() {
     );
 }
 
-#[test_log::test]
 fn test_reduction_2l_a() {
     let vakint = get_vakint(VakintSettings {
         allow_unknown_integrals: false,
@@ -106,4 +103,11 @@ fn test_reduction_2l_a() {
         )
         .unwrap(),
     );
+}
+
+#[test_log::test]
+fn run_tensor_reduction_tests() {
+    test_reduction_1l_a();
+    test_reduction_1l_b();
+    test_reduction_2l_a();
 }

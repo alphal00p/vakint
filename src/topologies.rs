@@ -9,7 +9,7 @@ use symbolica::{
 };
 
 use crate::{
-    EvaluationOrder, Integral, ReplacementRules, VakintError, VakintSettings, function_condition,
+    EvaluationOrder, Integral, ReplacementRules, VakintError, function_condition,
     get_individual_momenta, get_individual_momenta_from_atom, get_node_ids, get_prop_with_id,
     graph::Graph, symbols::S,
 };
@@ -37,7 +37,7 @@ impl fmt::Display for Topologies {
 }
 
 impl Topologies {
-    pub fn generate_topologies(settings: &VakintSettings) -> Result<Self, VakintError> {
+    pub fn generate_topologies() -> Result<Self, VakintError> {
         // ==
         // One-loop topology
         // ==
@@ -218,14 +218,12 @@ impl Topologies {
             .0,
         );
 
-        if settings.allow_unknown_integrals {
-            topologies.0.push(Topology::Unknown(Integral::new(
-                0,
-                None,
-                None,
-                EvaluationOrder::pysecdec_only(None),
-            )?));
-        }
+        topologies.0.push(Topology::Unknown(Integral::new(
+            0,
+            None,
+            None,
+            EvaluationOrder::pysecdec_only(None),
+        )?));
 
         Ok(topologies)
     }
@@ -291,8 +289,12 @@ impl Topologies {
     pub fn match_topologies_to_user_input(
         &self,
         input: AtomView,
+        allow_unknown_integrals: bool,
     ) -> Result<Option<ReplacementRules>, VakintError> {
         for topology in self.0.iter() {
+            if matches!(topology, Topology::Unknown(_)) && !allow_unknown_integrals {
+                continue;
+            }
             if let Some(replacement_rules) = topology.match_topology_to_user_input(input)? {
                 return Ok(Some(replacement_rules));
             }

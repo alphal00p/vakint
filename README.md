@@ -22,11 +22,12 @@ For example:
 use vakint::{vakint_parse, Vakint, VakintExpression, VakintSettings};
 
 fn main() {
-    let vakint = Vakint::new(Some(VakintSettings {
+    let settings = VakintSettings {
         allow_unknown_integrals: false,
         ..VakintSettings::default()
-    }))
-    .unwrap();
+    };
+    let vakint = Vakint::new().unwrap();
+    vakint.validate_settings(&settings).unwrap();
 
     //println!("Supported topologies:\n{}", vakint.topologies);
 
@@ -44,7 +45,9 @@ fn main() {
     )
     .unwrap();
 
-    let output = vakint.to_canonical(input.as_view(), true).unwrap();
+    let output = vakint
+        .to_canonical(&settings, input.as_view(), true)
+        .unwrap();
 
     println!(
         "\nInput:\n\n{}\n\nhas been matched to\n\n{}\n",
@@ -65,14 +68,15 @@ use ahash::HashMap;
 use vakint::{vakint_parse, Vakint, VakintExpression, VakintSettings};
 
 fn main() {
-    let vakint = Vakint::new(Some(VakintSettings {
+    let settings = VakintSettings {
         allow_unknown_integrals: false,
         use_dot_product_notation: true,
         integral_normalization_factor: vakint::LoopNormalizationFactor::Custom("1".into()),
         run_time_decimal_precision: 16,
         ..VakintSettings::default()
-    }))
-    .unwrap();
+    };
+    let vakint = Vakint::new().unwrap();
+    vakint.validate_settings(&settings).unwrap();
 
     let mut integral = vakint_parse!(
         "(k(3,11)*k(3,22)+k(3,77)*p(8,77))*topo(\
@@ -85,34 +89,44 @@ fn main() {
         VakintExpression::try_from(integral.clone()).unwrap()
     );
 
-    integral = vakint.to_canonical(integral.as_view(), true).unwrap();
+    integral = vakint
+        .to_canonical(&settings, integral.as_view(), true)
+        .unwrap();
     println!(
         "Matched integral:\n{}\n",
         VakintExpression::try_from(integral.clone()).unwrap()
     );
 
-    integral = vakint.tensor_reduce(integral.as_view()).unwrap();
+    integral = vakint.tensor_reduce(&settings, integral.as_view()).unwrap();
     println!(
         "Tensor reduced integral:\n{}\n",
         VakintExpression::try_from(integral.clone()).unwrap()
     );
 
-    integral = vakint.evaluate_integral(integral.as_view()).unwrap();
+    integral = vakint
+        .evaluate_integral(&settings, integral.as_view())
+        .unwrap();
     println!("Evaluated integral:\n{}\n", integral);
 
     let mut params = HashMap::default();
-    params.insert("MUVsq".into(), vakint.settings.real_to_prec("1.0"));
-    params.insert("mursq".into(), vakint.settings.real_to_prec("1.0"));
+    params.insert("MUVsq".into(), settings.real_to_prec("1.0"));
+    params.insert("mursq".into(), settings.real_to_prec("1.0"));
 
-    let numerical_partial_eval =
-        Vakint::partial_numerical_evaluation(&vakint.settings, integral.as_view(), &params, None);
-    println!("Partial eval:\n{}\n", numerical_partial_eval);
-
-    params.insert("g(11,22)".into(), vakint.settings.real_to_prec("1.0"));
-    let numerical_full_eval = Vakint::full_numerical_evaluation_without_error(
-        &vakint.settings,
+    let numerical_partial_eval = Vakint::partial_numerical_evaluation(
+        &settings,
         integral.as_view(),
         &params,
+        &HashMap::default(),
+        None,
+    );
+    println!("Partial eval:\n{}\n", numerical_partial_eval);
+
+    params.insert("g(11,22)".into(), settings.real_to_prec("1.0"));
+    let numerical_full_eval = Vakint::full_numerical_evaluation_without_error(
+        &settings,
+        integral.as_view(),
+        &params,
+        &HashMap::default(),
         None,
     )
     .unwrap();

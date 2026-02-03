@@ -1,24 +1,25 @@
 use ahash::HashMap;
 use vakint::{
-    vakint_parse, vakint_symbol, EvaluationOrder, LoopNormalizationFactor,
-    NumericalEvaluationResult, Vakint, VakintExpression, VakintSettings,
+    EvaluationOrder, LoopNormalizationFactor, NumericalEvaluationResult, Vakint, VakintExpression,
+    VakintSettings, vakint_parse, vakint_symbol,
 };
 
 fn main() {
     // Set vakint parameters
-    let vakint = Vakint::new(Some(VakintSettings {
+    let settings = VakintSettings {
         evaluation_order: EvaluationOrder::alphaloop_only(),
         integral_normalization_factor: LoopNormalizationFactor::MSbar,
         run_time_decimal_precision: 32,
         ..VakintSettings::default()
-    }))
-    .unwrap();
+    };
+    let vakint = Vakint::new().unwrap();
+    vakint.validate_settings(&settings).unwrap();
 
     let mut integral = vakint_parse!(
         "(
                 k(1,11)*k(2,11)*k(1,22)*k(2,22)
               + p(1,11)*k(3,11)*k(3,22)*p(2,22)
-              + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+              + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22)
            )
           *topo(\
                prop(1,edge(1,2),k(1),muvsq,1)\
@@ -37,11 +38,12 @@ fn main() {
         Vakint::convert_to_dot_notation(vakint_expr.0[0].numerator.as_view());
     println!("\nInput integral in dot notation:\n{}\n", vakint_expr);
 
-    integral = vakint.evaluate(integral.as_view()).unwrap();
+    integral = vakint.evaluate(&settings, integral.as_view()).unwrap();
     println!("Evaluated integral:\n{}\n", integral.clone());
 
     // Set some value for the mass parameters
     let params = vakint.params_from_f64(
+        &settings,
         &[("muvsq".into(), 3.0), ("mursq".into(), 5.0)]
             .iter()
             .cloned()
@@ -50,6 +52,7 @@ fn main() {
 
     // And for the external momenta part of the numerator
     let externals = vakint.externals_from_f64(
+        &settings,
         &(1..=2)
             .map(|i| {
                 (
@@ -67,6 +70,7 @@ fn main() {
 
     let (eval, error) = vakint
         .numerical_evaluation(
+            &settings,
             integral.as_view(),
             &params,
             &HashMap::default(),
@@ -74,7 +78,7 @@ fn main() {
         )
         .unwrap();
     println!("Numerical evaluation:\n{}\n", eval);
-    let eval_atom = eval.to_atom(vakint_symbol!(vakint.settings.epsilon_symbol.clone()));
+    let eval_atom = eval.to_atom(vakint_symbol!(settings.epsilon_symbol.clone()));
     println!("Numerical evaluation as atom:\n{}\n", eval_atom);
     #[rustfmt::skip]
     let target_eval =  NumericalEvaluationResult::from_vec(
@@ -84,11 +88,11 @@ fn main() {
             (-1, ( "0.0".into(),  "-188670.2193437045050954664088623".into()),),
             ( 0, ( "0.0".into(),  "148095.4883501202267659938351786".into()),),
         ],
-        &vakint.settings);
+        &settings);
     let (matches, match_msg) = target_eval.does_approx_match(
         &eval,
         error.as_ref(),
-        10.0_f64.powi(-((vakint.settings.run_time_decimal_precision - 4) as i32)),
+        10.0_f64.powi(-((settings.run_time_decimal_precision - 4) as i32)),
         1.0,
     );
     if matches {

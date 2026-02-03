@@ -1,7 +1,7 @@
 mod test_utils;
 use vakint::{
-    vakint_parse, EvaluationMethod, EvaluationOrder, LoopNormalizationFactor, PySecDecOptions,
-    VakintSettings,
+    EvaluationMethod, EvaluationOrder, LoopNormalizationFactor, PySecDecOptions, VakintSettings,
+    vakint_parse,
 };
 
 use std::{collections::HashMap, vec};
@@ -14,7 +14,6 @@ const N_DIGITS_PYSECDEC_EVALUATION_FOR_TESTS: u32 = 10;
 // PySecDec QMC is often very optimistic
 const MAX_PULL: f64 = 1.0e99;
 
-#[test_log::test]
 fn test_integrate_1l_simple() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -39,8 +38,6 @@ fn test_integrate_1l_simple() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 fn test_integrate_1l_cross_product() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -72,8 +69,6 @@ fn test_integrate_1l_cross_product() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 fn test_integrate_1l_cross_product_with_additional_symbols_numerator() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -105,8 +100,6 @@ fn test_integrate_1l_cross_product_with_additional_symbols_numerator() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 fn test_integrate_2l_different_masses() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -139,8 +132,6 @@ fn test_integrate_2l_different_masses() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 fn test_integrate_3l_o_eps() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -177,8 +168,6 @@ fn test_integrate_3l_o_eps() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 #[allow(non_snake_case)]
 fn test_integrate_4l_h() {
     let vakint_default_settings = VakintSettings {
@@ -217,8 +206,6 @@ fn test_integrate_4l_h() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 #[allow(non_snake_case)]
 fn test_integrate_4l_PR9d_from_FG_pinch() {
     let vakint_default_settings = VakintSettings {
@@ -261,8 +248,6 @@ fn test_integrate_4l_PR9d_from_FG_pinch() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 #[allow(non_snake_case)]
 fn test_integrate_4l_PR11d() {
     let vakint_default_settings = VakintSettings {
@@ -300,8 +285,6 @@ fn test_integrate_4l_PR11d() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 #[allow(non_snake_case)]
 fn test_integrate_4l_clover() {
     let vakint_default_settings = VakintSettings {
@@ -339,8 +322,6 @@ fn test_integrate_4l_clover() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 #[allow(non_snake_case)]
 fn test_integrate_4l_clover_with_numerator() {
     let vakint_default_settings = VakintSettings {
@@ -354,10 +335,10 @@ fn test_integrate_4l_clover_with_numerator() {
         EvaluationOrder(vec![EvaluationMethod::PySecDec(
             PySecDecOptions{ relative_precision: 1e-8, min_n_evals: 10_000_000, max_n_evals: 100_000_000, reuse_existing_output: Some("./tests_workspace/test_integrate_4l_clover_with_numerator".into()), ..PySecDecOptions::default()} )]),
         vakint_parse!(
-            "( 
+            "(
                 user_space::A * k(1,11)*k(2,11)*k(1,22)*k(2,22)
               + user_space::B * p(1,11)*k(3,11)*k(3,22)*p(2,22)
-              + user_space::C * p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+              + user_space::C * p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22)
            )*topo(
               prop(1, edge(1, 1), k(1), muvsq, 2)*\
               prop(2, edge(1, 1), k(2), muvsq, 1)*\
@@ -384,4 +365,19 @@ fn test_integrate_4l_clover_with_numerator() {
         ],
         4, MAX_PULL
     );
+}
+
+#[test_log::test]
+fn run_integral_evaluation_pysecdec_tests() {
+    test_integrate_1l_simple();
+    // Single runner keeps Symbolica initialization single-threaded; helper tests stay plain fns.
+    test_integrate_1l_cross_product();
+    test_integrate_1l_cross_product_with_additional_symbols_numerator();
+    test_integrate_2l_different_masses();
+    test_integrate_3l_o_eps();
+    test_integrate_4l_h();
+    test_integrate_4l_PR9d_from_FG_pinch();
+    test_integrate_4l_PR11d();
+    test_integrate_4l_clover();
+    test_integrate_4l_clover_with_numerator();
 }

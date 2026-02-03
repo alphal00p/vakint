@@ -10,7 +10,6 @@ const COMPARISON_WITH_PYSECDEC_REL_THRESHOLD: f64 = 1.0e-7;
 // PySecDec QMC is often very optimistic
 const MAX_PULL: f64 = 1.0e5;
 
-#[test_log::test]
 fn test_integrate_1l_pysecdec() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -34,8 +33,6 @@ fn test_integrate_1l_pysecdec() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 fn test_integrate_1l_pysecdec_non_unit_mass() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -59,8 +56,6 @@ fn test_integrate_1l_pysecdec_non_unit_mass() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 fn test_integrate_1l_pysecdec_non_unit_scale() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -84,8 +79,6 @@ fn test_integrate_1l_pysecdec_non_unit_scale() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 fn test_integrate_1l_pysecdec_num_rank_two() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -109,8 +102,6 @@ fn test_integrate_1l_pysecdec_num_rank_two() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 fn test_integrate_1l_pysecdec_dot_product_external() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -134,7 +125,6 @@ fn test_integrate_1l_pysecdec_dot_product_external() {
     );
 }
 
-#[test_log::test]
 fn test_integrate_2l_pysecdec() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -160,8 +150,6 @@ fn test_integrate_2l_pysecdec() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 fn test_integrate_2l_pysecdec_pinched() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -186,8 +174,6 @@ fn test_integrate_2l_pysecdec_pinched() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 fn test_integrate_2l_pysecdec_pinched_other_lmb() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -212,8 +198,6 @@ fn test_integrate_2l_pysecdec_pinched_other_lmb() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 fn test_integrate_2l_pysecdec_rank_four_num() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -244,8 +228,6 @@ fn test_integrate_2l_pysecdec_rank_four_num() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 fn test_integrate_3l_pysecdec() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -275,8 +257,6 @@ fn test_integrate_3l_pysecdec() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 fn test_integrate_3l_rank_4() {
     // pySecDec is not so great for such higher rank cases, so we need to set a very high threshold
     const ADJUSTED_THRESHOLD: f64 = 1.0e-2;
@@ -290,7 +270,7 @@ fn test_integrate_3l_rank_4() {
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + p(1,11)*k(3,11)*k(3,22)*p(2,22)
-                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22)
              )
             *topo(\
                  prop(1,edge(1,2),k(1),muvsq,1)\
@@ -313,8 +293,6 @@ fn test_integrate_3l_rank_4() {
     );
 }
 
-#[ignore]
-#[test_log::test]
 fn test_integrate_3l_rank_4_matad() {
     // pySecDec is not so great for such higher rank cases, so we need to set a very high threshold
     const ADJUSTED_THRESHOLD: f64 = 1.0e-2;
@@ -323,14 +301,14 @@ fn test_integrate_3l_rank_4_matad() {
         VakintSettings {number_of_terms_in_epsilon_expansion: 5,..VakintSettings::default()},
         ((&EvaluationOrder::matad_only(None) ,true),
          (&EvaluationOrder(vec![EvaluationMethod::PySecDec(
-            PySecDecOptions{ 
+            PySecDecOptions{
                 // reuse_existing_output: Some("./SAVED_PYSECDEC_OUTPUTS/test_integrate_3l_rank_4_matad".into()),
                 min_n_evals: 100_000, max_n_evals: 10_000_000, reuse_existing_output: Some("./tests_workspace/pysecdec_comparison_3l_rank_4_matad".into()), ..PySecDecOptions::default()} )]) ,true)),
         vakint_parse!(
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + p(1,11)*k(3,11)*k(3,22)*p(2,22)
-                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22)
              )
             *topo(\
                  prop(1,edge(1,2),k(1),muvsq,1)\
@@ -351,4 +329,21 @@ fn test_integrate_3l_rank_4_matad() {
             ADJUSTED_THRESHOLD, MAX_PULL,
         true,
     );
+}
+
+#[test_log::test]
+fn run_integral_comparison_vs_pysecdec_tests() {
+    // Single runner keeps Symbolica initialization single-threaded; helper tests stay plain fns.
+    test_integrate_1l_pysecdec();
+    test_integrate_1l_pysecdec_non_unit_mass();
+    test_integrate_1l_pysecdec_non_unit_scale();
+    test_integrate_1l_pysecdec_num_rank_two();
+    test_integrate_1l_pysecdec_dot_product_external();
+    test_integrate_2l_pysecdec();
+    test_integrate_2l_pysecdec_pinched();
+    test_integrate_2l_pysecdec_pinched_other_lmb();
+    test_integrate_2l_pysecdec_rank_four_num();
+    test_integrate_3l_pysecdec();
+    test_integrate_3l_rank_4();
+    test_integrate_3l_rank_4_matad();
 }

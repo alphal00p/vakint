@@ -10,14 +10,138 @@ use symbolica::{
 };
 
 use std::collections::HashMap;
+use std::process::{Command, Stdio};
+use std::sync::OnceLock;
+use vakint::{EvaluationMethod, NumericalEvaluationResult, Vakint, VakintError};
 use vakint::{EvaluationOrder, LoopNormalizationFactor, Momentum, VakintSettings};
-use vakint::{NumericalEvaluationResult, Vakint, VakintError};
 
-pub fn get_vakint(vakint_settings: VakintSettings) -> Vakint {
-    match Vakint::new(Some(vakint_settings)) {
-        Ok(r) => r,
-        Err(err) => panic!("Failed to initialize vakint: {}", err),
+pub struct TestVakint {
+    pub vakint: Vakint,
+    pub settings: VakintSettings,
+}
+
+impl std::ops::Deref for TestVakint {
+    type Target = Vakint;
+
+    fn deref(&self) -> &Self::Target {
+        &self.vakint
     }
+}
+
+impl std::ops::DerefMut for TestVakint {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.vakint
+    }
+}
+
+// Helpers are shared across test binaries. With the single-runner setup (to keep Symbolica
+// initialization single-threaded), some binaries don't call every helper, so allow dead_code.
+#[allow(dead_code)]
+impl TestVakint {
+    pub fn to_canonical(&self, input: AtomView, short_form: bool) -> Result<Atom, VakintError> {
+        self.vakint.to_canonical(&self.settings, input, short_form)
+    }
+
+    pub fn tensor_reduce(&self, input: AtomView) -> Result<Atom, VakintError> {
+        self.vakint.tensor_reduce(&self.settings, input)
+    }
+
+    pub fn evaluate_integral(&self, input: AtomView) -> Result<Atom, VakintError> {
+        self.vakint.evaluate_integral(&self.settings, input)
+    }
+
+    pub fn evaluate(&self, input: AtomView) -> Result<Atom, VakintError> {
+        self.vakint.evaluate(&self.settings, input)
+    }
+
+    pub fn params_from_f64(
+        &self,
+        params: &HashMap<String, f64>,
+    ) -> HashMap<String, Float, ahash::RandomState> {
+        self.vakint.params_from_f64(&self.settings, params)
+    }
+
+    pub fn params_from_complex_f64(
+        &self,
+        params: &HashMap<String, Complex<f64>>,
+    ) -> HashMap<String, Complex<Float>, ahash::RandomState> {
+        self.vakint.params_from_complex_f64(&self.settings, params)
+    }
+
+    pub fn externals_from_f64(
+        &self,
+        externals: &HashMap<usize, (f64, f64, f64, f64)>,
+    ) -> HashMap<usize, Momentum, ahash::RandomState> {
+        self.vakint.externals_from_f64(&self.settings, externals)
+    }
+
+    #[allow(clippy::type_complexity)]
+    pub fn externals_from_complex_f64(
+        &self,
+        externals: &HashMap<usize, (Complex<f64>, Complex<f64>, Complex<f64>, Complex<f64>)>,
+    ) -> HashMap<usize, Momentum, ahash::RandomState> {
+        self.vakint
+            .externals_from_complex_f64(&self.settings, externals)
+    }
+
+    pub fn numerical_evaluation(
+        &self,
+        expression: AtomView,
+        params_real: &HashMap<String, Float, ahash::RandomState>,
+        params_complex: &HashMap<String, Complex<Float>, ahash::RandomState>,
+        externals: Option<&HashMap<usize, Momentum, ahash::RandomState>>,
+    ) -> Result<(NumericalEvaluationResult, Option<NumericalEvaluationResult>), VakintError> {
+        self.vakint.numerical_evaluation(
+            &self.settings,
+            expression,
+            params_real,
+            params_complex,
+            externals,
+        )
+    }
+}
+
+pub fn get_vakint(mut vakint_settings: VakintSettings) -> TestVakint {
+    if evaluation_requires_pysecdec(&vakint_settings.evaluation_order)
+        && !pysecdec_available(&vakint_settings.python_exe_path)
+    {
+        vakint_settings
+            .evaluation_order
+            .0
+            .retain(|method| !matches!(method, EvaluationMethod::PySecDec(_)));
+    }
+    static VAKINT_INSTANCE: OnceLock<Vakint> = OnceLock::new();
+    let vakint = VAKINT_INSTANCE
+        .get_or_init(|| Vakint::new().expect("Failed to initialize vakint"))
+        .clone();
+    TestVakint {
+        vakint,
+        settings: vakint_settings,
+    }
+}
+
+fn pysecdec_available(python_exe: &str) -> bool {
+    for probe in ["import pySecDec", "import pysecdec"] {
+        let ok = Command::new(python_exe)
+            .arg("-c")
+            .arg(probe)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false);
+        if ok {
+            return true;
+        }
+    }
+    false
+}
+
+fn evaluation_requires_pysecdec(evaluation_order: &EvaluationOrder) -> bool {
+    evaluation_order
+        .0
+        .iter()
+        .any(|method| matches!(method, EvaluationMethod::PySecDec(_)))
 }
 
 #[allow(unused)]
@@ -126,6 +250,7 @@ pub fn compare_two_evaluations(
     max_pull: f64,
     quiet: bool,
 ) {
+    let python_exe = vakint_default_settings.python_exe_path.clone();
     let mut mod_evaluation_order_a = evaluation_orders.0.0.clone();
     let mut mod_evaluation_order_b = evaluation_orders.1.0.clone();
     for eval_order in [&mut mod_evaluation_order_a, &mut mod_evaluation_order_b] {
@@ -148,6 +273,13 @@ pub fn compare_two_evaluations(
         evaluation_order: mod_evaluation_order_a.clone(),
         ..vakint_default_settings
     };
+    if (evaluation_requires_pysecdec(&mod_evaluation_order_a)
+        || evaluation_requires_pysecdec(&mod_evaluation_order_b))
+        && !pysecdec_available(&python_exe)
+    {
+        eprintln!("Skipping test: PySecDec not available.");
+        return;
+    }
     let mut vakint = get_vakint(vakint_analytic_settings);
 
     let mut eval_params = HashMap::default();
@@ -367,6 +499,7 @@ pub fn compare_vakint_evaluation_vs_reference(
     prec: u32,
     max_pull: f64,
 ) {
+    let python_exe = vakint_default_settings.python_exe_path.clone();
     // Adjust evaluation method options
     let mut mod_evaluation_order = evaluation_order.clone();
     mod_evaluation_order.adjust(
@@ -387,6 +520,11 @@ pub fn compare_vakint_evaluation_vs_reference(
         evaluation_order: mod_evaluation_order.clone(),
         ..vakint_default_settings
     };
+
+    if evaluation_requires_pysecdec(&mod_evaluation_order) && !pysecdec_available(&python_exe) {
+        eprintln!("Skipping test: PySecDec not available.");
+        return;
+    }
 
     let mut vakint = get_vakint(vakint_settings);
 
