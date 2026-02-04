@@ -3,6 +3,7 @@ use test_utils::{compare_output, get_vakint};
 use vakint::VakintSettings;
 use vakint::vakint_parse;
 
+#[test_log::test]
 fn test_reduction_1l_a() {
     let vakint = get_vakint(VakintSettings {
         allow_unknown_integrals: false,
@@ -37,6 +38,7 @@ fn test_reduction_1l_a() {
     );
 }
 
+#[test_log::test]
 fn test_reduction_1l_b() {
     let vakint = get_vakint(VakintSettings {
         allow_unknown_integrals: false,
@@ -71,6 +73,7 @@ fn test_reduction_1l_b() {
     );
 }
 
+#[test_log::test]
 fn test_reduction_2l_a() {
     let vakint = get_vakint(VakintSettings {
         allow_unknown_integrals: false,
@@ -105,7 +108,7 @@ fn test_reduction_2l_a() {
     );
 }
 
-#[test_log::test]
+#[allow(dead_code)]
 fn run_tensor_reduction_tests() {
     test_reduction_1l_a();
     test_reduction_1l_b();

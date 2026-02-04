@@ -2332,20 +2332,24 @@ impl VakintTerm {
                 vk_parse!(format!("{}{}", vec, id).as_str()).unwrap(),
                 vk_parse!(format!("{}({})", vec, id).as_str()).unwrap(),
             );
-            let vec_pattern = vk_parse!(format!("{}({},idx_)", vec, id).as_str())
-                .unwrap()
-                .to_pattern();
-            let matcher = form_numerator.pattern_match(&vec_pattern, None, None);
-            for m in matcher {
-                let idx = m.get(&vk_symbol!("idx_")).unwrap();
-                vector_mapping.insert(
-                    vk_parse!(format!("{}{}({})", vec, id, idx.to_canonical_string()).as_str())
-                        .unwrap(),
-                    vk_parse!(format!("{}({},{})", vec, id, idx.to_canonical_string()).as_str())
-                        .unwrap(),
-                );
-            }
-
+            // NO! Indices can move around in the reduction!, not bound to vector names!
+            // let vec_pattern = vk_parse!(format!("{}({},idx_)", vec, id).as_str())
+            //     .unwrap()
+            //     .to_pattern();
+            // let matcher = form_numerator.pattern_match(&vec_pattern, None, None);
+            // for m in matcher {
+            //     let idx = m.get(&vk_symbol!("idx_")).unwrap();
+            //     vector_mapping.insert(
+            //         vk_parse!(format!("{}{}({})", vec, id, idx.to_canonical_string()).as_str())
+            //             .unwrap(),
+            //         vk_parse!(format!("{}({},{})", vec, id, idx.to_canonical_string()).as_str())
+            //             .unwrap(),
+            //     );
+            // }
+            vector_mapping.insert(
+                vk_parse!(format!("{}{}(idx_)", vec, id).as_str()).unwrap(),
+                vk_parse!(format!("{}({},idx_)", vec, id).as_str()).unwrap(),
+            );
             form_numerator = form_numerator
                 .replace(
                     vk_parse!(format!("{}({},idx_)", vec, id).as_str())
@@ -2377,7 +2381,6 @@ impl VakintTerm {
         let mut vars: HashMap<String, String> = HashMap::new();
         let (form_header_additions, form_expression, indices) =
             vakint.prepare_expression_for_form(settings, form_numerator, true)?;
-
         vars.insert("numerator".into(), form_expression);
         vars.insert("additional_symbols".into(), form_header_additions);
 
@@ -4528,7 +4531,7 @@ Evaluated (n_loops=1, mu_r=1) :
         //     AtomPrinter::new_with_options(processed.as_view(), PrintOptions::file_no_namespace())
         //         .to_string();
         let mut processed_str = expression.to_canonical_string();
-
+        // println!("Original expression: {}", expression.to_canonical_string());
         // Identify user indices in p and k structures
         let mut indices = Vakint::identify_vector_indices(expression)?;
         // println!(

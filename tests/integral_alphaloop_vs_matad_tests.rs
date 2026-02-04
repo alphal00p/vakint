@@ -20,6 +20,7 @@ const COMPARISON_REL_THRESHOLD: f64 = 1.0e-25;
 // No error on anylic expressions
 const MAX_PULL: f64 = 0.0e0;
 
+#[test_log::test]
 fn test_integrate_1l_no_numerator() {
     for pow in 1..=6 {
         #[rustfmt::skip]
@@ -46,6 +47,7 @@ fn test_integrate_1l_no_numerator() {
     }
 }
 
+#[test_log::test]
 fn test_integrate_1l_no_numerator_squared_mass() {
     for pow in 1..=2 {
         #[rustfmt::skip]
@@ -72,6 +74,7 @@ fn test_integrate_1l_no_numerator_squared_mass() {
     }
 }
 
+#[test_log::test]
 fn test_integrate_2l_no_numerator() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -97,6 +100,7 @@ fn test_integrate_2l_no_numerator() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_3l_basketball_a() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -123,6 +127,7 @@ fn test_integrate_3l_basketball_a() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_3l_basketball_b() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -149,6 +154,7 @@ fn test_integrate_3l_basketball_b() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_3l_no_numerator() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -178,6 +184,7 @@ fn test_integrate_3l_no_numerator() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_3l_rank_4() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -211,6 +218,7 @@ fn test_integrate_3l_rank_4() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_3l_rank_4_different_scales() {
     #[rustfmt::skip]
     compare_two_evaluations(
@@ -342,6 +350,7 @@ pub fn evaluate_expression_with_matad(
     res
 }
 
+#[test_log::test]
 pub fn test_eval_matad_masters() {
     let mut vakint = get_vakint(VakintSettings {
         evaluation_order: EvaluationOrder::empty(),
@@ -538,6 +547,7 @@ pub fn test_eval_matad_masters() {
     }
 }
 
+#[test_log::test]
 pub fn test_eval_matad_one_master_combination() {
     let vakint = get_vakint(VakintSettings {
         evaluation_order: EvaluationOrder::empty(),
@@ -590,9 +600,9 @@ pub fn test_eval_matad_one_master_combination() {
     assert!(matches, "{}", msg);
 }
 
-#[test_log::test]
+#[allow(dead_code)]
 fn run_integral_alphaloop_vs_matad_tests() {
-    // Single runner keeps Symbolica initialization single-threaded; helper tests stay plain fns.
+    // Convenience runner to execute all tests in this module.
     test_integrate_1l_no_numerator();
     test_integrate_1l_no_numerator_squared_mass();
     test_integrate_2l_no_numerator();

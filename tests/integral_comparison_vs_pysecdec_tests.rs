@@ -10,7 +10,11 @@ const COMPARISON_WITH_PYSECDEC_REL_THRESHOLD: f64 = 1.0e-7;
 // PySecDec QMC is often very optimistic
 const MAX_PULL: f64 = 1.0e5;
 
+#[test_log::test]
 fn test_integrate_1l_pysecdec() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
@@ -33,7 +37,11 @@ fn test_integrate_1l_pysecdec() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_1l_pysecdec_non_unit_mass() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
@@ -56,7 +64,11 @@ fn test_integrate_1l_pysecdec_non_unit_mass() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_1l_pysecdec_non_unit_scale() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
@@ -79,7 +91,11 @@ fn test_integrate_1l_pysecdec_non_unit_scale() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_1l_pysecdec_num_rank_two() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
@@ -102,7 +118,11 @@ fn test_integrate_1l_pysecdec_num_rank_two() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_1l_pysecdec_dot_product_external() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
@@ -125,7 +145,11 @@ fn test_integrate_1l_pysecdec_dot_product_external() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_2l_pysecdec() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
@@ -150,7 +174,11 @@ fn test_integrate_2l_pysecdec() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_2l_pysecdec_pinched() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
@@ -174,7 +202,11 @@ fn test_integrate_2l_pysecdec_pinched() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_2l_pysecdec_pinched_other_lmb() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
@@ -198,7 +230,11 @@ fn test_integrate_2l_pysecdec_pinched_other_lmb() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_2l_pysecdec_rank_four_num() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
@@ -228,7 +264,11 @@ fn test_integrate_2l_pysecdec_rank_four_num() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_3l_pysecdec() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     #[rustfmt::skip]
     compare_two_evaluations(
         VakintSettings::default(),
@@ -257,7 +297,11 @@ fn test_integrate_3l_pysecdec() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_3l_rank_4() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     // pySecDec is not so great for such higher rank cases, so we need to set a very high threshold
     const ADJUSTED_THRESHOLD: f64 = 1.0e-2;
     #[rustfmt::skip]
@@ -293,7 +337,11 @@ fn test_integrate_3l_rank_4() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_3l_rank_4_matad() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     // pySecDec is not so great for such higher rank cases, so we need to set a very high threshold
     const ADJUSTED_THRESHOLD: f64 = 1.0e-2;
     #[rustfmt::skip]
@@ -331,9 +379,9 @@ fn test_integrate_3l_rank_4_matad() {
     );
 }
 
-#[test_log::test]
+#[allow(dead_code)]
 fn run_integral_comparison_vs_pysecdec_tests() {
-    // Single runner keeps Symbolica initialization single-threaded; helper tests stay plain fns.
+    // Convenience runner to execute all tests in this module.
     test_integrate_1l_pysecdec();
     test_integrate_1l_pysecdec_non_unit_mass();
     test_integrate_1l_pysecdec_non_unit_scale();

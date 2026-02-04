@@ -15,6 +15,7 @@ const N_DIGITS_PYSECDEC_EVALUATION_FOR_TESTS: u32 = 10;
 // PySecDec QMC is often very optimistic
 const MAX_PULL: f64 = 1.0e99;
 
+#[test_log::test]
 fn test_integrate_1l_decorated_indices_alphaloop() {
     #[rustfmt::skip]
     Vakint::initialize_vakint_symbols();
@@ -51,6 +52,7 @@ fn test_integrate_1l_decorated_indices_alphaloop() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_1l_decorated_indices_matad() {
     #[rustfmt::skip]
     Vakint::initialize_vakint_symbols();
@@ -88,6 +90,7 @@ fn test_integrate_1l_decorated_indices_matad() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_1l_decorated_indices_fmft() {
     #[rustfmt::skip]
     Vakint::initialize_vakint_symbols();
@@ -132,6 +135,7 @@ fn test_integrate_1l_decorated_indices_fmft() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_1l_decorated_indices_pysecdec() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
@@ -168,7 +172,7 @@ fn test_integrate_1l_decorated_indices_pysecdec() {
     );
 }
 
-#[test_log::test]
+#[allow(dead_code)]
 fn run_integral_evaluation_freeform_tests() {
     test_integrate_1l_decorated_indices_alphaloop();
     test_integrate_1l_decorated_indices_matad();

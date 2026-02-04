@@ -14,7 +14,11 @@ const N_DIGITS_PYSECDEC_EVALUATION_FOR_TESTS: u32 = 10;
 // PySecDec QMC is often very optimistic
 const MAX_PULL: f64 = 1.0e99;
 
+#[test_log::test]
 fn test_integrate_1l_simple() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
         VakintSettings{ number_of_terms_in_epsilon_expansion: 2, integral_normalization_factor: LoopNormalizationFactor::pySecDec, ..VakintSettings::default()},
@@ -38,7 +42,11 @@ fn test_integrate_1l_simple() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_1l_cross_product() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
         VakintSettings{number_of_terms_in_epsilon_expansion: 5, integral_normalization_factor: LoopNormalizationFactor::MSbar, ..VakintSettings::default()},
@@ -69,7 +77,11 @@ fn test_integrate_1l_cross_product() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_1l_cross_product_with_additional_symbols_numerator() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
         VakintSettings{number_of_terms_in_epsilon_expansion: 5, integral_normalization_factor: LoopNormalizationFactor::MSbar, ..VakintSettings::default()},
@@ -100,7 +112,11 @@ fn test_integrate_1l_cross_product_with_additional_symbols_numerator() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_2l_different_masses() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
         VakintSettings{integral_normalization_factor: LoopNormalizationFactor::MSbar, allow_unknown_integrals: true, ..VakintSettings::default()},
@@ -132,7 +148,11 @@ fn test_integrate_2l_different_masses() {
     );
 }
 
+#[test_log::test]
 fn test_integrate_3l_o_eps() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
         VakintSettings { integral_normalization_factor: LoopNormalizationFactor::MSbar, number_of_terms_in_epsilon_expansion: 5, ..VakintSettings::default()},
@@ -169,7 +189,11 @@ fn test_integrate_3l_o_eps() {
 }
 
 #[allow(non_snake_case)]
+#[test_log::test]
 fn test_integrate_4l_h() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     let vakint_default_settings = VakintSettings {
         integral_normalization_factor: LoopNormalizationFactor::MSbar,
         number_of_terms_in_epsilon_expansion: 5,
@@ -207,7 +231,11 @@ fn test_integrate_4l_h() {
 }
 
 #[allow(non_snake_case)]
+#[test_log::test]
 fn test_integrate_4l_PR9d_from_FG_pinch() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     let vakint_default_settings = VakintSettings {
         integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD,
         number_of_terms_in_epsilon_expansion: 6,
@@ -249,7 +277,11 @@ fn test_integrate_4l_PR9d_from_FG_pinch() {
 }
 
 #[allow(non_snake_case)]
+#[test_log::test]
 fn test_integrate_4l_PR11d() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     let vakint_default_settings = VakintSettings {
         integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD,
         number_of_terms_in_epsilon_expansion: 5,
@@ -286,7 +318,11 @@ fn test_integrate_4l_PR11d() {
 }
 
 #[allow(non_snake_case)]
+#[test_log::test]
 fn test_integrate_4l_clover() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     let vakint_default_settings = VakintSettings {
         integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD,
         number_of_terms_in_epsilon_expansion: 5,
@@ -323,7 +359,11 @@ fn test_integrate_4l_clover() {
 }
 
 #[allow(non_snake_case)]
+#[test_log::test]
 fn test_integrate_4l_clover_with_numerator() {
+    if test_utils::should_skip_pysecdec_tests() {
+        return;
+    }
     let vakint_default_settings = VakintSettings {
         integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD,
         number_of_terms_in_epsilon_expansion: 5,
@@ -367,10 +407,10 @@ fn test_integrate_4l_clover_with_numerator() {
     );
 }
 
-#[test_log::test]
+#[allow(dead_code)]
 fn run_integral_evaluation_pysecdec_tests() {
+    // Convenience runner to execute all tests in this module.
     test_integrate_1l_simple();
-    // Single runner keeps Symbolica initialization single-threaded; helper tests stay plain fns.
     test_integrate_1l_cross_product();
     test_integrate_1l_cross_product_with_additional_symbols_numerator();
     test_integrate_2l_different_masses();

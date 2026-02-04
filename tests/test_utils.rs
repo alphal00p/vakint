@@ -11,7 +11,7 @@ use symbolica::{
 
 use std::collections::HashMap;
 use std::process::{Command, Stdio};
-use std::sync::OnceLock;
+use std::sync::{Once, OnceLock};
 use vakint::{EvaluationMethod, NumericalEvaluationResult, Vakint, VakintError};
 use vakint::{EvaluationOrder, LoopNormalizationFactor, Momentum, VakintSettings};
 
@@ -34,8 +34,7 @@ impl std::ops::DerefMut for TestVakint {
     }
 }
 
-// Helpers are shared across test binaries. With the single-runner setup (to keep Symbolica
-// initialization single-threaded), some binaries don't call every helper, so allow dead_code.
+// Helpers are shared across test binaries; not every binary uses every helper, so allow dead_code.
 #[allow(dead_code)]
 impl TestVakint {
     pub fn to_canonical(&self, input: AtomView, short_form: bool) -> Result<Atom, VakintError> {
@@ -118,6 +117,24 @@ pub fn get_vakint(mut vakint_settings: VakintSettings) -> TestVakint {
         vakint,
         settings: vakint_settings,
     }
+}
+
+#[allow(dead_code)]
+pub fn should_skip_pysecdec_tests() -> bool {
+    static WARNED: Once = Once::new();
+    let skip = match std::env::var("VAKINT_SKIP_PYSECDEC_TESTS") {
+        Ok(value) => {
+            let trimmed = value.trim();
+            !(trimmed.is_empty() || trimmed == "0" || trimmed.eq_ignore_ascii_case("false"))
+        }
+        Err(_) => false,
+    };
+    if skip {
+        WARNED.call_once(|| {
+            eprintln!("Skipping PySecDec tests because VAKINT_SKIP_PYSECDEC_TESTS is set.");
+        });
+    }
+    skip
 }
 
 fn pysecdec_available(python_exe: &str) -> bool {
