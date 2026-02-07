@@ -2,8 +2,8 @@ use std::sync::LazyLock;
 
 use crate::utils::vakint_macros::vk_symbol;
 use symbolica::{
-    atom::{Atom, Symbol},
-    symbol,
+    atom::{Atom, AtomOrView, Symbol},
+    function, symbol,
 };
 
 pub static METRIC_SYMBOL: &str = "g";
@@ -14,6 +14,7 @@ pub static EXTERNAL_MOMENTUM_SYMBOL: &str = "p";
 pub struct VakintSymbols {
     pub uedge: Symbol,
     pub dot: Symbol,
+    pub dot_pow: Symbol,
     pub vkdot: Symbol,
     pub g: Symbol,
     pub g_form: Symbol,
@@ -45,6 +46,7 @@ pub struct VakintSymbols {
     pub n_: Symbol,
     pub a_: Symbol,
     pub b_: Symbol,
+    pub c_: Symbol,
     pub lambda: Symbol,
     pub cmplx_i: Symbol,
     pub lambda_a: Atom,
@@ -60,6 +62,7 @@ pub static S: LazyLock<VakintSymbols> = LazyLock::new(|| VakintSymbols {
     dot: symbol!(
         format!("{}::dot",crate::NAMESPACE); Symmetric,Linear
     ),
+    dot_pow: symbol!("dot_pow"),
     vkdot: symbol!(
         format!("{}::vkdot",crate::NAMESPACE);  Symmetric, Linear
     ),
@@ -93,6 +96,7 @@ pub static S: LazyLock<VakintSymbols> = LazyLock::new(|| VakintSymbols {
     n_: vk_symbol!("n_"),
     a_: vk_symbol!("a_"),
     b_: vk_symbol!("b_"),
+    c_: vk_symbol!("c_"),
     cmplx_i: vk_symbol!("𝑖"),
     lambda: vk_symbol!("VakintLambdaScalingAnalysis"),
     lambda_a: Atom::var(vk_symbol!("VakintLambdaScalingAnalysis")),
@@ -102,3 +106,28 @@ pub static S: LazyLock<VakintSymbols> = LazyLock::new(|| VakintSymbols {
     topo: vk_symbol!("topo"),
     metric: vk_symbol!("g"),
 });
+
+impl VakintSymbols {
+    pub fn dot<'a, A: Into<AtomOrView<'a>>>(&self, a: A, b: A) -> Atom {
+        let a = a.into();
+        let b = b.into();
+        function!(self.dot, a.as_view(), b.as_view())
+    }
+
+    pub fn dot_pow<
+        'a,
+        A: Into<AtomOrView<'a>>,
+        B: Into<AtomOrView<'a>>,
+        C: Into<AtomOrView<'a>>,
+    >(
+        &self,
+        a: A,
+        b: B,
+        pow: C,
+    ) -> Atom {
+        let a = a.into();
+        let b = b.into();
+        let pow = pow.into();
+        function!(self.dot_pow, a.as_view(), b.as_view(), pow.as_view())
+    }
+}

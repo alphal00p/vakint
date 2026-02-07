@@ -363,7 +363,7 @@ CF uvid;
         redefine i "0";
         label realend;
         id D = rat(4-2*ep, 1);
-        Multiply replace_(D, 4-2*ep);
+        Multiply replace_(D, rat(4-2*ep, 1));
 
 * some reduction rules have generated raising operators that have to be merged
         repeat id uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?)*uvid(3,1,nn1?,nn2?,nn3?,nn4?,nn5?,nn6?) = uvid(3,1,n1+nn1,n2+nn2,n3+nn3,n4+nn4,n5+nn5,n6+nn6);
@@ -419,13 +419,14 @@ CF uvid;
 #endprocedure
 
 #procedure SubstituteMasters()
-    Multiply replace_(D, 4 - 2 * ep);
+    Multiply replace_(D,rat(4 - 2 * ep,1));
     id ep^n1? = rat(ep^n1,1);
 
     B+ uvid;
     .sort:masters-1;
     PolyRatFun rat(expand,ep,{`MAXPOLE'+`SELECTEDEPSILONORDER'+`SPURIOUSPOLE'});
     Keep brackets;
+
 
 * Normalize with alphaLoop convention
 *#ifndef `PYSECDECCOMPARE'
@@ -451,6 +452,7 @@ CF uvid;
     #call TruncateExpansion(0)
     .sort:truncation;
     PolyRatFun rat(expand,ep,{`MAXPOLE'+`SELECTEDEPSILONORDER'});
+
 
 * fill in constants, they have not been substituted before to have exact cancellation
 *    id pi = 30246273033735921/9627687726852338;

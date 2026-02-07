@@ -2126,7 +2126,7 @@ impl fmt::Display for VakintTerm {
         write!(
             f,
             "({}) x {}",
-            format!("{}", self.numerator).cyan(),
+            format!("{:>}", self.numerator).cyan(),
             format!("{}", self.integral).green(),
         )
     }
@@ -2321,7 +2321,7 @@ impl VakintTerm {
         let mut form_numerator = self.numerator.clone();
         // Make sure to undo the dot product notation.
         // If it was not used, the command below will do nothing.
-        form_numerator = Vakint::convert_from_dot_notation(form_numerator.as_view(), false);
+        form_numerator = Vakint::convert_from_dot_notation(form_numerator.as_view());
 
         let vectors = Self::identify_vectors_in_numerator(form_numerator.as_view())?;
 
@@ -2437,8 +2437,7 @@ impl VakintTerm {
         }
 
         if !settings.use_dot_product_notation {
-            reduced_numerator =
-                Vakint::convert_from_dot_notation(reduced_numerator.as_view(), false);
+            reduced_numerator = Vakint::convert_from_dot_notation(reduced_numerator.as_view());
         }
         self.numerator = reduced_numerator;
         Ok(())
@@ -3310,7 +3309,7 @@ Evaluated (n_loops=1, mu_r=1) :
                 "PySecDec".green(),
                 integral
             );
-            let dot_product_numerator = Vakint::convert_from_dot_notation(input_numerator, false);
+            let dot_product_numerator = Vakint::convert_from_dot_notation(input_numerator);
             let vectors =
                 VakintTerm::identify_vectors_in_numerator(dot_product_numerator.as_view())?;
             let numerator_atom = Vakint::convert_to_dot_notation(input_numerator);
@@ -3346,8 +3345,7 @@ Evaluated (n_loops=1, mu_r=1) :
             numerator_additional_symbols.retain(|&s| s != eps_symbol);
 
             // Convert back from dot notation
-            processed_numerator =
-                Vakint::convert_from_dot_notation(processed_numerator.as_view(), true);
+            processed_numerator = Vakint::convert_from_dot_notation(processed_numerator.as_view());
 
             let mut lorentz_indices = HashSet::<String>::new();
             let arc_mutex_lorentz_indices = Arc::new(Mutex::new(HashSet::new()));
@@ -4166,8 +4164,7 @@ Evaluated (n_loops=1, mu_r=1) :
         );
 
         if !settings.use_dot_product_notation {
-            evaluated_integral =
-                Vakint::convert_from_dot_notation(evaluated_integral.as_view(), false);
+            evaluated_integral = Vakint::convert_from_dot_notation(evaluated_integral.as_view());
         }
 
         evaluated_integral = evaluated_integral
@@ -4291,133 +4288,92 @@ Evaluated (n_loops=1, mu_r=1) :
         Ok(versions[0].into())
     }
 
-    pub fn convert_from_dot_notation(atom: AtomView, no_power: bool) -> Atom {
-        let mut expr = atom.to_owned().expand();
-        let mut running_dummy_index = 1;
+    pub fn convert_from_dot_notation(atom: AtomView) -> Atom {
+        atom.replace(S.dot(S.a_, S.b_).pow(Atom::var(S.c_)))
+            .with(S.dot_pow(S.a_, S.b_, S.c_))
+            .replace(S.dot(S.a_, S.b_))
+            .with(S.dot_pow(S.a_, S.b_, 1))
+            .replace(S.dot_pow(S.a_, S.b_, S.c_))
+            .when(S.c_.filter(|a| a.to_atom() < 0))
+            .with(S.dot_pow(S.a_, S.b_, -Atom::var(S.c_)).npow(-1))
+            .map_terms_single_core(|a| {
+                let mut a = a.to_owned();
+                let mut dummy = 1;
+                loop {
+                    let new = a
+                        .replace(S.dot_pow(S.a_, S.b_, S.c_))
+                        .once()
+                        .with_map(move |m| {
+                            let Match::Single(a) = m.get(S.a_).unwrap() else {
+                                unreachable!()
+                            };
+                            let Match::Single(b) = m.get(S.b_).unwrap() else {
+                                unreachable!()
+                            };
+                            let rest = S
+                                .dot_pow(S.a_, S.b_, Atom::var(S.c_) - 1)
+                                .to_pattern()
+                                .replace_wildcards_with_matches(m);
 
-        if no_power {
-            while let Some(m) = expr
-                .pattern_match(
-                    &vk_parse!("dot(v1_(id1_),v2_(id2_))^n_")
-                        .unwrap()
-                        .to_pattern(),
-                    Some(
-                        &(Condition::from((vk_symbol!("v1_"), symbol_condition()))
-                            & Condition::from((vk_symbol!("v2_"), symbol_condition()))
-                            & Condition::from((vk_symbol!("id1_"), number_condition()))
-                            & Condition::from((vk_symbol!("id2_"), number_condition()))
-                            & Condition::from((vk_symbol!("n_"), number_condition()))),
-                    ),
-                    None,
-                )
-                .next_detailed()
-            {
-                let (id1, id2) = (
-                    get_integer_from_atom(
-                        m.match_stack
-                            .get(vk_symbol!("id1_"))
-                            .unwrap()
-                            .to_atom()
-                            .as_view(),
-                    )
-                    .unwrap(),
-                    get_integer_from_atom(
-                        m.match_stack
-                            .get(vk_symbol!("id2_"))
-                            .unwrap()
-                            .to_atom()
-                            .as_view(),
-                    )
-                    .unwrap(),
-                );
-                let (v1, v2) = match (
-                    m.match_stack.get(vk_symbol!("v1_")),
-                    m.match_stack.get(vk_symbol!("v2_")),
-                ) {
-                    (Some(Match::FunctionName(s1)), Some(Match::FunctionName(s2))) => (s1, s2),
-                    _ => unreachable!("Vectors have to be symbols"),
-                };
-                let pow = get_integer_from_atom(
-                    m.match_stack
-                        .get(vk_symbol!("n_"))
-                        .unwrap()
-                        .to_atom()
-                        .as_view(),
-                )
-                .unwrap() as usize;
-                let new_expression = (0..pow)
-                    .map(|_i| {
-                        let r = format!(
-                            "{}({},{})*{}({},{})",
-                            v1, id1, running_dummy_index, v2, id2, running_dummy_index
-                        );
-                        running_dummy_index += 1;
-                        r
-                    })
-                    .collect::<Vec<_>>()
-                    .join("*");
+                            // if let (Ok(a), Ok(b)) =
+                            //     (FunctionBuilder::try_from(m.get(S.a_)), FunctionBuilder::try_from(b))
+                            // {
+                            //     a.add_arg(dummy).finish() * b.add_arg(dummy).finish() * rest
+                            // }
+                            match (a, b) {
+                                (AtomView::Var(a), AtomView::Var(b)) => {
+                                    FunctionBuilder::new(a.get_symbol()).add_arg(dummy).finish()
+                                        * FunctionBuilder::new(b.get_symbol())
+                                            .add_arg(dummy)
+                                            .finish()
+                                        * rest
+                                }
+                                (AtomView::Var(a), AtomView::Fun(b)) => {
+                                    FunctionBuilder::new(a.get_symbol()).add_arg(dummy).finish()
+                                        * FunctionBuilder::new(b.get_symbol())
+                                            .add_args(&b.iter().collect::<Vec<_>>())
+                                            .add_arg(dummy)
+                                            .finish()
+                                        * rest
+                                }
+                                (AtomView::Fun(a), AtomView::Var(b)) => {
+                                    FunctionBuilder::new(a.get_symbol())
+                                        .add_args(&a.iter().collect::<Vec<_>>())
+                                        .add_arg(dummy)
+                                        .finish()
+                                        * FunctionBuilder::new(b.get_symbol())
+                                            .add_arg(dummy)
+                                            .finish()
+                                        * rest
+                                }
+                                (AtomView::Fun(a), AtomView::Fun(b)) => {
+                                    FunctionBuilder::new(a.get_symbol())
+                                        .add_args(&a.iter().collect::<Vec<_>>())
+                                        .add_arg(dummy)
+                                        .finish()
+                                        * FunctionBuilder::new(b.get_symbol())
+                                            .add_args(&b.iter().collect::<Vec<_>>())
+                                            .add_arg(dummy)
+                                            .finish()
+                                        * rest
+                                }
+                                _ => S
+                                    .dot_pow(S.a_, S.b_, S.c_)
+                                    .to_pattern()
+                                    .replace_wildcards_with_matches(m),
+                            }
+                        })
+                        .replace(S.dot_pow(S.a_, S.b_, 0))
+                        .with(1);
 
-                expr = expr
-                    .as_view()
-                    .replace(m.target.to_pattern())
-                    .with(vk_parse!(new_expression.as_str()).unwrap().to_pattern());
-            }
-        }
-
-        while let Some(m) = expr
-            .pattern_match(
-                &vk_parse!("dot(v1_(id1_),v2_(id2_))").unwrap().to_pattern(),
-                Some(
-                    &(Condition::from((vk_symbol!("v1_"), symbol_condition()))
-                        & Condition::from((vk_symbol!("v2_"), symbol_condition()))
-                        & Condition::from((vk_symbol!("id1_"), number_condition()))
-                        & Condition::from((vk_symbol!("id2_"), number_condition()))),
-                ),
-                None,
-            )
-            .next_detailed()
-        {
-            let (id1, id2) = (
-                get_integer_from_atom(
-                    m.match_stack
-                        .get(vk_symbol!("id1_"))
-                        .unwrap()
-                        .to_atom()
-                        .as_view(),
-                )
-                .unwrap(),
-                get_integer_from_atom(
-                    m.match_stack
-                        .get(vk_symbol!("id2_"))
-                        .unwrap()
-                        .to_atom()
-                        .as_view(),
-                )
-                .unwrap(),
-            );
-            let (v1, v2) = match (
-                m.match_stack.get(vk_symbol!("v1_")),
-                m.match_stack.get(vk_symbol!("v2_")),
-            ) {
-                (Some(Match::FunctionName(s1)), Some(Match::FunctionName(s2))) => (s1, s2),
-                _ => unreachable!("Vectors have to be symbols"),
-            };
-
-            expr = expr.replace(m.target.to_pattern()).with(
-                vk_parse!(
-                    format!(
-                        "{}({},{})*{}({},{})",
-                        v1, id1, running_dummy_index, v2, id2, running_dummy_index
-                    )
-                    .as_str()
-                )
-                .unwrap()
-                .to_pattern(),
-            );
-            running_dummy_index += 1;
-        }
-
-        expr
+                    if new == a {
+                        break;
+                    }
+                    a = new;
+                    dummy += 1;
+                }
+                a
+            })
     }
 
     pub fn convert_to_dot_notation(atom: AtomView) -> Atom {
@@ -5015,6 +4971,7 @@ Evaluated (n_loops=1, mu_r=1) :
         }
         //println!("Running {} with command: {:?}", "FORM".green(), cmd);
         let output = cmd.stderr(Stdio::piped()).stdout(Stdio::piped()).output()?;
+        // println!("{}", String::from_utf8_lossy(&output.stdout));
         if !ExitStatus::success(&output.status) {
             return Err(VakintError::FormError(
                 String::from_utf8_lossy(&output.stderr).into(),
@@ -5030,6 +4987,7 @@ Evaluated (n_loops=1, mu_r=1) :
                 tmp_dir.to_str().unwrap().into(),
             ));
         }
+
         let result = fs::read_to_string(tmp_dir.join("out.txt"))?;
         if clean {
             fs::remove_dir_all(tmp_dir)?;
@@ -5080,5 +5038,28 @@ Evaluated (n_loops=1, mu_r=1) :
         let mut vakint_expr = VakintExpression::try_from(input)?;
         vakint_expr.evaluate_integral(self, settings)?;
         Ok(vakint_expr.into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use symbolica::{parse, parse_lit};
+
+    use super::*;
+
+    #[test]
+    fn undo_dots() {
+        S.dot;
+        let expr = parse_lit!(
+            -UFO::GC_10
+                ^ 4 * (gammalooprs::ε - 2)
+                ^ -1 * dot(p(0), p(1)) * dot(k(1), k(2))
+                ^ 2 * gammalooprs::tag(0, 1) - UFO::GC_10
+                ^ 4 * (gammalooprs::ε - 2)
+                ^ -1 * dot(p(0), p(1)) * dot(k(1), k(2)) * dot(k(2), k(2)) * gammalooprs::tag(0, 0)
+        );
+
+        let a = Vakint::convert_from_dot_notation(expr.as_view(), true);
+        println!("a = {}", a);
     }
 }
