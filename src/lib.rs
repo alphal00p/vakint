@@ -1,3 +1,4 @@
+#![allow(mixed_script_confusables)]
 pub mod fmft;
 pub mod fmft_numerics;
 pub mod graph;
@@ -5043,7 +5044,7 @@ Evaluated (n_loops=1, mu_r=1) :
 
 #[cfg(test)]
 mod tests {
-    use symbolica::{parse, parse_lit};
+    use symbolica::parse_lit;
 
     use super::*;
 
@@ -5059,7 +5060,7 @@ mod tests {
                 ^ -1 * dot(p(0), p(1)) * dot(k(1), k(2)) * dot(k(2), k(2)) * gammalooprs::tag(0, 0)
         );
 
-        let a = Vakint::convert_from_dot_notation(expr.as_view(), true);
+        let a = Vakint::convert_from_dot_notation(expr.as_view());
         println!("a = {}", a);
     }
 }

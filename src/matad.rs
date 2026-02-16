@@ -755,7 +755,7 @@ impl Vakint {
 
         if !settings.use_dot_product_notation {
             evaluated_integral =
-                Vakint::convert_from_dot_notation(evaluated_integral.as_view(), false);
+                Vakint::convert_from_dot_notation(evaluated_integral.as_view());
         }
 
         let log_muv_mu_sq = function!(
