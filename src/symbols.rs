@@ -9,6 +9,7 @@ use symbolica::{
 pub static METRIC_SYMBOL: &str = "g";
 pub static LOOP_MOMENTUM_SYMBOL: &str = "k";
 pub static EXTERNAL_MOMENTUM_SYMBOL: &str = "p";
+pub static DOT_SYMBOL: &str = "dot";
 
 #[allow(dead_code)]
 pub struct VakintSymbols {

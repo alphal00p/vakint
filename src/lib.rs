@@ -67,8 +67,9 @@ use symbols::{EXTERNAL_MOMENTUM_SYMBOL, LOOP_MOMENTUM_SYMBOL, METRIC_SYMBOL, S};
 
 use phf::phf_map;
 
-use crate::utils::{
-    get_full_name, pysecdec_decode, pysecdec_encode, to_symbol, undress_vakint_symbols,
+use crate::{
+    symbols::DOT_SYMBOL,
+    utils::{get_full_name, pysecdec_decode, pysecdec_encode, to_symbol, undress_vakint_symbols},
 };
 
 pub enum Momentum {
@@ -1129,8 +1130,8 @@ impl Integral {
                 // Dummy substitutions for the numerator in this case
                 for i_loop in 1..=self.n_loops {
                     replacement_rules.numerator_substitutions.insert(
-                        vk_parse!(format!("k({},idx_)", i_loop).as_str()).unwrap(),
-                        vk_parse!(format!("k({},idx_)", i_loop).as_str()).unwrap(),
+                        vk_parse!(format!("k({},idx___)", i_loop).as_str()).unwrap(),
+                        vk_parse!(format!("k({},idx___)", i_loop).as_str()).unwrap(),
                     );
                 }
                 Ok(Some(replacement_rules))
@@ -1352,7 +1353,7 @@ impl Integral {
                         let input_lmb_pattern = function!(
                             input_momentum_symbol,
                             &input_momentum_atom_id,
-                            &vk_parse!("idx_").unwrap()
+                            &vk_parse!("idx___").unwrap()
                         );
 
                         let mut canonical_momenta_atom_for_pattern = canonical_prop_match
@@ -1361,7 +1362,7 @@ impl Integral {
                             .replace(vk_parse!("k(ilmb_)").unwrap().to_pattern())
                             .when(Condition::from((vk_symbol!("ilmb_"), number_condition())))
                             .allow_new_wildcards_on_rhs(true)
-                            .with(vk_parse!("k(ilmb_,idx_)").unwrap().to_pattern());
+                            .with(vk_parse!("k(ilmb_,idx___)").unwrap().to_pattern());
                         let lmb_replacement_length: i32 =
                             canonical_momenta_atom_for_pattern.nterms() as i32;
                         score_for_this_match.0 += (lmb_replacement_length - 1).max(0) as usize;
@@ -2209,6 +2210,27 @@ impl VakintTerm {
                 .collect::<Vec<_>>()
                 .as_slice(),
         );
+
+        // If there is no casted_replacement_rules, this means that there was no canonization rule for the numerator, so we must manually set loop momenta to 1.
+        // if casted_replacement_rules.len() == 0 {
+        //     test = test
+        //         .replace(
+        //             vk_parse!(&format!("{}(momID_,idx___)", LOOP_MOMENTUM_SYMBOL))
+        //                 .unwrap()
+        //                 .to_pattern(),
+        //         )
+        //         .with(one_substitution_pattern.clone());
+        // } else {
+        //     test = test.replace_multiple(
+        //         casted_replacement_rules
+        //             .iter()
+        //             .map(|(source, _target)| {
+        //                 Replacement::new(source.to_owned(), one_substitution_pattern.clone())
+        //             })
+        //             .collect::<Vec<_>>()
+        //             .as_slice(),
+        //     );
+        // }
         test = test.replace_multiple(
             casted_replacement_rules
                 .iter()
@@ -2222,15 +2244,28 @@ impl VakintTerm {
         // Make sure to also set all externals to zero for the test
         test = test
             .replace(
-                vk_parse!(format!("{}(momID_,idx_)", EXTERNAL_MOMENTUM_SYMBOL).as_str())
+                vk_parse!(format!("{}(momID_,idx___)", EXTERNAL_MOMENTUM_SYMBOL).as_str())
                     .unwrap()
                     .to_pattern(),
             )
             .with(vk_parse!("1").unwrap().to_pattern());
 
-        // Substitute metric in as well
+        // Substitute metric as well
         test = test
-            .replace(vk_parse!("g(idx1_,idx2_)").unwrap().to_pattern())
+            .replace(
+                vk_parse!(format!("{}(idx1_,idx2_)", METRIC_SYMBOL))
+                    .unwrap()
+                    .to_pattern(),
+            )
+            .with(vk_parse!("1").unwrap().to_pattern());
+
+        // Substitute dot product wrappers as well, with the understanding that all momenta in arguments should now have been mapped to 1 at this point.
+        test = test
+            .replace(
+                vk_parse!(format!("{}(1,1)", DOT_SYMBOL))
+                    .unwrap()
+                    .to_pattern(),
+            )
             .with(vk_parse!("1").unwrap().to_pattern());
 
         // Substitute epsilon regulator
