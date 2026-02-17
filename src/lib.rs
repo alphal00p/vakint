@@ -2359,7 +2359,7 @@ impl VakintTerm {
         // If it was not used, the command below will do nothing.
         form_numerator = Vakint::convert_from_dot_notation(form_numerator.as_view());
 
-        println!("VH:: A:: Reduction of numerator:\n{}", form_numerator);
+        // println!("VH:: A:: Reduction of numerator:\n{}", form_numerator);
 
         let vectors = Self::identify_vectors_in_numerator(form_numerator.as_view())?;
 
@@ -2429,7 +2429,7 @@ impl VakintTerm {
             })
             .unwrap();
 
-        println!("Rendered: {}", rendered);
+        // println!("Rendered: {}", rendered);
         let form_result = vakint.run_form(
             settings,
             &["tensorreduce.frm".into(), "pvtab10.h".into()],
@@ -2438,37 +2438,37 @@ impl VakintTerm {
             settings.clean_tmp_dir,
             settings.temporary_directory.clone(),
         )?;
-        println!("Raw output: {}", form_result);
+        // println!("Raw output: {}", form_result);
 
-        println!(
-            "\n>>>> VH:: A:: Indices:\n{}",
-            indices
-                .clone()
-                .iter()
-                .map(|idx| idx.to_canonical_string())
-                .collect::<Vec<_>>()
-                .join(",")
-        );
+        // println!(
+        //     "\n>>>> VH:: A:: Indices:\n{}",
+        //     indices
+        //         .clone()
+        //         .iter()
+        //         .map(|idx| idx.to_canonical_string())
+        //         .collect::<Vec<_>>()
+        //         .join(",")
+        // );
 
-        println!(
-            "\n>>>> VH:: A:: Vector mapping:\n{}",
-            vector_mapping
-                .iter()
-                .map(|(k, v)| format!("{} -> {}", k, v.to_canonical_string()))
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
+        // println!(
+        //     "\n>>>> VH:: A:: Vector mapping:\n{}",
+        //     vector_mapping
+        //         .iter()
+        //         .map(|(k, v)| format!("{} -> {}", k, v.to_canonical_string()))
+        //         .collect::<Vec<_>>()
+        //         .join("\n")
+        // );
         let mut reduced_numerator =
             vakint.process_form_output(settings, form_result, indices, vector_mapping)?;
 
-        println!(
-            "\n>>>> VH:: A:: Vectors:\n{}",
-            vectors
-                .iter()
-                .map(|(vec, id)| format!("{}{} -> {}({})", vec, id, vec, id))
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
+        // println!(
+        //     "\n>>>> VH:: A:: Vectors:\n{}",
+        //     vectors
+        //         .iter()
+        //         .map(|(vec, id)| format!("{}{} -> {}({})", vec, id, vec, id))
+        //         .collect::<Vec<_>>()
+        //         .join("\n")
+        // );
 
         // Map back surviving external indices
         for (vec, id) in vectors.iter() {
@@ -2488,6 +2488,7 @@ impl VakintTerm {
         if !settings.use_dot_product_notation {
             reduced_numerator = Vakint::convert_from_dot_notation(reduced_numerator.as_view());
         }
+
         self.numerator = reduced_numerator;
         Ok(())
     }
@@ -4057,12 +4058,12 @@ Evaluated (n_loops=1, mu_r=1) :
             "AlphaLoop".green(),
             integral
         );
-        println!(
-            "VH:: B:: Processing the following integral with {}:\n{}\n and numerator:\n{}",
-            "AlphaLoop".green(),
-            integral,
-            numerator
-        );
+        // println!(
+        //     "VH:: B:: Processing the following integral with {}:\n{}\n and numerator:\n{}",
+        //     "AlphaLoop".green(),
+        //     integral,
+        //     numerator
+        // );
 
         // DO NOT REQUIRE MASS TO BE A SYMBOL
         let (muv_atom, muv_sq_atom) =
@@ -4210,24 +4211,23 @@ Evaluated (n_loops=1, mu_r=1) :
             settings.temporary_directory.clone(),
         )?;
 
-        println!(
-            "\n>>>> VH:: B:: A Indices:\n{}",
-            indices
-                .clone()
-                .iter()
-                .map(|idx| idx.to_canonical_string())
-                .collect::<Vec<_>>()
-                .join(",")
-        );
-
-        println!(
-            "\n>>>> VH:: B:: Vector mapping:\n{}",
-            vector_mapping
-                .iter()
-                .map(|(k, v)| format!("{} -> {}", k, v.to_canonical_string()))
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
+        // println!(
+        //     "\n>>>> VH:: B:: A Indices:\n{}",
+        //     indices
+        //         .clone()
+        //         .iter()
+        //         .map(|idx| idx.to_canonical_string())
+        //         .collect::<Vec<_>>()
+        //         .join(",")
+        // );
+        // println!(
+        //     "\n>>>> VH:: B:: Vector mapping:\n{}",
+        //     vector_mapping
+        //         .iter()
+        //         .map(|(k, v)| format!("{} -> {}", k, v.to_canonical_string()))
+        //         .collect::<Vec<_>>()
+        //         .join("\n")
+        // );
 
         let mut evaluated_integral =
             self.process_form_output(settings, form_result, indices, vector_mapping)?;
@@ -4540,10 +4540,9 @@ Evaluated (n_loops=1, mu_r=1) :
             if let Match::FunctionName(vec_symbol) = m.match_stack.get(vk_symbol!("vec_")).unwrap()
             {
                 if [
-                    LOOP_MOMENTUM_SYMBOL,
-                    EXTERNAL_MOMENTUM_SYMBOL,
-                    "vec1",
-                    "vec",
+                    // LOOP_MOMENTUM_SYMBOL,
+                    // EXTERNAL_MOMENTUM_SYMBOL,
+                    "vec1", "vec",
                 ]
                 .iter()
                 .any(|s| *vec_symbol == vk_symbol!(s))
@@ -4807,14 +4806,14 @@ Evaluated (n_loops=1, mu_r=1) :
                 (new_s, t.clone())
             })
             .collect();
-        println!(
-            "\n>>>> VH:: C:: Processed vector mappings:\n{}",
-            vector_mapping
-                .iter()
-                .map(|(s, t)| format!("{} -> {}", s, t))
-                .collect::<Vec<_>>()
-                .join("\n")
-        );
+        // println!(
+        //     "\n>>>> VH:: C:: Processed vector mappings:\n{}",
+        //     vector_mapping
+        //         .iter()
+        //         .map(|(s, t)| format!("{} -> {}", s, t))
+        //         .collect::<Vec<_>>()
+        //         .join("\n")
+        // );
         // Map back the integer indices to the original expressions if substitutions took place
         match vk_parse!(processed_form_str.as_str()) {
             Ok(mut processed) => {
