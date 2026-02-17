@@ -2428,6 +2428,8 @@ impl VakintTerm {
                 ..Default::default()
             })
             .unwrap();
+
+        println!("Rendered: {}", rendered);
         let form_result = vakint.run_form(
             settings,
             &["tensorreduce.frm".into(), "pvtab10.h".into()],
@@ -2436,7 +2438,7 @@ impl VakintTerm {
             settings.clean_tmp_dir,
             settings.temporary_directory.clone(),
         )?;
-        // println!("Raw output: {}", form_result);
+        println!("Raw output: {}", form_result);
 
         println!(
             "\n>>>> VH:: A:: Indices:\n{}",
@@ -4361,6 +4363,8 @@ Evaluated (n_loops=1, mu_r=1) :
     }
 
     pub fn convert_from_dot_notation(atom: AtomView) -> Atom {
+        let dummy_pat = function!(S.dot_dummy_ind, S.a_).to_pattern();
+
         atom.replace(S.dot(S.a_, S.b_).pow(Atom::var(S.c_)))
             .with(S.dot_pow(S.a_, S.b_, S.c_))
             .replace(S.dot(S.a_, S.b_))
@@ -4369,9 +4373,20 @@ Evaluated (n_loops=1, mu_r=1) :
             .when(S.c_.filter(|a| a.to_atom() < 0))
             .with(S.dot_pow(S.a_, S.b_, -Atom::var(S.c_)).npow(-1))
             .map_terms_single_core(|a| {
-                let mut a = a.to_owned();
                 let mut dummy = 1;
+                for m in a.replace(&dummy_pat).match_iter() {
+                    let Ok(d) = usize::try_from(&m[&S.a_]) else {
+                        continue;
+                    };
+                    if dummy <= d {
+                        dummy = d;
+                    }
+                }
+                dummy += 1;
+
+                let mut a = a.to_owned();
                 loop {
+                    let dummy_wrapped = S.dot_dummy_ind(dummy);
                     let new = a
                         .replace(S.dot_pow(S.a_, S.b_, S.c_))
                         .once()
@@ -4394,38 +4409,42 @@ Evaluated (n_loops=1, mu_r=1) :
                             // }
                             match (a, b) {
                                 (AtomView::Var(a), AtomView::Var(b)) => {
-                                    FunctionBuilder::new(a.get_symbol()).add_arg(dummy).finish()
+                                    FunctionBuilder::new(a.get_symbol())
+                                        .add_arg(&dummy_wrapped)
+                                        .finish()
                                         * FunctionBuilder::new(b.get_symbol())
-                                            .add_arg(dummy)
+                                            .add_arg(&dummy_wrapped)
                                             .finish()
                                         * rest
                                 }
                                 (AtomView::Var(a), AtomView::Fun(b)) => {
-                                    FunctionBuilder::new(a.get_symbol()).add_arg(dummy).finish()
+                                    FunctionBuilder::new(a.get_symbol())
+                                        .add_arg(&dummy_wrapped)
+                                        .finish()
                                         * FunctionBuilder::new(b.get_symbol())
                                             .add_args(&b.iter().collect::<Vec<_>>())
-                                            .add_arg(dummy)
+                                            .add_arg(&dummy_wrapped)
                                             .finish()
                                         * rest
                                 }
                                 (AtomView::Fun(a), AtomView::Var(b)) => {
                                     FunctionBuilder::new(a.get_symbol())
                                         .add_args(&a.iter().collect::<Vec<_>>())
-                                        .add_arg(dummy)
+                                        .add_arg(&dummy_wrapped)
                                         .finish()
                                         * FunctionBuilder::new(b.get_symbol())
-                                            .add_arg(dummy)
+                                            .add_arg(&dummy_wrapped)
                                             .finish()
                                         * rest
                                 }
                                 (AtomView::Fun(a), AtomView::Fun(b)) => {
                                     FunctionBuilder::new(a.get_symbol())
                                         .add_args(&a.iter().collect::<Vec<_>>())
-                                        .add_arg(dummy)
+                                        .add_arg(&dummy_wrapped)
                                         .finish()
                                         * FunctionBuilder::new(b.get_symbol())
                                             .add_args(&b.iter().collect::<Vec<_>>())
-                                            .add_arg(dummy)
+                                            .add_arg(&dummy_wrapped)
                                             .finish()
                                         * rest
                                 }

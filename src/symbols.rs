@@ -54,6 +54,7 @@ pub struct VakintSymbols {
     pub prop: Symbol,
     pub edge: Symbol,
     pub mom: Symbol,
+    pub dot_dummy_ind: Symbol,
     pub topo: Symbol,
     pub metric: Symbol,
 }
@@ -63,7 +64,8 @@ pub static S: LazyLock<VakintSymbols> = LazyLock::new(|| VakintSymbols {
     dot: symbol!(
         format!("{}::dot",crate::NAMESPACE); Symmetric,Linear
     ),
-    dot_pow: symbol!("dot_pow"),
+    dot_dummy_ind: vk_symbol!("dot_dummy_ind"),
+    dot_pow: vk_symbol!("dot_pow"),
     vkdot: symbol!(
         format!("{}::vkdot",crate::NAMESPACE);  Symmetric, Linear
     ),
@@ -130,5 +132,10 @@ impl VakintSymbols {
         let b = b.into();
         let pow = pow.into();
         function!(self.dot_pow, a.as_view(), b.as_view(), pow.as_view())
+    }
+
+    pub fn dot_dummy_ind<'a, A: Into<AtomOrView<'a>>>(&self, a: A) -> Atom {
+        let a = a.into();
+        function!(self.dot_dummy_ind, a.as_view())
     }
 }
