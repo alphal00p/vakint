@@ -18,7 +18,7 @@ use log::{debug, info, warn};
 use regex::Regex;
 use rug::float::Constant;
 use std::{
-    collections::{HashMap, HashSet, hash_map::Entry},
+    collections::{BTreeMap, HashMap, HashSet, hash_map::Entry},
     env,
     f64::consts::LOG2_10,
     fmt,
@@ -2359,9 +2359,11 @@ impl VakintTerm {
         // If it was not used, the command below will do nothing.
         form_numerator = Vakint::convert_from_dot_notation(form_numerator.as_view());
 
+        println!("VH:: A:: Reduction of numerator:\n{}", form_numerator);
+
         let vectors = Self::identify_vectors_in_numerator(form_numerator.as_view())?;
 
-        let mut vector_mapping: HashMap<Atom, Atom> = HashMap::new();
+        let mut vector_mapping: BTreeMap<Atom, Atom> = BTreeMap::new();
 
         for (vec, id) in vectors.iter() {
             vector_mapping.insert(
@@ -2436,26 +2438,35 @@ impl VakintTerm {
         )?;
         // println!("Raw output: {}", form_result);
 
-        // println!(
-        //     "Indices: {}",
-        //     indices
-        //         .clone()
-        //         .iter()
-        //         .map(|idx| idx.to_canonical_string())
-        //         .collect::<Vec<_>>()
-        //         .join(",")
-        // );
+        println!(
+            "\n>>>> VH:: A:: Indices:\n{}",
+            indices
+                .clone()
+                .iter()
+                .map(|idx| idx.to_canonical_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        );
 
-        // println!(
-        //     "Vector mapping: {}",
-        //     vector_mapping
-        //         .iter()
-        //         .map(|(k, v)| format!("{} -> {}", k, v.to_canonical_string()))
-        //         .collect::<Vec<_>>()
-        //         .join("\n")
-        // );
+        println!(
+            "\n>>>> VH:: A:: Vector mapping:\n{}",
+            vector_mapping
+                .iter()
+                .map(|(k, v)| format!("{} -> {}", k, v.to_canonical_string()))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         let mut reduced_numerator =
             vakint.process_form_output(settings, form_result, indices, vector_mapping)?;
+
+        println!(
+            "\n>>>> VH:: A:: Vectors:\n{}",
+            vectors
+                .iter()
+                .map(|(vec, id)| format!("{}{} -> {}({})", vec, id, vec, id))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
 
         // Map back surviving external indices
         for (vec, id) in vectors.iter() {
@@ -4044,6 +4055,12 @@ Evaluated (n_loops=1, mu_r=1) :
             "AlphaLoop".green(),
             integral
         );
+        println!(
+            "VH:: B:: Processing the following integral with {}:\n{}\n and numerator:\n{}",
+            "AlphaLoop".green(),
+            integral,
+            numerator
+        );
 
         // DO NOT REQUIRE MASS TO BE A SYMBOL
         let (muv_atom, muv_sq_atom) =
@@ -4072,7 +4089,7 @@ Evaluated (n_loops=1, mu_r=1) :
         form_expression = Vakint::convert_to_dot_notation(form_expression.as_view());
         // println!("Input expression with dot products : {}", form_expression);
 
-        let mut vector_mapping: HashMap<Atom, Atom> = HashMap::new();
+        let mut vector_mapping: BTreeMap<Atom, Atom> = BTreeMap::new();
         let vec_pattern = vk_parse!("v_(id_)").unwrap().to_pattern();
         let vec_conditions = Condition::from((vk_symbol!("id_"), number_condition()))
             & Condition::from((vk_symbol!("v_"), symbol_condition()));
@@ -4190,6 +4207,25 @@ Evaluated (n_loops=1, mu_r=1) :
             settings.clean_tmp_dir,
             settings.temporary_directory.clone(),
         )?;
+
+        println!(
+            "\n>>>> VH:: B:: A Indices:\n{}",
+            indices
+                .clone()
+                .iter()
+                .map(|idx| idx.to_canonical_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        );
+
+        println!(
+            "\n>>>> VH:: B:: Vector mapping:\n{}",
+            vector_mapping
+                .iter()
+                .map(|(k, v)| format!("{} -> {}", k, v.to_canonical_string()))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
 
         let mut evaluated_integral =
             self.process_form_output(settings, form_result, indices, vector_mapping)?;
@@ -4725,7 +4761,7 @@ Evaluated (n_loops=1, mu_r=1) :
         settings: &VakintSettings,
         form_output: String,
         indices: Vec<Atom>,
-        vector_mapping: HashMap<Atom, Atom>,
+        vector_mapping: BTreeMap<Atom, Atom>,
     ) -> Result<Atom, VakintError> {
         let processed_form_str = form_output
             .replace("[", "")
@@ -4738,7 +4774,7 @@ Evaluated (n_loops=1, mu_r=1) :
             .join("");
 
         // Make sure to replace the indices already in the source of the vector mappings since this replacement is done *before* substituting the indices
-        let vector_mapping: HashMap<Atom, Atom> = vector_mapping
+        let vector_mapping: BTreeMap<Atom, Atom> = vector_mapping
             .iter()
             .map(|(s, t)| {
                 let mut new_s = s.to_owned();
@@ -4752,7 +4788,14 @@ Evaluated (n_loops=1, mu_r=1) :
                 (new_s, t.clone())
             })
             .collect();
-
+        println!(
+            "\n>>>> VH:: C:: Processed vector mappings:\n{}",
+            vector_mapping
+                .iter()
+                .map(|(s, t)| format!("{} -> {}", s, t))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
         // Map back the integer indices to the original expressions if substitutions took place
         match vk_parse!(processed_form_str.as_str()) {
             Ok(mut processed) => {

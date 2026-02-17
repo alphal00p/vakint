@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::{collections::HashMap, sync::LazyLock};
 
 use crate::matad_numerics::DIRECT_SUBSTITUTIONS;
@@ -593,7 +593,7 @@ impl Vakint {
         )?;
 
         let processed_form_result =
-            self.process_form_output(settings, form_result, indices, HashMap::new())?;
+            self.process_form_output(settings, form_result, indices, BTreeMap::new())?;
         let mut evaluated_integral = matad.process_matad_form_output(processed_form_result)?;
         debug!(
             "{}: raw result from FORM:\n{}",
@@ -754,8 +754,7 @@ impl Vakint {
             .with(Atom::var(vk_symbol!(settings.epsilon_symbol.as_str())).to_pattern());
 
         if !settings.use_dot_product_notation {
-            evaluated_integral =
-                Vakint::convert_from_dot_notation(evaluated_integral.as_view());
+            evaluated_integral = Vakint::convert_from_dot_notation(evaluated_integral.as_view());
         }
 
         let log_muv_mu_sq = function!(
