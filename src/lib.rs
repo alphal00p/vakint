@@ -63,6 +63,8 @@ use thiserror::Error;
 use topologies::{Topologies, Topology};
 use version_compare::{Cmp, compare_to};
 
+#[allow(unused)]
+use symbols::SYMBOL_REGISTRY;
 use symbols::{EXTERNAL_MOMENTUM_SYMBOL, LOOP_MOMENTUM_SYMBOL, METRIC_SYMBOL, S};
 
 use phf::phf_map;
@@ -4681,16 +4683,34 @@ Evaluated (n_loops=1, mu_r=1) :
 
         user_variables = user_variables
             .iter()
-            .filter(|s| s.get_namespace() != NAMESPACE)
+            //.filter(|s| !SYMBOL_REGISTRY.contains(s))
+            .filter(|s| S.should_symbol_be_escaped_in_form(s))
             //            .filter(|s| s.get_namespace() != NAMESPACE || !s.get_attributes().is_empty() )
             .cloned()
             .collect::<HashSet<_, _>>();
         user_functions = user_functions
             .iter()
-            .filter(|s: &&Symbol| s.get_namespace() != NAMESPACE)
+            //.filter(|s| !SYMBOL_REGISTRY.contains(s))
+            .filter(|s: &&Symbol| S.should_symbol_be_escaped_in_form(s))
             //            .filter(|s: &&Symbol| s.get_namespace() != NAMESPACE || !s.get_attributes().is_empty() )
             .cloned()
             .collect::<HashSet<_, _>>();
+        // println!(
+        //     "User variables: {}",
+        //     user_variables
+        //         .iter()
+        //         .map(|s| s.to_string())
+        //         .collect::<Vec<_>>()
+        //         .join(", ")
+        // );
+        // println!(
+        //     "User functions: {}",
+        //     user_functions
+        //         .iter()
+        //         .map(|s| s.to_string())
+        //         .collect::<Vec<_>>()
+        //         .join(", ")
+        // );
 
         let mut form_header_functions = vec![];
         let mut form_header_symbols = vec![];
