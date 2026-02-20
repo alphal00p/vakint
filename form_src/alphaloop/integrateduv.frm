@@ -1,5 +1,5 @@
 Auto S cMi1L1, cmi1L2, cmi2L2, alarm;
-S eulergamma, log4pi, pi;
+S eulergamma, log4pi, pi, cl2, sqrt3, MASTER2m22EP, MASTER3m111111FINPIECE, MASTER3m011111FIN, MASTER3m011101EP, MASTER3m001111FIN;
 CF uvid;
 
 #if `MAXPOLE' == 3
@@ -153,6 +153,10 @@ CF uvid;
 #endprocedure
 
 #procedure IntegrateUV3L()
+    B+ vxs,uvprop,uvid,g;
+    .sort:mapping-3l-start;
+    Keep brackets;
+
     id uvprop(k1?,n1?) = uvprop(k1,n1)*tmps(k1,-k1);
 
 * mercedes
@@ -172,7 +176,7 @@ CF uvid;
         uvid(3,1,0,0,0,0,0,0)*map(kk1,k1,1)*map(kk1,kn1,-1)*map(kk2,k2,1)*map(kk2,kn2,-1)*map(kk3,k3,1)*map(kk3,kn3,-1)*map(kk4,k4,1)*map(kk4,kn4,-1);
 
 * triple-bubble
-    id ifnomatch->end3l vxs(k1?,k2?,k3?,kn1?,kn2?,kn3?)*tmps(k1?,kn1?)*tmps(k2?,kn2?)*tmps(k3?,kn3?) =
+    id vxs(k1?,k2?,k3?,kn1?,kn2?,kn3?)*tmps(k1?,kn1?)*tmps(k2?,kn2?)*tmps(k3?,kn3?) =
         uvid(3,1,0,0,0,0,0,0)*map(kk1,k1,1)*map(kk1,kn1,-1)*map(kk2,k2,1)*map(kk2,kn2,-1)*map(kk3,k3,1)*map(kk3,kn3,-1);
 
     label matchend3l;
@@ -185,47 +189,58 @@ CF uvid;
     id map(kk6,k?,nn?)*uvprop(k?,n?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = map(kk6,k,nn)*uvid(3,1,n1,n2,n3,n4,n5,n6+n);
 
 * reduce the numerator
-    repeat id g(k?,k?)*map(kk1,k?,n?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = (uvid(3,1,n1-1,n2,n3,n4,n5,n6) + mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6))*map(kk1,k,n);
-    repeat id g(k?,k?)*map(kk2,k?,n?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = (uvid(3,1,n1,n2-1,n3,n4,n5,n6) + mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6))*map(kk2,k,n);
-    repeat id g(k?,k?)*map(kk3,k?,n?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = (uvid(3,1,n1,n2,n3-1,n4,n5,n6) + mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6))*map(kk3,k,n);
-    repeat id g(k?,k?)*map(kk4,k?,n?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = (uvid(3,1,n1,n2,n3,n4-1,n5,n6) + mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6))*map(kk4,k,n);
-    repeat id g(k?,k?)*map(kk5,k?,n?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = (uvid(3,1,n1,n2,n3,n4,n5-1,n6) + mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6))*map(kk5,k,n);
-    repeat id g(k?,k?)*map(kk6,k?,n?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = (uvid(3,1,n1,n2,n3,n4,n5,n6-1) + mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6))*map(kk6,k,n);
+    #define nloop "1"
+    #do i=1,1
+        id ifmatch->endmap`i' g(k?,k?)*map(kk1,k?,n?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = (uvid(3,1,n1-1,n2,n3,n4,n5,n6) + mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6))*map(kk1,k,n);
+        id ifmatch->endmap`i' g(k?,k?)*map(kk2,k?,n?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = (uvid(3,1,n1,n2-1,n3,n4,n5,n6) + mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6))*map(kk2,k,n);
+        id ifmatch->endmap`i' g(k?,k?)*map(kk3,k?,n?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = (uvid(3,1,n1,n2,n3-1,n4,n5,n6) + mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6))*map(kk3,k,n);
+        id ifmatch->endmap`i' g(k?,k?)*map(kk4,k?,n?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = (uvid(3,1,n1,n2,n3,n4-1,n5,n6) + mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6))*map(kk4,k,n);
+        id ifmatch->endmap`i' g(k?,k?)*map(kk5,k?,n?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = (uvid(3,1,n1,n2,n3,n4,n5-1,n6) + mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6))*map(kk5,k,n);
+        id ifmatch->endmap`i' g(k?,k?)*map(kk6,k?,n?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = (uvid(3,1,n1,n2,n3,n4,n5,n6-1) + mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6))*map(kk6,k,n);
 
-    repeat id g(k1?,k2?)*map(kk1,k1?,nn1?)*map(kk2,k2?,nn2?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn1*nn2*map(kk1,k1,nn1)*map(kk2,k2,nn2)*(
-        uvid(3,1,n1,n2,n3,n4-1,n5,n6) - uvid(3,1,n1-1,n2,n3,n4,n5,n6) - uvid(3,1,n1,n2-1,n3,n4,n5,n6) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
-    repeat id g(k1?,k3?)*map(kk1,k1?,nn1?)*map(kk3,k3?,nn3?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn1*nn3*map(kk1,k1,nn1)*map(kk3,k3,nn3)*(
-        uvid(3,1,n1,n2,n3,n4,n5,n6-1) - uvid(3,1,n1-1,n2,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3-1,n4,n5,n6) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
-    repeat id g(k1?,k4?)*map(kk1,k1?,nn1?)*map(kk4,k4?,nn4?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn1*nn4*map(kk1,k1,nn1)*map(kk4,k4,nn4)*(
-        uvid(3,1,n1,n2-1,n3,n4,n5,n6) - uvid(3,1,n1-1,n2,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4-1,n5,n6) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
-    repeat id g(k1?,k5?)*map(kk1,k1?,nn1?)*map(kk5,k5?,nn5?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn1*nn5*map(kk1,k1,nn1)*map(kk5,k5,nn5)*(
-        uvid(3,1,n1,n2,n3,n4-1,n5,n6) + uvid(3,1,n1,n2,n3-1,n4,n5,n6) - uvid(3,1,n1,n2-1,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5,n6-1));
-    repeat id g(k1?,k6?)*map(kk1,k1?,nn1?)*map(kk6,k6?,nn6?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn1*nn6*map(kk1,k1,nn1)*map(kk6,k6,nn6)*(
-        uvid(3,1,n1,n2,n3-1,n4,n5,n6) - uvid(3,1,n1-1,n2,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5,n6-1) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
-    repeat id g(k2?,k3?)*map(kk2,k2?,nn2?)*map(kk3,k3?,nn3?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn2*nn3*map(kk2,k2,nn2)*map(kk3,k3,nn3)*(
-        uvid(3,1,n1,n2,n3,n4,n5-1,n6) - uvid(3,1,n1,n2-1,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3-1,n4,n5,n6) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
-    repeat id g(k2?,k4?)*map(kk2,k2?,nn2?)*map(kk4,k4?,nn4?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = 1/2*nn2*nn4*map(kk2,k2,nn2)*map(kk4,k4,nn4)*(
-        uvid(3,1,n1-1,n2,n3,n4,n5,n6) - uvid(3,1,n1,n2-1,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4-1,n5,n6) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
-    repeat id g(k2?,k5?)*map(kk2,k2?,nn2?)*map(kk5,k5?,nn5?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn2*nn5*map(kk2,k2,nn2)*map(kk5,k5,nn5)*(
-        uvid(3,1,n1,n2,n3-1,n4,n5,n6) - uvid(3,1,n1,n2-1,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5-1,n6) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
-    repeat id g(k2?,k6?)*map(kk2,k2?,nn2?)*map(kk6,k6?,nn6?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn2*nn6*map(kk2,k2,nn2)*map(kk6,k6,nn6)*(
-        uvid(3,1,n1,n2,n3-1,n4,n5,n6) + uvid(3,1,n1,n2,n3,n4-1,n5,n6) - uvid(3,1,n1-1,n2,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5-1,n6));
-    repeat id g(k3?,k4?)*map(kk3,k3?,nn3?)*map(kk4,k4?,nn4?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn3*nn4*map(kk3,k3,nn3)*map(kk4,k4,nn4)*(
-        uvid(3,1,n1,n2-1,n3,n4,n5,n6) + uvid(3,1,n1,n2,n3,n4,n5,n6-1) - uvid(3,1,n1-1,n2,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5-1,n6));
-    repeat id g(k3?,k5?)*map(kk3,k3?,nn3?)*map(kk5,k5?,nn5?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = 1/2*nn3*nn5*map(kk3,k3,nn3)*map(kk5,k5,nn5)*(
-        uvid(3,1,n1,n2-1,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3-1,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5-1,n6) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
-    repeat id g(k3?,k6?)*map(kk3,k3?,nn3?)*map(kk6,k6?,nn6?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = 1/2*nn3*nn6*map(kk3,k3,nn3)*map(kk6,k6,nn6)*(
-        uvid(3,1,n1-1,n2,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3-1,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5,n6-1) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
-    repeat id g(k4?,k5?)*map(kk4,k4?,nn4?)*map(kk5,k5?,nn5?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = 1/2*nn4*nn5*map(kk4,k4,nn4)*map(kk5,k5,nn5)*(
-        uvid(3,1,n1,n2,n3,n4,n5,n6-1) - uvid(3,1,n1,n2,n3,n4-1,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5-1,n6) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
-    repeat id g(k4?,k6?)*map(kk4,k4?,nn4?)*map(kk6,k6?,nn6?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn4*nn6*map(kk4,k4,nn4)*map(kk6,k6,nn6)*(
-        uvid(3,1,n1,n2,n3,n4,n5-1,n6) - uvid(3,1,n1,n2,n3,n4-1,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5,n6-1) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
-    repeat id g(k5?,k6?)*map(kk5,k5?,nn5?)*map(kk6,k6?,nn6?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn5*nn6*map(kk5,k5,nn5)*map(kk6,k6,nn6)*(
-        uvid(3,1,n1,n2,n3,n4-1,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5-1,n6) - uvid(3,1,n1,n2,n3,n4,n5,n6-1) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
+        id ifmatch->endmap`i' g(k1?,k2?)*map(kk1,k1?,nn1?)*map(kk2,k2?,nn2?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn1*nn2*map(kk1,k1,nn1)*map(kk2,k2,nn2)*(
+            uvid(3,1,n1,n2,n3,n4-1,n5,n6) - uvid(3,1,n1-1,n2,n3,n4,n5,n6) - uvid(3,1,n1,n2-1,n3,n4,n5,n6) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
+        id ifmatch->endmap`i' g(k1?,k3?)*map(kk1,k1?,nn1?)*map(kk3,k3?,nn3?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn1*nn3*map(kk1,k1,nn1)*map(kk3,k3,nn3)*(
+            uvid(3,1,n1,n2,n3,n4,n5,n6-1) - uvid(3,1,n1-1,n2,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3-1,n4,n5,n6) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
+        id ifmatch->endmap`i' g(k1?,k4?)*map(kk1,k1?,nn1?)*map(kk4,k4?,nn4?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn1*nn4*map(kk1,k1,nn1)*map(kk4,k4,nn4)*(
+            uvid(3,1,n1,n2-1,n3,n4,n5,n6) - uvid(3,1,n1-1,n2,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4-1,n5,n6) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
+        id ifmatch->endmap`i' g(k1?,k5?)*map(kk1,k1?,nn1?)*map(kk5,k5?,nn5?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn1*nn5*map(kk1,k1,nn1)*map(kk5,k5,nn5)*(
+            uvid(3,1,n1,n2,n3,n4-1,n5,n6) + uvid(3,1,n1,n2,n3-1,n4,n5,n6) - uvid(3,1,n1,n2-1,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5,n6-1));
+        id ifmatch->endmap`i' g(k1?,k6?)*map(kk1,k1?,nn1?)*map(kk6,k6?,nn6?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn1*nn6*map(kk1,k1,nn1)*map(kk6,k6,nn6)*(
+            uvid(3,1,n1,n2,n3-1,n4,n5,n6) - uvid(3,1,n1-1,n2,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5,n6-1) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
+        id ifmatch->endmap`i' g(k2?,k3?)*map(kk2,k2?,nn2?)*map(kk3,k3?,nn3?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn2*nn3*map(kk2,k2,nn2)*map(kk3,k3,nn3)*(
+            uvid(3,1,n1,n2,n3,n4,n5-1,n6) - uvid(3,1,n1,n2-1,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3-1,n4,n5,n6) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
+        id ifmatch->endmap`i' g(k2?,k4?)*map(kk2,k2?,nn2?)*map(kk4,k4?,nn4?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = 1/2*nn2*nn4*map(kk2,k2,nn2)*map(kk4,k4,nn4)*(
+            uvid(3,1,n1-1,n2,n3,n4,n5,n6) - uvid(3,1,n1,n2-1,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4-1,n5,n6) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
+        id ifmatch->endmap`i' g(k2?,k5?)*map(kk2,k2?,nn2?)*map(kk5,k5?,nn5?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn2*nn5*map(kk2,k2,nn2)*map(kk5,k5,nn5)*(
+            uvid(3,1,n1,n2,n3-1,n4,n5,n6) - uvid(3,1,n1,n2-1,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5-1,n6) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
+        id ifmatch->endmap`i' g(k2?,k6?)*map(kk2,k2?,nn2?)*map(kk6,k6?,nn6?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn2*nn6*map(kk2,k2,nn2)*map(kk6,k6,nn6)*(
+            uvid(3,1,n1,n2,n3-1,n4,n5,n6) + uvid(3,1,n1,n2,n3,n4-1,n5,n6) - uvid(3,1,n1-1,n2,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5-1,n6));
+        id ifmatch->endmap`i' g(k3?,k4?)*map(kk3,k3?,nn3?)*map(kk4,k4?,nn4?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn3*nn4*map(kk3,k3,nn3)*map(kk4,k4,nn4)*(
+            uvid(3,1,n1,n2-1,n3,n4,n5,n6) + uvid(3,1,n1,n2,n3,n4,n5,n6-1) - uvid(3,1,n1-1,n2,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5-1,n6));
+        id ifmatch->endmap`i' g(k3?,k5?)*map(kk3,k3?,nn3?)*map(kk5,k5?,nn5?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = 1/2*nn3*nn5*map(kk3,k3,nn3)*map(kk5,k5,nn5)*(
+            uvid(3,1,n1,n2-1,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3-1,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5-1,n6) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
+        id ifmatch->endmap`i' g(k3?,k6?)*map(kk3,k3?,nn3?)*map(kk6,k6?,nn6?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = 1/2*nn3*nn6*map(kk3,k3,nn3)*map(kk6,k6,nn6)*(
+            uvid(3,1,n1-1,n2,n3,n4,n5,n6) - uvid(3,1,n1,n2,n3-1,n4,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5,n6-1) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
+        id ifmatch->endmap`i' g(k4?,k5?)*map(kk4,k4?,nn4?)*map(kk5,k5?,nn5?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = 1/2*nn4*nn5*map(kk4,k4,nn4)*map(kk5,k5,nn5)*(
+            uvid(3,1,n1,n2,n3,n4,n5,n6-1) - uvid(3,1,n1,n2,n3,n4-1,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5-1,n6) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
+        id ifmatch->endmap`i' g(k4?,k6?)*map(kk4,k4?,nn4?)*map(kk6,k6?,nn6?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn4*nn6*map(kk4,k4,nn4)*map(kk6,k6,nn6)*(
+            uvid(3,1,n1,n2,n3,n4,n5-1,n6) - uvid(3,1,n1,n2,n3,n4-1,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5,n6-1) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
+        id ifmatch->endmap`i' g(k5?,k6?)*map(kk5,k5?,nn5?)*map(kk6,k6?,nn6?)*uvid(3,1,n1?,n2?,n3?,n4?,n5?,n6?) = -1/2*nn5*nn6*map(kk5,k5,nn5)*map(kk6,k6,nn6)*(
+            uvid(3,1,n1,n2,n3,n4-1,n5,n6) - uvid(3,1,n1,n2,n3,n4,n5-1,n6) - uvid(3,1,n1,n2,n3,n4,n5,n6-1) - mUV^2 * uvid(3,1,n1,n2,n3,n4,n5,n6));
+
+        goto realmapend;
+        label endmap`i';
+        redefine i "0";
+        label realmapend;
+
+        B+ g,map,uvid;
+        .sort:num-reduction-3l-`nloop++';
+        Keep brackets;
+    #enddo
 
     id map(?a) = 1;
 
-    label end3l;
     id tmps(p1?,p2?) = 1;
 
     B+ uvid;
@@ -283,65 +298,790 @@ CF uvid;
         id uvid(3,1,n1?{>0}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{<1}, n6?{>0}) = uvid(3,1,n5, n6, n3, n4, n1, n2);
         id uvid(3,1,n1?{>0}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{<1}) = uvid(3,1,n6, n5, n3, n4, n2, n1);
 
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{<0}, n5?{>0}, n6?{>1}) = uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, n6) - (3*uvid(3,1,n1, n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/2 + (D*uvid(3,1,n1, n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/2 - (n1*uvid(3,1,n1, n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/2 - (3*n4*uvid(3,1,n1, n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/2 - (uvid(3,1,n1, n2, n3, 2 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/2 - (n4*uvid(3,1,n1, n2, n3, 2 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/2 + (uvid(3,1,n1, n2, n3, 2 + n4, n5, -2 + n6)*rat(1, -1 + n6))/2 + (n4*uvid(3,1,n1, n2, n3, 2 + n4, n5, -2 + n6)*rat(1, -1 + n6))/2 - (3*mUV^2*uvid(3,1,n1, n2, n3, 2 + n4, n5, -1 + n6)*rat(1, -1 + n6))/2 - (3*mUV^2*n4*uvid(3,1,n1, n2, n3, 2 + n4, n5, -1 + n6)*rat(1, -1 + n6))/2 + n1*uvid(3,1,1 + n1, -1 + n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6) - (n1*uvid(3,1,1 + n1, n2, -1 + n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/2 - n1*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6) + (n1*uvid(3,1,1 + n1, n2, n3, 1 + n4, n5, -2 + n6)*rat(1, -1 + n6))/2 - (mUV^2*n1*uvid(3,1,1 + n1, n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/2;
-        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{<1}, n3?{>0}, n4?{<1}, n5?{>0}, n6?{>1}) = uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6) - n4*uvid(3,1,n1, n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6) + n4*uvid(3,1,1 + n1, -1 + n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6) - (3*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2 + (D*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2 - (3*n1*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2 - (n4*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2 - (n4*uvid(3,1,1 + n1, n2, n3, 1 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/2 + (n4*uvid(3,1,1 + n1, n2, n3, 1 + n4, n5, -2 + n6)*rat(1, -1 + n6))/2 - (mUV^2*n4*uvid(3,1,1 + n1, n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/2 - (uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2 - (n1*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2 + (uvid(3,1,2 + n1, n2, n3, n4, n5, -2 + n6)*rat(1, -1 + n6))/2 + (n1*uvid(3,1,2 + n1, n2, n3, n4, n5, -2 + n6)*rat(1, -1 + n6))/2 - (3*mUV^2*uvid(3,1,2 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2 - (3*mUV^2*n1*uvid(3,1,2 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{<0}, n5?{>1}, n6?{>0}) = uvid(3,1,n1, n2, n3, 1 + n4, n5, -1 + n6) + n2*uvid(3,1,-1 + n1, 1 + n2, n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n5) - (3*uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n5))/2 + (D*uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n5))/2 - (n2*uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n5))/2 - (3*n4*uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n5))/2 + (uvid(3,1,n1, n2, n3, 2 + n4, -2 + n5, n6)*rat(1, -1 + n5))/2 + (n4*uvid(3,1,n1, n2, n3, 2 + n4, -2 + n5, n6)*rat(1, -1 + n5))/2 - (uvid(3,1,n1, n2, n3, 2 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n5))/2 - (n4*uvid(3,1,n1, n2, n3, 2 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n5))/2 - (3*mUV^2*uvid(3,1,n1, n2, n3, 2 + n4, -1 + n5, n6)*rat(1, -1 + n5))/2 - (3*mUV^2*n4*uvid(3,1,n1, n2, n3, 2 + n4, -1 + n5, n6)*rat(1, -1 + n5))/2 - (n2*uvid(3,1,n1, 1 + n2, -1 + n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n5))/2 - n2*uvid(3,1,n1, 1 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5) + (n2*uvid(3,1,n1, 1 + n2, n3, 1 + n4, -2 + n5, n6)*rat(1, -1 + n5))/2 - (mUV^2*n2*uvid(3,1,n1, 1 + n2, n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n5))/2;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<0}, n3?{>0}, n4?{<1}, n5?{>1}, n6?{>0}) = uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, n6) + n4*uvid(3,1,-1 + n1, 1 + n2, n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n5) - n4*uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n5) - (3*uvid(3,1,n1, 1 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/2 + (D*uvid(3,1,n1, 1 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/2 - (3*n2*uvid(3,1,n1, 1 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/2 - (n4*uvid(3,1,n1, 1 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/2 + (n4*uvid(3,1,n1, 1 + n2, n3, 1 + n4, -2 + n5, n6)*rat(1, -1 + n5))/2 - (n4*uvid(3,1,n1, 1 + n2, n3, 1 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n5))/2 - (mUV^2*n4*uvid(3,1,n1, 1 + n2, n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n5))/2 - (uvid(3,1,n1, 2 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/2 - (n2*uvid(3,1,n1, 2 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/2 + (uvid(3,1,n1, 2 + n2, n3, n4, -2 + n5, n6)*rat(1, -1 + n5))/2 + (n2*uvid(3,1,n1, 2 + n2, n3, n4, -2 + n5, n6)*rat(1, -1 + n5))/2 - (3*mUV^2*uvid(3,1,n1, 2 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/2 - (3*mUV^2*n2*uvid(3,1,n1, 2 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/2;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<0}, n3?{>1}, n4?{<1}, n5?{>0}, n6?{>0}) = uvid(3,1,n1, 1 + n2, n3, n4, -1 + n5, n6) - (3*uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + (D*uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (n1*uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (3*n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + (uvid(3,1,n1, 2 + n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + (n2*uvid(3,1,n1, 2 + n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (uvid(3,1,n1, 2 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n3))/2 - (n2*uvid(3,1,n1, 2 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n3))/2 - (3*mUV^2*uvid(3,1,n1, 2 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (3*mUV^2*n2*uvid(3,1,n1, 2 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3) + (n1*uvid(3,1,1 + n1, 1 + n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + n1*uvid(3,1,1 + n1, 1 + n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n3) - (n1*uvid(3,1,1 + n1, 1 + n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n3))/2 - (mUV^2*n1*uvid(3,1,1 + n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2;
-        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{<1}, n3?{>1}, n4?{<1}, n5?{>0}, n6?{>0}) = uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6) - n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3) - (3*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + (D*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (3*n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (n2*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + (n2*uvid(3,1,1 + n1, 1 + n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + n2*uvid(3,1,1 + n1, 1 + n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n3) - (n2*uvid(3,1,1 + n1, 1 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n3))/2 - (mUV^2*n2*uvid(3,1,1 + n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + (uvid(3,1,2 + n1, n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + (n1*uvid(3,1,2 + n1, n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n3))/2 - (n1*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n3))/2 - (3*mUV^2*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (3*mUV^2*n1*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{<1}, n5?{>0}, n6?{>1}) = (uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/mUV^2 + (D*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(2*mUV^2) - (n1*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(2*mUV^2) - (n4*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(2*mUV^2) - (n6*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/mUV^2 + (n4*uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/(2*mUV^2) - (n4*uvid(3,1,n1, n2, n3, 1 + n4, n5, -2 + n6)*rat(1, -1 + n6))/(2*mUV^2) - (n4*uvid(3,1,n1, n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/2 + (n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(2*mUV^2) - (n1*uvid(3,1,1 + n1, n2, n3, n4, n5, -2 + n6)*rat(1, -1 + n6))/(2*mUV^2) - (n1*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{<1}, n5?{>1}, n6?{>0}) = (uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/mUV^2 + (D*uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(2*mUV^2) - (n2*uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(2*mUV^2) - (n4*uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(2*mUV^2) - (n5*uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/mUV^2 - (n4*uvid(3,1,n1, n2, n3, 1 + n4, -2 + n5, n6)*rat(1, -1 + n5))/(2*mUV^2) + (n4*uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n5))/(2*mUV^2) - (n4*uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n5))/2 + (n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(2*mUV^2) - (n2*uvid(3,1,n1, 1 + n2, n3, n4, -2 + n5, n6)*rat(1, -1 + n5))/(2*mUV^2) - (n2*uvid(3,1,n1, 1 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/2;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>1}, n4?{<1}, n5?{>0}, n6?{>0}) = (uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/mUV^2 + (D*uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/(2*mUV^2) - (n1*uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/(2*mUV^2) - (n2*uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/(2*mUV^2) - (n3*uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/mUV^2 - (n2*uvid(3,1,n1, 1 + n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/(2*mUV^2) + (n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n3))/(2*mUV^2) - (n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (n1*uvid(3,1,1 + n1, n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/(2*mUV^2) + (n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n3))/(2*mUV^2) - (n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, 1, n4?{<0}, 1, 1)                   = n4*uvid(3,1,n1, n2, 1, 1 + n4, 0, 1)*rat(1, -2 +D - n2 - n4) - n4*uvid(3,1,n1, n2, 1, 1 + n4, 1, 0)*rat(1, -2 +D - n2 - n4) - 3*mUV^2*uvid(3,1,n1, n2, 1, 1 + n4, 1, 1)*rat(1, -2 +D - n2 - n4) +D*mUV^2*uvid(3,1,n1, n2, 1, 1 + n4, 1, 1)*rat(1, -2 +D - n2 - n4) - mUV^2*n2*uvid(3,1,n1, n2, 1, 1 + n4, 1, 1)*rat(1, -2 +D - n2 - n4) - 2*mUV^2*n4*uvid(3,1,n1, n2, 1, 1 + n4, 1, 1)*rat(1, -2 +D - n2 - n4) + 2*mUV^2*uvid(3,1,n1, n2, 1, 1 + n4, 2, 0)*rat(1, -2 +D - n2 - n4) - mUV^2*uvid(3,1,n1, n2, 1, 2 + n4, 1, 0)*rat(1, -2 +D - n2 - n4) - mUV^2*n4*uvid(3,1,n1, n2, 1, 2 + n4, 1, 0)*rat(1, -2 +D - n2 - n4) - 3*mUV^4*uvid(3,1,n1, n2, 1, 2 + n4, 1, 1)*rat(1, -2 +D - n2 - n4) - 3*mUV^4*n4*uvid(3,1,n1, n2, 1, 2 + n4, 1, 1)*rat(1, -2 +D - n2 - n4) - 2*mUV^2*n2*uvid(3,1,-1 + n1, 1 + n2, 1, 1 + n4, 1, 1)*rat(1, 2 -D + n2 + n4) - mUV^2*uvid(3,1,n1, n2, 1, 2 + n4, 0, 1)*rat(1, 2 -D + n2 + n4) - mUV^2*n4*uvid(3,1,n1, n2, 1, 2 + n4, 0, 1)*rat(1, 2 -D + n2 + n4) + n2*uvid(3,1,n1, 1 + n2, 0, n4, 1, 1)*rat(1, 2 -D + n2 + n4) + mUV^2*n2*uvid(3,1,n1, 1 + n2, 0, 1 + n4, 1, 1)*rat(1, 2 -D + n2 + n4) - n2*uvid(3,1,n1, 1 + n2, 1, n4, 0, 1)*rat(1, 2 -D + n2 + n4) + mUV^2*n2*uvid(3,1,n1, 1 + n2, 1, n4, 1, 1)*rat(1, 2 -D + n2 + n4) - mUV^2*n2*uvid(3,1,n1, 1 + n2, 1, 1 + n4, 0, 1)*rat(1, 2 -D + n2 + n4) + mUV^4*n2*uvid(3,1,n1, 1 + n2, 1, 1 + n4, 1, 1)*rat(1, 2 -D + n2 + n4);
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<0}, 1, 0, 1, 1)                         = n2*uvid(3,1,n1, 1 + n2, 0, 0, 1, 1)*rat(1, -2 +D - n1 - n2) - n2*uvid(3,1,n1, 1 + n2, 1, 0, 0, 1)*rat(1, -2 +D - n1 - n2) - 3*mUV^2*uvid(3,1,n1, 1 + n2, 1, 0, 1, 1)*rat(1, -2 +D - n1 - n2) +D*mUV^2*uvid(3,1,n1, 1 + n2, 1, 0, 1, 1)*rat(1, -2 +D - n1 - n2) - mUV^2*n1*uvid(3,1,n1, 1 + n2, 1, 0, 1, 1)*rat(1, -2 +D - n1 - n2) - 2*mUV^2*n2*uvid(3,1,n1, 1 + n2, 1, 0, 1, 1)*rat(1, -2 +D - n1 - n2) + 2*mUV^2*uvid(3,1,n1, 1 + n2, 2, 0, 0, 1)*rat(1, -2 +D - n1 - n2) - mUV^2*uvid(3,1,n1, 2 + n2, 1, 0, 0, 1)*rat(1, -2 +D - n1 - n2) - mUV^2*n2*uvid(3,1,n1, 2 + n2, 1, 0, 0, 1)*rat(1, -2 +D - n1 - n2) - 3*mUV^4*uvid(3,1,n1, 2 + n2, 1, 0, 1, 1)*rat(1, -2 +D - n1 - n2) - 3*mUV^4*n2*uvid(3,1,n1, 2 + n2, 1, 0, 1, 1)*rat(1, -2 +D - n1 - n2) - mUV^2*uvid(3,1,n1, 2 + n2, 0, 0, 1, 1)*rat(1, 2 -D + n1 + n2) - mUV^2*n2*uvid(3,1,n1, 2 + n2, 0, 0, 1, 1)*rat(1, 2 -D + n1 + n2) - n1*uvid(3,1,1 + n1, n2, 0, 0, 1, 1)*rat(1, 2 -D + n1 + n2) + n1*uvid(3,1,1 + n1, n2, 1, 0, 1, 0)*rat(1, 2 -D + n1 + n2) + mUV^2*n1*uvid(3,1,1 + n1, n2, 1, 0, 1, 1)*rat(1, 2 -D + n1 + n2) - mUV^2*n1*uvid(3,1,1 + n1, 1 + n2, 0, 0, 1, 1)*rat(1, 2 -D + n1 + n2) - 2*mUV^2*n1*uvid(3,1,1 + n1, 1 + n2, 1, -1, 1, 1)*rat(1, 2 -D + n1 + n2) + mUV^2*n1*uvid(3,1,1 + n1, 1 + n2, 1, 0, 1, 0)*rat(1, 2 -D + n1 + n2) + mUV^4*n1*uvid(3,1,1 + n1, 1 + n2, 1, 0, 1, 1)*rat(1, 2 -D + n1 + n2);
-        id ifmatch->end`i' uvid(3,1,n1?{<0}, 0, 1, 0, 1, 1)                               = n1*uvid(3,1,1 + n1, 0, 0, 0, 1, 1)*rat(1, -2 +D - n1) - n1*uvid(3,1,1 + n1, 0, 1, 0, 1, 0)*rat(1, -2 +D - n1) - 3*mUV^2*uvid(3,1,1 + n1, 0, 1, 0, 1, 1)*rat(1, -2 +D - n1) +D*mUV^2*uvid(3,1,1 + n1, 0, 1, 0, 1, 1)*rat(1, -2 +D - n1) - 2*mUV^2*n1*uvid(3,1,1 + n1, 0, 1, 0, 1, 1)*rat(1, -2 +D - n1) + 2*mUV^2*uvid(3,1,1 + n1, 0, 2, 0, 1, 0)*rat(1, -2 +D - n1) - mUV^2*uvid(3,1,2 + n1, 0, 1, 0, 1, 0)*rat(1, -2 +D - n1) - mUV^2*n1*uvid(3,1,2 + n1, 0, 1, 0, 1, 0)*rat(1, -2 +D - n1) - 3*mUV^4*uvid(3,1,2 + n1, 0, 1, 0, 1, 1)*rat(1, -2 +D - n1) - 3*mUV^4*n1*uvid(3,1,2 + n1, 0, 1, 0, 1, 1)*rat(1, -2 +D - n1) - mUV^2*uvid(3,1,2 + n1, 0, 0, 0, 1, 1)*rat(1, 2 -D + n1) - mUV^2*n1*uvid(3,1,2 + n1, 0, 0, 0, 1, 1)*rat(1, 2 -D + n1);
-        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{<1}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>1}) = uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6) - n4*uvid(3,1,n1, n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6) - (n2*uvid(3,1,n1, 1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3 + n4*uvid(3,1,1 + n1, -1 + n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6) + (n5*uvid(3,1,1 + n1, n2, n3, -1 + n4, 1 + n5, -1 + n6)*rat(1, -1 + n6))/3 - (3*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2 + (D*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3 - (3*n1*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2 + (n2*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/6 - (n5*uvid(3,1,1 + n1, n2, n3, n4, 1 + n5, -2 + n6)*rat(1, -1 + n6))/3 - (2*n4*uvid(3,1,1 + n1, n2, n3, 1 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/3 + (2*n4*uvid(3,1,1 + n1, n2, n3, 1 + n4, n5, -2 + n6)*rat(1, -1 + n6))/3 + (n2*uvid(3,1,1 + n1, 1 + n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/6 + (n2*uvid(3,1,1 + n1, 1 + n2, n3, -1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/3 - (n2*uvid(3,1,1 + n1, 1 + n2, n3, n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/6 + (mUV^2*n2*uvid(3,1,1 + n1, 1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/6 - (uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2 - (n1*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2 + (uvid(3,1,2 + n1, n2, n3, n4, n5, -2 + n6)*rat(1, -1 + n6))/2 + (n1*uvid(3,1,2 + n1, n2, n3, n4, n5, -2 + n6)*rat(1, -1 + n6))/2 - (3*mUV^2*uvid(3,1,2 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2 - (3*mUV^2*n1*uvid(3,1,2 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<0}, n3?{>0}, n4?{>0}, n5?{>1}, n6?{>0}) = uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, n6) + uvid(3,1,n1, 1 + n2, n3, -1 + n4, n5, n6)/3 - uvid(3,1,n1, 1 + n2, n3, n4, n5, -1 + n6)/3 + n4*uvid(3,1,-1 + n1, 1 + n2, n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n5) - (uvid(3,1,-1 + n1, 2 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/3 - (n2*uvid(3,1,-1 + n1, 2 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/3 - n4*uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n5) - (4*uvid(3,1,n1, 1 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/3 + (D*uvid(3,1,n1, 1 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/3 - (4*n2*uvid(3,1,n1, 1 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/3 + (n4*uvid(3,1,n1, 1 + n2, n3, 1 + n4, -2 + n5, n6)*rat(1, -1 + n5))/3 - (n4*uvid(3,1,n1, 1 + n2, n3, 1 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n5))/3 - (uvid(3,1,n1, 2 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/3 - (n2*uvid(3,1,n1, 2 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/3 + (uvid(3,1,n1, 2 + n2, n3, -1 + n4, -1 + n5, n6)*rat(1, -1 + n5))/3 + (n2*uvid(3,1,n1, 2 + n2, n3, -1 + n4, -1 + n5, n6)*rat(1, -1 + n5))/3 + (uvid(3,1,n1, 2 + n2, n3, n4, -2 + n5, n6)*rat(1, -1 + n5))/3 + (n2*uvid(3,1,n1, 2 + n2, n3, n4, -2 + n5, n6)*rat(1, -1 + n5))/3 - (4*mUV^2*uvid(3,1,n1, 2 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/3 - (4*mUV^2*n2*uvid(3,1,n1, 2 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/3;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<0}, n3?{>1}, n4?{>0}, n5?{>0}, n6?{>0}) = uvid(3,1,n1, 1 + n2, n3, n4, -1 + n5, n6) - (3*uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + (D*uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (n1*uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (3*n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + (uvid(3,1,n1, 2 + n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + (n2*uvid(3,1,n1, 2 + n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (uvid(3,1,n1, 2 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n3))/2 - (n2*uvid(3,1,n1, 2 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n3))/2 - (3*mUV^2*uvid(3,1,n1, 2 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (3*mUV^2*n2*uvid(3,1,n1, 2 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3) + (n1*uvid(3,1,1 + n1, 1 + n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + n1*uvid(3,1,1 + n1, 1 + n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n3) - (n1*uvid(3,1,1 + n1, 1 + n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n3))/2 - (mUV^2*n1*uvid(3,1,1 + n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2;
-        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{<1}, n3?{>1}, n4?{>0}, n5?{>0}, n6?{>0}) = uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6) - n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3) - (3*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + (D*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (3*n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (n2*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + (n2*uvid(3,1,1 + n1, 1 + n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + n2*uvid(3,1,1 + n1, 1 + n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n3) - (n2*uvid(3,1,1 + n1, 1 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n3))/2 - (mUV^2*n2*uvid(3,1,1 + n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + (uvid(3,1,2 + n1, n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 + (n1*uvid(3,1,2 + n1, n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n3))/2 - (n1*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n3))/2 - (3*mUV^2*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (3*mUV^2*n1*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>1}) = -1/3*(n2*uvid(3,1,-1 + n1, 1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/mUV^2 + (n5*uvid(3,1,n1, n2, n3, -1 + n4, 1 + n5, -1 + n6)*rat(1, -1 + n6))/(3*mUV^2) + (uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/mUV^2 + (D*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(3*mUV^2) - (n1*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(2*mUV^2) + (n2*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(6*mUV^2) - (n6*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/mUV^2 - (n5*uvid(3,1,n1, n2, n3, n4, 1 + n5, -2 + n6)*rat(1, -1 + n6))/(3*mUV^2) + (n4*uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/(3*mUV^2) - (n4*uvid(3,1,n1, n2, n3, 1 + n4, n5, -2 + n6)*rat(1, -1 + n6))/(3*mUV^2) + (n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(6*mUV^2) + (n2*uvid(3,1,n1, 1 + n2, n3, -1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/(3*mUV^2) - (n2*uvid(3,1,n1, 1 + n2, n3, n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/(6*mUV^2) + (n2*uvid(3,1,n1, 1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/6 + (n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(2*mUV^2) - (n1*uvid(3,1,1 + n1, n2, n3, n4, n5, -2 + n6)*rat(1, -1 + n6))/(2*mUV^2) - (n1*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{>0}, n5?{>1}, n6?{>0}) = uvid(3,1,n1, n2, n3, -1 + n4, n5, n6)/(3*mUV^2) - uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)/(3*mUV^2) - (n2*uvid(3,1,-1 + n1, 1 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) + (uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/mUV^2 + (D*uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) - (n2*uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) - (n5*uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/mUV^2 - (2*n4*uvid(3,1,n1, n2, n3, 1 + n4, -2 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) + (2*n4*uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n5))/(3*mUV^2) + (2*n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) + (n2*uvid(3,1,n1, 1 + n2, n3, -1 + n4, -1 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) - (2*n2*uvid(3,1,n1, 1 + n2, n3, n4, -2 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) - (n2*uvid(3,1,n1, 1 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/3;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{>1}, n5?{>0}, n6?{>0}) = uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)/(3*mUV^2) - uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)/(3*mUV^2) + (2*n2*uvid(3,1,-1 + n1, 1 + n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/(3*mUV^2) - (2*n5*uvid(3,1,n1, n2, n3, -2 + n4, 1 + n5, n6)*rat(1, -1 + n4))/(3*mUV^2) + (uvid(3,1,n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/mUV^2 + (D*uvid(3,1,n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/(3*mUV^2) - (n2*uvid(3,1,n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/(3*mUV^2) - (n4*uvid(3,1,n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/mUV^2 + (2*n5*uvid(3,1,n1, n2, n3, -1 + n4, 1 + n5, -1 + n6)*rat(1, -1 + n4))/(3*mUV^2) - (n2*uvid(3,1,n1, 1 + n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/(3*mUV^2) - (2*n2*uvid(3,1,n1, 1 + n2, n3, -2 + n4, n5, n6)*rat(1, -1 + n4))/(3*mUV^2) + (n2*uvid(3,1,n1, 1 + n2, n3, -1 + n4, -1 + n5, n6)*rat(1, -1 + n4))/(3*mUV^2) - (n2*uvid(3,1,n1, 1 + n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/3;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>1}, n4?{>0}, n5?{>0}, n6?{>0}) = (uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/mUV^2 + (D*uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/(2*mUV^2) - (n1*uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/(2*mUV^2) - (n2*uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/(2*mUV^2) - (n3*uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/mUV^2 - (n2*uvid(3,1,n1, 1 + n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/(2*mUV^2) + (n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n3))/(2*mUV^2) - (n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2 - (n1*uvid(3,1,1 + n1, n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/(2*mUV^2) + (n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n3))/(2*mUV^2) - (n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/2;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>1}) = uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, n6) - n2*uvid(3,1,-1 + n1, 1 + n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6) + n5*uvid(3,1,n1, n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) - (n1*uvid(3,1,n1, n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/2 + (n2*uvid(3,1,n1, n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/2 - n5*uvid(3,1,n1, n2, n3, 1 + n4, 1 + n5, -2 + n6)*rat(1, -1 + n6) - uvid(3,1,n1, n2, n3, 2 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n6) - n4*uvid(3,1,n1, n2, n3, 2 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n6) + uvid(3,1,n1, n2, n3, 2 + n4, n5, -2 + n6)*rat(1, -1 + n6) + n4*uvid(3,1,n1, n2, n3, 2 + n4, n5, -2 + n6)*rat(1, -1 + n6) + (n2*uvid(3,1,n1, 1 + n2, -1 + n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/2 + n2*uvid(3,1,n1, 1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6) - (n2*uvid(3,1,n1, 1 + n2, n3, 1 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/2 + (mUV^2*n2*uvid(3,1,n1, 1 + n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/2 + n1*uvid(3,1,1 + n1, -1 + n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6) - (n1*uvid(3,1,1 + n1, n2, -1 + n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/2 - n1*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6) + (n1*uvid(3,1,1 + n1, n2, n3, 1 + n4, n5, -2 + n6)*rat(1, -1 + n6))/2 - (mUV^2*n1*uvid(3,1,1 + n1, n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/2;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<0}, 1, 1, 1, 1)                         = uvid(3,1,n1, 1 + n2, 0, 1, 1, 1)/2 + uvid(3,1,n1, 1 + n2, 1, 0, 1, 1) - uvid(3,1,n1, 1 + n2, 1, 1, 1, 0)/2 + (mUV^2*uvid(3,1,n1, 1 + n2, 1, 1, 1, 1))/2 + uvid(3,1,-1 + n1, 1 + n2, 1, 0, 2, 1)*rat(1, 1 - n1) + uvid(3,1,-1 + n1, 1 + n2, 1, 1, 0, 2)*rat(1, 1 - n1) + uvid(3,1,-1 + n1, 1 + n2, 1, 2, 1, 0)*rat(1, 1 - n1) + uvid(3,1,-2 + n1, 2 + n2, 1, 1, 1, 1)*rat(1, -1 + n1) + n2*uvid(3,1,-2 + n1, 2 + n2, 1, 1, 1, 1)*rat(1, -1 + n1) + uvid(3,1,-1 + n1, 1 + n2, 1, 0, 1, 2)*rat(1, -1 + n1) - uvid(3,1,-1 + n1, 1 + n2, 1, 1, 1, 1)*rat(1, -1 + n1) + (n1*uvid(3,1,-1 + n1, 1 + n2, 1, 1, 1, 1)*rat(1, -1 + n1))/2 - (n2*uvid(3,1,-1 + n1, 1 + n2, 1, 1, 1, 1)*rat(1, -1 + n1))/2 + uvid(3,1,-1 + n1, 1 + n2, 1, 1, 2, 0)*rat(1, -1 + n1) + uvid(3,1,-1 + n1, 1 + n2, 1, 2, 0, 1)*rat(1, -1 + n1) - (uvid(3,1,-1 + n1, 2 + n2, 0, 1, 1, 1)*rat(1, -1 + n1))/2 - (n2*uvid(3,1,-1 + n1, 2 + n2, 0, 1, 1, 1)*rat(1, -1 + n1))/2 - uvid(3,1,-1 + n1, 2 + n2, 1, 0, 1, 1)*rat(1, -1 + n1) - n2*uvid(3,1,-1 + n1, 2 + n2, 1, 0, 1, 1)*rat(1, -1 + n1) + (uvid(3,1,-1 + n1, 2 + n2, 1, 1, 0, 1)*rat(1, -1 + n1))/2 + (n2*uvid(3,1,-1 + n1, 2 + n2, 1, 1, 0, 1)*rat(1, -1 + n1))/2 - (mUV^2*uvid(3,1,-1 + n1, 2 + n2, 1, 1, 1, 1)*rat(1, -1 + n1))/2 - (mUV^2*n2*uvid(3,1,-1 + n1, 2 + n2, 1, 1, 1, 1)*rat(1, -1 + n1))/2;
-        id ifmatch->end`i' uvid(3,1,n1?{<0}, 0, 1, 1, 1, 1)                               = -3*mUV^2*uvid(3,1,1 + n1, 0, 1, 1, 1, 1)*rat(1, -2 +D - n1) +D*mUV^2*uvid(3,1,1 + n1, 0, 1, 1, 1, 1)*rat(1, -2 +D - n1) - 2*mUV^2*n1*uvid(3,1,1 + n1, 0, 1, 1, 1, 1)*rat(1, -2 +D - n1) + 2*mUV^2*uvid(3,1,1 + n1, 0, 2, 1, 1, 0)*rat(1, -2 +D - n1) - n1*uvid(3,1,1 + n1, 0, 0, 1, 1, 1)*rat(1, 2 -D + n1) + n1*uvid(3,1,1 + n1, 0, 1, 1, 1, 0)*rat(1, 2 -D + n1) - mUV^2*uvid(3,1,2 + n1, 0, 0, 1, 1, 1)*rat(1, 2 -D + n1) - mUV^2*n1*uvid(3,1,2 + n1, 0, 0, 1, 1, 1)*rat(1, 2 -D + n1) + mUV^2*uvid(3,1,2 + n1, 0, 1, 1, 1, 0)*rat(1, 2 -D + n1) + mUV^2*n1*uvid(3,1,2 + n1, 0, 1, 1, 1, 0)*rat(1, 2 -D + n1) + 3*mUV^4*uvid(3,1,2 + n1, 0, 1, 1, 1, 1)*rat(1, 2 -D + n1) + 3*mUV^4*n1*uvid(3,1,2 + n1, 0, 1, 1, 1, 1)*rat(1, 2 -D + n1);
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{<0}, n6?{>1}) = uvid(3,1,n1, n2, n3, -1 + n4, 1 + n5, n6) - uvid(3,1,n1, n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) + (D*uvid(3,1,n1, n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6))/2 - n2*uvid(3,1,n1, n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) - n3*uvid(3,1,n1, n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) + n4*uvid(3,1,n1, n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) - n5*uvid(3,1,n1, n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) - mUV^2*uvid(3,1,n1, n2, n3, n4, 2 + n5, -1 + n6)*rat(1, -1 + n6) - mUV^2*n5*uvid(3,1,n1, n2, n3, n4, 2 + n5, -1 + n6)*rat(1, -1 + n6) + mUV^2*n4*uvid(3,1,n1, n2, n3, 1 + n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) - mUV^2*n3*uvid(3,1,n1, n2, 1 + n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) - mUV^2*n2*uvid(3,1,n1, 1 + n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) - n1*uvid(3,1,1 + n1, -1 + n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) + n1*uvid(3,1,1 + n1, n2, n3, -1 + n4, 1 + n5, -1 + n6)*rat(1, -1 + n6);
-        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{<1}, n6?{>1}) = uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6) - n5*uvid(3,1,1 + n1, -1 + n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) + n5*uvid(3,1,1 + n1, n2, -1 + n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) - uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6) + (D*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/2 - n1*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6) - n2*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6) + n3*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6) - n4*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6) - mUV^2*n4*uvid(3,1,1 + n1, n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6) + mUV^2*n3*uvid(3,1,1 + n1, n2, 1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6) - mUV^2*n2*uvid(3,1,1 + n1, 1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6) - mUV^2*uvid(3,1,2 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6) - mUV^2*n1*uvid(3,1,2 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6);
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>0}, n3?{>0}, n4?{>1}, n5?{<0}, n6?{>0}) = uvid(3,1,n1, n2, n3, n4, 1 + n5, -1 + n6) - mUV^2*uvid(3,1,n1, n2, n3, n4, 1 + n5, n6) - uvid(3,1,n1, n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) + 2*D*uvid(3,1,n1, n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) - n1*uvid(3,1,n1, n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) - 2*n2*uvid(3,1,n1, n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) - 2*n3*uvid(3,1,n1, n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) - n4*uvid(3,1,n1, n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) - 2*n5*uvid(3,1,n1, n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) - 2*mUV^2*uvid(3,1,n1, n2, n3, -1 + n4, 2 + n5, n6)*rat(1, -1 + n4) - 2*mUV^2*n5*uvid(3,1,n1, n2, n3, -1 + n4, 2 + n5, n6)*rat(1, -1 + n4) - 2*mUV^2*n3*uvid(3,1,n1, n2, 1 + n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) - 2*mUV^2*n2*uvid(3,1,n1, 1 + n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) - n1*uvid(3,1,1 + n1, n2, -1 + n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) + n1*uvid(3,1,1 + n1, n2, n3, -1 + n4, 1 + n5, -1 + n6)*rat(1, -1 + n4) - mUV^2*n1*uvid(3,1,1 + n1, n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4);
-        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{>0}, n3?{>0}, n4?{>1}, n5?{<1}, n6?{>0}) = uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, n6) + mUV^2*uvid(3,1,1 + n1, n2, n3, n4, n5, n6) + n5*uvid(3,1,1 + n1, -1 + n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) - n5*uvid(3,1,1 + n1, n2, -1 + n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) - uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4) -D*uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4) + 2*n2*uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4) + n4*uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4) + n5*uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4) + mUV^2*n5*uvid(3,1,1 + n1, n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) + 2*mUV^2*n2*uvid(3,1,1 + n1, 1 + n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4);
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>0}, n3?{>1}, n4?{>0}, n5?{<0}, n6?{>0}) = uvid(3,1,n1, -1 + n2, n3, n4, 1 + n5, n6) + mUV^2*uvid(3,1,n1, n2, n3, n4, 1 + n5, n6) - uvid(3,1,n1, n2, -1 + n3, n4, 1 + n5, n6)*rat(1, -1 + n3) -D*uvid(3,1,n1, n2, -1 + n3, n4, 1 + n5, n6)*rat(1, -1 + n3) + n1*uvid(3,1,n1, n2, -1 + n3, n4, 1 + n5, n6)*rat(1, -1 + n3) + 2*n2*uvid(3,1,n1, n2, -1 + n3, n4, 1 + n5, n6)*rat(1, -1 + n3) + n3*uvid(3,1,n1, n2, -1 + n3, n4, 1 + n5, n6)*rat(1, -1 + n3) + 2*mUV^2*n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, 1 + n5, n6)*rat(1, -1 + n3) + n1*uvid(3,1,1 + n1, -1 + n2, -1 + n3, n4, 1 + n5, n6)*rat(1, -1 + n3) - n1*uvid(3,1,1 + n1, n2, -1 + n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n3) + mUV^2*n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, 1 + n5, n6)*rat(1, -1 + n3);
-        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{>0}, n3?{>1}, n4?{>0}, n5?{<1}, n6?{>0}) = uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6) - mUV^2*uvid(3,1,1 + n1, n2, n3, n4, n5, n6) - n5*uvid(3,1,1 + n1, n2, -1 + n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n3) - uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3) + 2*D*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3) - 2*n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3) - 2*n2*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3) - n3*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3) - 2*n4*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3) - n5*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3) + n5*uvid(3,1,1 + n1, n2, -1 + n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n3) - mUV^2*n5*uvid(3,1,1 + n1, n2, -1 + n3, n4, 1 + n5, n6)*rat(1, -1 + n3) - 2*mUV^2*n4*uvid(3,1,1 + n1, n2, -1 + n3, 1 + n4, n5, n6)*rat(1, -1 + n3) - 2*mUV^2*n2*uvid(3,1,1 + n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3) - 2*mUV^2*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3) - 2*mUV^2*n1*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3);
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>1}, n3?{>0}, n4?{>0}, n5?{<0}, n6?{>0}) = uvid(3,1,n1, n2, -1 + n3, n4, 1 + n5, n6) + mUV^2*uvid(3,1,n1, n2, n3, n4, 1 + n5, n6) - uvid(3,1,n1, -1 + n2, n3, n4, 1 + n5, n6)*rat(1, -1 + n2) -D*uvid(3,1,n1, -1 + n2, n3, n4, 1 + n5, n6)*rat(1, -1 + n2) + n1*uvid(3,1,n1, -1 + n2, n3, n4, 1 + n5, n6)*rat(1, -1 + n2) + n2*uvid(3,1,n1, -1 + n2, n3, n4, 1 + n5, n6)*rat(1, -1 + n2) + 2*n3*uvid(3,1,n1, -1 + n2, n3, n4, 1 + n5, n6)*rat(1, -1 + n2) + 2*mUV^2*n3*uvid(3,1,n1, -1 + n2, 1 + n3, n4, 1 + n5, n6)*rat(1, -1 + n2) + n1*uvid(3,1,1 + n1, -1 + n2, -1 + n3, n4, 1 + n5, n6)*rat(1, -1 + n2) - n1*uvid(3,1,1 + n1, -1 + n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n2) + mUV^2*n1*uvid(3,1,1 + n1, -1 + n2, n3, n4, 1 + n5, n6)*rat(1, -1 + n2);
-        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{>1}, n3?{>0}, n4?{>0}, n5?{<1}, n6?{>0}) = uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, n6) + mUV^2*uvid(3,1,1 + n1, n2, n3, n4, n5, n6) + n5*uvid(3,1,1 + n1, -1 + n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n2) - uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2) -D*uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2) + n2*uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2) + 2*n4*uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2) + n5*uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2) - n5*uvid(3,1,1 + n1, -1 + n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n2) + mUV^2*n5*uvid(3,1,1 + n1, -1 + n2, n3, n4, 1 + n5, n6)*rat(1, -1 + n2) + 2*mUV^2*n4*uvid(3,1,1 + n1, -1 + n2, n3, 1 + n4, n5, n6)*rat(1, -1 + n2);
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{<1}, n6?{>1}) = (uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/mUV^2 + (3*D*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(2*mUV^2) - (n1*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/mUV^2 - (n2*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/mUV^2 - (n3*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/mUV^2 - (n4*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/mUV^2 - (n5*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/mUV^2 - (n6*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/mUV^2 - n5*uvid(3,1,n1, n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) - n4*uvid(3,1,n1, n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n6) - n3*uvid(3,1,n1, n2, 1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6) - n2*uvid(3,1,n1, 1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6) - n1*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6);
-        id ifmatch->end`i' uvid(3,1,0, n2?{>0}, n3?{>0}, n4?{>2}, 0, 1)                   = -1/2*(n3*uvid(3,1,0, -1 + n2, 1 + n3, -1 + n4, 0, 1)*rat(1, -1 + n4))/mUV^2 + (uvid(3,1,0, n2, n3, -1 + n4, 0, 1)*rat(1, -1 + n4))/mUV^2 + (D*uvid(3,1,0, n2, n3, -1 + n4, 0, 1)*rat(1, -1 + n4))/mUV^2 - (n2*uvid(3,1,0, n2, n3, -1 + n4, 0, 1)*rat(1, -1 + n4))/mUV^2 - (n3*uvid(3,1,0, n2, n3, -1 + n4, 0, 1)*rat(1, -1 + n4))/(2*mUV^2) - (n4*uvid(3,1,0, n2, n3, -1 + n4, 0, 1)*rat(1, -1 + n4))/mUV^2 + (n3*uvid(3,1,0, n2, 1 + n3, -1 + n4, 0, 0)*rat(1, -1 + n4))/(2*mUV^2) - n3*uvid(3,1,0, n2, 1 + n3, -1 + n4, 0, 1)*rat(1, -1 + n4) - n2*uvid(3,1,0, 1 + n2, n3, -1 + n4, 0, 1)*rat(1, -1 + n4) + (n3*uvid(3,1,0, n2, 1 + n3, -2 + n4, 0, 1)*rat(1, -2 + n4)*rat(1, -1 + n4))/mUV^2 + (D*n3*uvid(3,1,0, n2, 1 + n3, -2 + n4, 0, 1)*rat(1, -2 + n4)*rat(1, -1 + n4))/(2*mUV^2) - (n2*n3*uvid(3,1,0, n2, 1 + n3, -2 + n4, 0, 1)*rat(1, -2 + n4)*rat(1, -1 + n4))/mUV^2 - (n3*n4*uvid(3,1,0, n2, 1 + n3, -2 + n4, 0, 1)*rat(1, -2 + n4)*rat(1, -1 + n4))/(2*mUV^2) - n2*n3*uvid(3,1,0, 1 + n2, 1 + n3, -2 + n4, 0, 1)*rat(1, -2 + n4)*rat(1, -1 + n4);
-        id ifmatch->end`i' uvid(3,1,0, n2?{>0}, n3?{>1}, 2, 0, 1)                         = -1/2*uvid(3,1,0, -1 + n2, n3, 2, 0, 1)/mUV^2 - uvid(3,1,0, n2, n3, 1, 0, 1)/(2*mUV^2) + (D*uvid(3,1,0, n2, n3, 1, 0, 1))/mUV^2 - (n2*uvid(3,1,0, n2, n3, 1, 0, 1))/mUV^2 - (n3*uvid(3,1,0, n2, n3, 1, 0, 1))/mUV^2 + uvid(3,1,0, n2, n3, 2, 0, 0)/(2*mUV^2) - n3*uvid(3,1,0, n2, 1 + n3, 1, 0, 1) - n2*uvid(3,1,0, 1 + n2, n3, 1, 0, 1) + (uvid(3,1,0, n2, -1 + n3, 2, 0, 1)*rat(1, -1 + n3))/(2*mUV^2) + (D*uvid(3,1,0, n2, -1 + n3, 2, 0, 1)*rat(1, -1 + n3))/(2*mUV^2) - (n2*uvid(3,1,0, n2, -1 + n3, 2, 0, 1)*rat(1, -1 + n3))/mUV^2 - (n3*uvid(3,1,0, n2, -1 + n3, 2, 0, 1)*rat(1, -1 + n3))/(2*mUV^2) - n2*uvid(3,1,0, 1 + n2, -1 + n3, 2, 0, 1)*rat(1, -1 + n3);
-        id ifmatch->end`i' uvid(3,1,0, n2?{>0}, n3?{>2}, 1, 0, 1)                         = (uvid(3,1,0, n2, -1 + n3, 1, 0, 1)*rat(1, -1 + n3))/mUV^2 + (D*uvid(3,1,0, n2, -1 + n3, 1, 0, 1)*rat(1, -1 + n3))/(2*mUV^2) - (n3*uvid(3,1,0, n2, -1 + n3, 1, 0, 1)*rat(1, -1 + n3))/mUV^2 + (n2*uvid(3,1,0, 1 + n2, -2 + n3, 1, 0, 1)*rat(1, -2 + n3)*rat(1, -1 + n3))/mUV^2 - (D*n2*uvid(3,1,0, 1 + n2, -2 + n3, 1, 0, 1)*rat(1, -2 + n3)*rat(1, -1 + n3))/(2*mUV^2) + (n2^2*uvid(3,1,0, 1 + n2, -2 + n3, 1, 0, 1)*rat(1, -2 + n3)*rat(1, -1 + n3))/mUV^2 + n2*uvid(3,1,0, 2 + n2, -2 + n3, 1, 0, 1)*rat(1, -2 + n3)*rat(1, -1 + n3) + n2^2*uvid(3,1,0, 2 + n2, -2 + n3, 1, 0, 1)*rat(1, -2 + n3)*rat(1, -1 + n3);
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, 1, 1, 1, n5?{<0}, 1)                         = 2*mUV^2*uvid(3,1,n1, 0, 2, 1, 1 + n5, 1)*rat(1, -8 + 3*D - 2*n1 - 2*n5) + 2*mUV^2*uvid(3,1,n1, 1, 1, 0, 1 + n5, 2)*rat(1, -8 + 3*D - 2*n1 - 2*n5) - 6*mUV^2*uvid(3,1,n1, 1, 1, 1, 1 + n5, 1)*rat(1, -8 + 3*D - 2*n1 - 2*n5) +D*mUV^2*uvid(3,1,n1, 1, 1, 1, 1 + n5, 1)*rat(1, -8 + 3*D - 2*n1 - 2*n5) + 2*mUV^2*n1*uvid(3,1,n1, 1, 1, 1, 1 + n5, 1)*rat(1, -8 + 3*D - 2*n1 - 2*n5) - 4*mUV^2*n5*uvid(3,1,n1, 1, 1, 1, 1 + n5, 1)*rat(1, -8 + 3*D - 2*n1 - 2*n5) + 2*mUV^2*uvid(3,1,n1, 1, 1, 2, 1 + n5, 0)*rat(1, -8 + 3*D - 2*n1 - 2*n5) + 2*mUV^2*uvid(3,1,n1, 2, 0, 1, 1 + n5, 1)*rat(1, -8 + 3*D - 2*n1 - 2*n5) + 6*mUV^4*uvid(3,1,n1, 1, 1, 1, 2 + n5, 1)*rat(1, 8 - 3*D + 2*n1 + 2*n5) + 6*mUV^4*n5*uvid(3,1,n1, 1, 1, 1, 2 + n5, 1)*rat(1, 8 - 3*D + 2*n1 + 2*n5) - 2*mUV^2*n1*uvid(3,1,1 + n1, 1, 1, 1, n5, 1)*rat(1, 8 - 3*D + 2*n1 + 2*n5) - 2*mUV^4*n1*uvid(3,1,1 + n1, 1, 1, 1, 1 + n5, 1)*rat(1, 8 - 3*D + 2*n1 + 2*n5);
-        id ifmatch->end`i' uvid(3,1,0, n2?{>0}, 1, 2, 0, 1)                               = -3*n2*uvid(3,1,0, 1 + n2, 1, 1, 0, 1) + (uvid(3,1,0, -1 + n2, 1, 2, 0, 1)*rat(1, -2 +D - n2))/mUV^2 - (D*uvid(3,1,0, -1 + n2, 1, 2, 0, 1)*rat(1, -2 +D - n2))/mUV^2 + (n2*uvid(3,1,0, -1 + n2, 1, 2, 0, 1)*rat(1, -2 +D - n2))/mUV^2 + uvid(3,1,0, n2, 0, 2, 0, 2)*rat(1, -2 +D - n2) + (3*uvid(3,1,0, n2, 1, 1, 0, 1)*rat(1, -2 +D - n2))/mUV^2 - (4*D*uvid(3,1,0, n2, 1, 1, 0, 1)*rat(1, -2 +D - n2))/mUV^2 + (3*D^2*uvid(3,1,0, n2, 1, 1, 0, 1)*rat(1, -2 +D - n2))/(2*mUV^2) + (6*n2*uvid(3,1,0, n2, 1, 1, 0, 1)*rat(1, -2 +D - n2))/mUV^2 - (9*D*n2*uvid(3,1,0, n2, 1, 1, 0, 1)*rat(1, -2 +D - n2))/(2*mUV^2) + (3*n2^2*uvid(3,1,0, n2, 1, 1, 0, 1)*rat(1, -2 +D - n2))/mUV^2 + uvid(3,1,0, n2, 2, 2, 0, 0)*rat(1, -2 +D - n2);
-        id ifmatch->end`i' uvid(3,1,0, n2?{>0}, 2, 1, 0, 1)                               = -3*n2*uvid(3,1,0, 1 + n2, 1, 1, 0, 1) + (uvid(3,1,0, -1 + n2, 2, 1, 0, 1)*rat(1, -2 +D - n2))/mUV^2 - (D*uvid(3,1,0, -1 + n2, 2, 1, 0, 1)*rat(1, -2 +D - n2))/mUV^2 + (n2*uvid(3,1,0, -1 + n2, 2, 1, 0, 1)*rat(1, -2 +D - n2))/mUV^2 + (3*uvid(3,1,0, n2, 1, 1, 0, 1)*rat(1, -2 +D - n2))/mUV^2 - (4*D*uvid(3,1,0, n2, 1, 1, 0, 1)*rat(1, -2 +D - n2))/mUV^2 + (3*D^2*uvid(3,1,0, n2, 1, 1, 0, 1)*rat(1, -2 +D - n2))/(2*mUV^2) + (6*n2*uvid(3,1,0, n2, 1, 1, 0, 1)*rat(1, -2 +D - n2))/mUV^2 - (9*D*n2*uvid(3,1,0, n2, 1, 1, 0, 1)*rat(1, -2 +D - n2))/(2*mUV^2) + (3*n2^2*uvid(3,1,0, n2, 1, 1, 0, 1)*rat(1, -2 +D - n2))/mUV^2 + uvid(3,1,0, n2, 2, 0, 0, 2)*rat(1, -2 +D - n2) + uvid(3,1,0, n2, 2, 2, 0, 0)*rat(1, -2 +D - n2);
-        id ifmatch->end`i' uvid(3,1,0, n2?{>1}, 1, 1, 0, 1)                               = (uvid(3,1,0, n2, 0, 1, 0, 2)*rat(1, -1 +D - n2))/4 - (uvid(3,1,0, n2, 1, 0, 0, 2)*rat(1, -1 +D - n2))/4 + (uvid(3,1,0, n2, 2, 0, 0, 1)*rat(1, -1 +D - n2))/2 - (uvid(3,1,0, n2, 2, 1, 0, 0)*rat(1, -1 +D - n2))/2 - (uvid(3,1,0, -1 + n2, 1, 1, 0, 1)*rat(1, -1 +D - n2)*rat(1, -1 + n2))/(4*mUV^2) + (5*D*uvid(3,1,0, -1 + n2, 1, 1, 0, 1)*rat(1, -1 +D - n2)*rat(1, -1 + n2))/(8*mUV^2) + (3*D^2*uvid(3,1,0, -1 + n2, 1, 1, 0, 1)*rat(1, -1 +D - n2)*rat(1, -1 + n2))/(8*mUV^2) - (3*n2*uvid(3,1,0, -1 + n2, 1, 1, 0, 1)*rat(1, -1 +D - n2)*rat(1, -1 + n2))/(8*mUV^2) - (11*D*n2*uvid(3,1,0, -1 + n2, 1, 1, 0, 1)*rat(1, -1 +D - n2)*rat(1, -1 + n2))/(8*mUV^2) + (n2^2*uvid(3,1,0, -1 + n2, 1, 1, 0, 1)*rat(1, -1 +D - n2)*rat(1, -1 + n2))/mUV^2 + (3*D*uvid(3,1,0, -2 + n2, 2, 1, 0, 1)*rat(1, -1 + n2)*rat(1, 1 -D + n2))/(8*mUV^2) - (3*n2*uvid(3,1,0, -2 + n2, 2, 1, 0, 1)*rat(1, -1 + n2)*rat(1, 1 -D + n2))/(8*mUV^2) + (3*uvid(3,1,0, -1 + n2, 2, 0, 0, 1)*rat(1, -1 + n2)*rat(1, 1 -D + n2))/(4*mUV^2) - (3*n2*uvid(3,1,0, -1 + n2, 2, 0, 0, 1)*rat(1, -1 + n2)*rat(1, 1 -D + n2))/(8*mUV^2) - (3*uvid(3,1,0, -1 + n2, 2, 1, 0, 0)*rat(1, -1 + n2)*rat(1, 1 -D + n2))/(4*mUV^2) + (3*n2*uvid(3,1,0, -1 + n2, 2, 1, 0, 0)*rat(1, -1 + n2)*rat(1, 1 -D + n2))/(8*mUV^2) - (3*uvid(3,1,0, -1 + n2, 2, 2, 0, 0)*rat(1, -1 + n2)*rat(1, 1 -D + n2))/4;
-        id ifmatch->end`i' uvid(3,1,n1?{<0}, 1, 1, 1, 0, 1)                               = 2*mUV^2*uvid(3,1,1 + n1, 0, 1, 2, 0, 1)*rat(1, -8 + 3*D - 2*n1) + 2*mUV^2*uvid(3,1,1 + n1, 1, 0, 1, 0, 2)*rat(1, -8 + 3*D - 2*n1) - 6*mUV^2*uvid(3,1,1 + n1, 1, 1, 1, 0, 1)*rat(1, -8 + 3*D - 2*n1) +D*mUV^2*uvid(3,1,1 + n1, 1, 1, 1, 0, 1)*rat(1, -8 + 3*D - 2*n1) - 4*mUV^2*n1*uvid(3,1,1 + n1, 1, 1, 1, 0, 1)*rat(1, -8 + 3*D - 2*n1) + 2*mUV^2*uvid(3,1,1 + n1, 1, 2, 1, 0, 0)*rat(1, -8 + 3*D - 2*n1) + 2*mUV^2*uvid(3,1,1 + n1, 2, 1, 0, 0, 1)*rat(1, -8 + 3*D - 2*n1) - 6*mUV^4*uvid(3,1,2 + n1, 1, 1, 1, 0, 1)*rat(1, -8 + 3*D - 2*n1) - 6*mUV^4*n1*uvid(3,1,2 + n1, 1, 1, 1, 0, 1)*rat(1, -8 + 3*D - 2*n1);
-        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>1}) = uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6) + (2*uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, n6))/3 - (2*uvid(3,1,1 + n1, n2, n3, n4, -1 + n5, n6))/3 - n5*uvid(3,1,1 + n1, -1 + n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) + n3*uvid(3,1,1 + n1, -1 + n2, 1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6) + n5*uvid(3,1,1 + n1, n2, -1 + n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) - (2*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3 + (D*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/6 - (2*n1*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3 + (n4*uvid(3,1,1 + n1, n2, n3, 1 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/3 - (n4*uvid(3,1,1 + n1, n2, n3, 1 + n4, n5, -2 + n6)*rat(1, -1 + n6))/3 - n3*uvid(3,1,1 + n1, n2, 1 + n3, n4, -1 + n5, -1 + n6)*rat(1, -1 + n6) - n2*uvid(3,1,1 + n1, 1 + n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6) + n2*uvid(3,1,1 + n1, 1 + n2, n3, n4, -1 + n5, -1 + n6)*rat(1, -1 + n6) + (uvid(3,1,2 + n1, -1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3 + (n1*uvid(3,1,2 + n1, -1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3 - (2*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3 - (2*n1*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3 - (uvid(3,1,2 + n1, n2, n3, -1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/3 - (n1*uvid(3,1,2 + n1, n2, n3, -1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/3 + (2*uvid(3,1,2 + n1, n2, n3, n4, n5, -2 + n6)*rat(1, -1 + n6))/3 + (2*n1*uvid(3,1,2 + n1, n2, n3, n4, n5, -2 + n6)*rat(1, -1 + n6))/3 - (2*mUV^2*uvid(3,1,2 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3 - (2*mUV^2*n1*uvid(3,1,2 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3;
-        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{>0}, n3?{>0}, n4?{>1}, n5?{>0}, n6?{>0}) = uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, n6) - (2*uvid(3,1,1 + n1, n2, n3, n4, -1 + n5, n6))/3 + (2*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6))/3 + n5*uvid(3,1,1 + n1, -1 + n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) - n3*uvid(3,1,1 + n1, -1 + n2, 1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n4) - n5*uvid(3,1,1 + n1, n2, -1 + n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) - (n6*uvid(3,1,1 + n1, n2, n3, -2 + n4, n5, 1 + n6)*rat(1, -1 + n4))/3 + (n6*uvid(3,1,1 + n1, n2, n3, -1 + n4, -1 + n5, 1 + n6)*rat(1, -1 + n4))/3 - (2*uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/3 + (D*uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/6 - (2*n1*uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/3 + n3*uvid(3,1,1 + n1, n2, 1 + n3, -1 + n4, -1 + n5, n6)*rat(1, -1 + n4) + n2*uvid(3,1,1 + n1, 1 + n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n4) - n2*uvid(3,1,1 + n1, 1 + n2, n3, -1 + n4, -1 + n5, n6)*rat(1, -1 + n4) - (2*uvid(3,1,2 + n1, -1 + n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/3 - (2*n1*uvid(3,1,2 + n1, -1 + n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/3 + (uvid(3,1,2 + n1, n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/3 + (n1*uvid(3,1,2 + n1, n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/3 + (2*uvid(3,1,2 + n1, n2, n3, -2 + n4, n5, n6)*rat(1, -1 + n4))/3 + (2*n1*uvid(3,1,2 + n1, n2, n3, -2 + n4, n5, n6)*rat(1, -1 + n4))/3 - (uvid(3,1,2 + n1, n2, n3, -1 + n4, n5, -1 + n6)*rat(1, -1 + n4))/3 - (n1*uvid(3,1,2 + n1, n2, n3, -1 + n4, n5, -1 + n6)*rat(1, -1 + n4))/3 - (2*mUV^2*uvid(3,1,2 + n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/3 - (2*mUV^2*n1*uvid(3,1,2 + n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/3;
-        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{>0}, n3?{>1}, n4?{>0}, n5?{>0}, n6?{>0}) = (2*uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, n6))/3 - (2*uvid(3,1,1 + n1, n2, n3, n4, -1 + n5, n6))/3 + uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6) + n6*uvid(3,1,1 + n1, n2, -1 + n3, -1 + n4, n5, 1 + n6)*rat(1, -1 + n3) - n5*uvid(3,1,1 + n1, n2, -1 + n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n3) - n6*uvid(3,1,1 + n1, n2, -1 + n3, n4, -1 + n5, 1 + n6)*rat(1, -1 + n3) - (2*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/3 + (D*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/6 - (2*n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/3 + n5*uvid(3,1,1 + n1, n2, -1 + n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n3) + n4*uvid(3,1,1 + n1, n2, -1 + n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n3) - n4*uvid(3,1,1 + n1, n2, -1 + n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n3) - (n2*uvid(3,1,1 + n1, 1 + n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/3 + (n2*uvid(3,1,1 + n1, 1 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n3))/3 - (uvid(3,1,2 + n1, -1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/3 - (n1*uvid(3,1,2 + n1, -1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/3 + (2*uvid(3,1,2 + n1, n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/3 + (2*n1*uvid(3,1,2 + n1, n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/3 + (uvid(3,1,2 + n1, n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n3))/3 + (n1*uvid(3,1,2 + n1, n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n3))/3 - (2*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n3))/3 - (2*n1*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n3))/3 - (2*mUV^2*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/3 - (2*mUV^2*n1*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/3;
-        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{>1}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>0}) = (2*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6))/3 + uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, n6) - (2*uvid(3,1,1 + n1, n2, n3, n4, -1 + n5, n6))/3 - (n3*uvid(3,1,1 + n1, -2 + n2, 1 + n3, n4, n5, n6)*rat(1, -1 + n2))/3 - n6*uvid(3,1,1 + n1, -1 + n2, n3, -1 + n4, n5, 1 + n6)*rat(1, -1 + n2) + n5*uvid(3,1,1 + n1, -1 + n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n2) + n6*uvid(3,1,1 + n1, -1 + n2, n3, n4, -1 + n5, 1 + n6)*rat(1, -1 + n2) - (2*uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/3 + (D*uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/6 - (2*n1*uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/3 - n5*uvid(3,1,1 + n1, -1 + n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n2) - n4*uvid(3,1,1 + n1, -1 + n2, n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n2) + n4*uvid(3,1,1 + n1, -1 + n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n2) + (n3*uvid(3,1,1 + n1, -1 + n2, 1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n2))/3 + (2*uvid(3,1,2 + n1, -2 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/3 + (2*n1*uvid(3,1,2 + n1, -2 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/3 - (uvid(3,1,2 + n1, -1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n2))/3 - (n1*uvid(3,1,2 + n1, -1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n2))/3 - (2*uvid(3,1,2 + n1, -1 + n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n2))/3 - (2*n1*uvid(3,1,2 + n1, -1 + n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n2))/3 + (uvid(3,1,2 + n1, -1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n2))/3 + (n1*uvid(3,1,2 + n1, -1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n2))/3 - (2*mUV^2*uvid(3,1,2 + n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/3 - (2*mUV^2*n1*uvid(3,1,2 + n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/3;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>1}) = uvid(3,1,n1, n2, n3, -1 + n4, n5, n6)/(3*mUV^2) - uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)/(3*mUV^2) + (uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/mUV^2 + (D*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(3*mUV^2) - (n1*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(3*mUV^2) - (n6*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/mUV^2 + (2*n4*uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/(3*mUV^2) - (2*n4*uvid(3,1,n1, n2, n3, 1 + n4, n5, -2 + n6)*rat(1, -1 + n6))/(3*mUV^2) - (n1*uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(3*mUV^2) + (2*n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(3*mUV^2) + (n1*uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/(3*mUV^2) - (2*n1*uvid(3,1,1 + n1, n2, n3, n4, n5, -2 + n6)*rat(1, -1 + n6))/(3*mUV^2) - (n1*uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{>1}, n6?{>0}) = (n3*uvid(3,1,n1, -1 + n2, 1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) + (n6*uvid(3,1,n1, n2, n3, -1 + n4, -1 + n5, 1 + n6)*rat(1, -1 + n5))/(3*mUV^2) - (n6*uvid(3,1,n1, n2, n3, n4, -2 + n5, 1 + n6)*rat(1, -1 + n5))/(3*mUV^2) + (uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/mUV^2 + (D*uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(6*mUV^2) + (n1*uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) - (n5*uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/mUV^2 - (n4*uvid(3,1,n1, n2, n3, 1 + n4, -2 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) + (n4*uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n5))/(3*mUV^2) - (n3*uvid(3,1,n1, n2, 1 + n3, n4, -2 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) + (n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) - (n2*uvid(3,1,n1, 1 + n2, n3, n4, -2 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) + (n1*uvid(3,1,1 + n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/3;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>0}, n3?{>0}, n4?{>1}, n5?{>0}, n6?{>0}) = -1/3*uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)/mUV^2 + uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)/(3*mUV^2) - (2*n6*uvid(3,1,n1, n2, n3, -2 + n4, n5, 1 + n6)*rat(1, -1 + n4))/(3*mUV^2) + (2*n6*uvid(3,1,n1, n2, n3, -1 + n4, -1 + n5, 1 + n6)*rat(1, -1 + n4))/(3*mUV^2) + (uvid(3,1,n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/mUV^2 + (D*uvid(3,1,n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/(3*mUV^2) - (n1*uvid(3,1,n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/(3*mUV^2) - (n4*uvid(3,1,n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/mUV^2 + (2*n1*uvid(3,1,1 + n1, -1 + n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/(3*mUV^2) - (n1*uvid(3,1,1 + n1, n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/(3*mUV^2) - (2*n1*uvid(3,1,1 + n1, n2, n3, -2 + n4, n5, n6)*rat(1, -1 + n4))/(3*mUV^2) + (n1*uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, -1 + n6)*rat(1, -1 + n4))/(3*mUV^2) - (n1*uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/3;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>0}, n3?{>1}, n4?{>0}, n5?{>0}, n6?{>0}) = uvid(3,1,n1, -1 + n2, n3, n4, n5, n6)/(3*mUV^2) - uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)/(3*mUV^2) + (uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/mUV^2 + (D*uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/(3*mUV^2) - (n1*uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/(3*mUV^2) - (n3*uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/mUV^2 - (2*n2*uvid(3,1,n1, 1 + n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/(3*mUV^2) + (2*n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n3))/(3*mUV^2) + (n1*uvid(3,1,1 + n1, -1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/(3*mUV^2) - (2*n1*uvid(3,1,1 + n1, n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/(3*mUV^2) - (n1*uvid(3,1,1 + n1, n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n3))/(3*mUV^2) + (2*n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n3))/(3*mUV^2) - (n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/3;
-        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>1}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>0}) = uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)/(3*mUV^2) - uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)/(3*mUV^2) - (2*n3*uvid(3,1,n1, -2 + n2, 1 + n3, n4, n5, n6)*rat(1, -1 + n2))/(3*mUV^2) + (uvid(3,1,n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/mUV^2 + (D*uvid(3,1,n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/(3*mUV^2) - (n1*uvid(3,1,n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/(3*mUV^2) - (n2*uvid(3,1,n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/mUV^2 + (2*n3*uvid(3,1,n1, -1 + n2, 1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n2))/(3*mUV^2) - (2*n1*uvid(3,1,1 + n1, -2 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/(3*mUV^2) + (n1*uvid(3,1,1 + n1, -1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n2))/(3*mUV^2) + (2*n1*uvid(3,1,1 + n1, -1 + n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n2))/(3*mUV^2) - (n1*uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n2))/(3*mUV^2) - (n1*uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/3;
-        id ifmatch->end`i' uvid(3,1,n1?{<0}, 1, 1, 1, 1, 1)                               = 2*uvid(3,1,n1, 0, 2, 1, 1, 1)*rat(1, -3 +D - n1) - 2*uvid(3,1,n1, 1, 2, 1, 0, 1)*rat(1, -3 +D - n1) + uvid(3,1,n1, 2, 1, 1, 0, 1)*rat(1, -3 +D - n1) + 2*n1*uvid(3,1,1 + n1, 0, 1, 1, 1, 1)*rat(1, -3 +D - n1) - mUV^2*uvid(3,1,1 + n1, 0, 2, 1, 1, 1)*rat(1, -3 +D - n1) - n1*uvid(3,1,1 + n1, 1, 0, 1, 1, 1)*rat(1, -3 +D - n1) - 2*n1*uvid(3,1,1 + n1, 1, 1, 0, 1, 1)*rat(1, -3 +D - n1) - 3*mUV^2*uvid(3,1,1 + n1, 1, 1, 0, 1, 2)*rat(1, -3 +D - n1) + 3*mUV^2*uvid(3,1,1 + n1, 1, 1, 0, 2, 1)*rat(1, -3 +D - n1) + 3*mUV^2*uvid(3,1,1 + n1, 1, 1, 1, 0, 2)*rat(1, -3 +D - n1) + n1*uvid(3,1,1 + n1, 1, 1, 1, 1, 0)*rat(1, -3 +D - n1) - 2*mUV^2*uvid(3,1,1 + n1, 1, 1, 1, 1, 1)*rat(1, -3 +D - n1) + (D*mUV^2*uvid(3,1,1 + n1, 1, 1, 1, 1, 1)*rat(1, -3 +D - n1))/2 - mUV^2*n1*uvid(3,1,1 + n1, 1, 1, 1, 1, 1)*rat(1, -3 +D - n1) - 3*mUV^2*uvid(3,1,1 + n1, 1, 1, 1, 2, 0)*rat(1, -3 +D - n1) - 3*mUV^2*uvid(3,1,1 + n1, 1, 1, 2, 0, 1)*rat(1, -3 +D - n1) + 3*mUV^2*uvid(3,1,1 + n1, 1, 1, 2, 1, 0)*rat(1, -3 +D - n1) + mUV^2*uvid(3,1,1 + n1, 1, 2, 1, 0, 1)*rat(1, -3 +D - n1) + 2*mUV^2*uvid(3,1,1 + n1, 2, 0, 1, 1, 1)*rat(1, -3 +D - n1) + 3*mUV^2*uvid(3,1,1 + n1, 2, 1, 0, 1, 1)*rat(1, -3 +D - n1) - 2*mUV^2*uvid(3,1,1 + n1, 2, 1, 1, 0, 1)*rat(1, -3 +D - n1) + 2*mUV^2*uvid(3,1,2 + n1, 0, 1, 1, 1, 1)*rat(1, -3 +D - n1) + 2*mUV^2*n1*uvid(3,1,2 + n1, 0, 1, 1, 1, 1)*rat(1, -3 +D - n1) - mUV^2*uvid(3,1,2 + n1, 1, 0, 1, 1, 1)*rat(1, -3 +D - n1) - mUV^2*n1*uvid(3,1,2 + n1, 1, 0, 1, 1, 1)*rat(1, -3 +D - n1) - 2*mUV^2*uvid(3,1,2 + n1, 1, 1, 0, 1, 1)*rat(1, -3 +D - n1) - 2*mUV^2*n1*uvid(3,1,2 + n1, 1, 1, 0, 1, 1)*rat(1, -3 +D - n1) + mUV^2*uvid(3,1,2 + n1, 1, 1, 1, 1, 0)*rat(1, -3 +D - n1) + mUV^2*n1*uvid(3,1,2 + n1, 1, 1, 1, 1, 0)*rat(1, -3 +D - n1) - 2*mUV^4*uvid(3,1,2 + n1, 1, 1, 1, 1, 1)*rat(1, -3 +D - n1) - 2*mUV^4*n1*uvid(3,1,2 + n1, 1, 1, 1, 1, 1)*rat(1, -3 +D - n1) + uvid(3,1,n1, 2, 0, 1, 1, 1)*rat(1, 3 -D + n1);
-        id ifmatch->end`i' uvid(3,1,n1?{>0}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>1}) = (5*uvid(3,1,n1, n2, n3, -1 + n4, n5, n6))/(6*mUV^2) - (5*uvid(3,1,n1, n2, n3, n4, -1 + n5, n6))/(6*mUV^2) + (n2*uvid(3,1,-1 + n1, 1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(2*mUV^2) + (n3*uvid(3,1,n1, -1 + n2, 1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(6*mUV^2) - (n5*uvid(3,1,n1, n2, n3, -1 + n4, 1 + n5, -1 + n6)*rat(1, -1 + n6))/(2*mUV^2) + (uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/mUV^2 + (D*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(4*mUV^2) - (n6*uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/mUV^2 + (n5*uvid(3,1,n1, n2, n3, n4, 1 + n5, -2 + n6)*rat(1, -1 + n6))/(2*mUV^2) + (7*n4*uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/(6*mUV^2) - (7*n4*uvid(3,1,n1, n2, n3, 1 + n4, n5, -2 + n6)*rat(1, -1 + n6))/(6*mUV^2) - (n3*uvid(3,1,n1, n2, 1 + n3, n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/(6*mUV^2) - (n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(3*mUV^2) - (n2*uvid(3,1,n1, 1 + n2, n3, -1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/(2*mUV^2) + (n2*uvid(3,1,n1, 1 + n2, n3, n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/(3*mUV^2) - (2*n1*uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(3*mUV^2) + (5*n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/(6*mUV^2) + (2*n1*uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/(3*mUV^2) - (5*n1*uvid(3,1,1 + n1, n2, n3, n4, n5, -2 + n6)*rat(1, -1 + n6))/(6*mUV^2);
-        id ifmatch->end`i' uvid(3,1,n1?{>0}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{>1}, n6?{>0}) = uvid(3,1,n1, n2, n3, -1 + n4, n5, n6)/(2*mUV^2) - uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)/(2*mUV^2) - (n2*uvid(3,1,-1 + n1, 1 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(2*mUV^2) + (n3*uvid(3,1,n1, -1 + n2, 1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(6*mUV^2) - (n6*uvid(3,1,n1, n2, n3, -1 + n4, -1 + n5, 1 + n6)*rat(1, -1 + n5))/(6*mUV^2) + (n6*uvid(3,1,n1, n2, n3, n4, -2 + n5, 1 + n6)*rat(1, -1 + n5))/(6*mUV^2) + (uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/mUV^2 + (D*uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(4*mUV^2) - (n5*uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/mUV^2 - (5*n4*uvid(3,1,n1, n2, n3, 1 + n4, -2 + n5, n6)*rat(1, -1 + n5))/(6*mUV^2) + (5*n4*uvid(3,1,n1, n2, n3, 1 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n5))/(6*mUV^2) - (n3*uvid(3,1,n1, n2, 1 + n3, n4, -2 + n5, n6)*rat(1, -1 + n5))/(6*mUV^2) + (2*n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) + (n2*uvid(3,1,n1, 1 + n2, n3, -1 + n4, -1 + n5, n6)*rat(1, -1 + n5))/(2*mUV^2) - (2*n2*uvid(3,1,n1, 1 + n2, n3, n4, -2 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) + (n1*uvid(3,1,1 + n1, -1 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) - (n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n5))/(6*mUV^2) - (n1*uvid(3,1,1 + n1, n2, n3, -1 + n4, -1 + n5, n6)*rat(1, -1 + n5))/(3*mUV^2) + (n1*uvid(3,1,1 + n1, n2, n3, n4, -1 + n5, -1 + n6)*rat(1, -1 + n5))/(6*mUV^2);
-        id ifmatch->end`i' uvid(3,1,n1?{>0}, n2?{>0}, n3?{>0}, n4?{>1}, n5?{>0}, n6?{>0}) = uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)/(6*mUV^2) - uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)/(6*mUV^2) + (n2*uvid(3,1,-1 + n1, 1 + n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/(2*mUV^2) + (n3*uvid(3,1,n1, -1 + n2, 1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/(6*mUV^2) - (n6*uvid(3,1,n1, n2, n3, -2 + n4, n5, 1 + n6)*rat(1, -1 + n4))/(6*mUV^2) - (n5*uvid(3,1,n1, n2, n3, -2 + n4, 1 + n5, n6)*rat(1, -1 + n4))/(2*mUV^2) + (n6*uvid(3,1,n1, n2, n3, -1 + n4, -1 + n5, 1 + n6)*rat(1, -1 + n4))/(6*mUV^2) + (uvid(3,1,n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/mUV^2 + (D*uvid(3,1,n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/(4*mUV^2) - (n4*uvid(3,1,n1, n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/mUV^2 + (n5*uvid(3,1,n1, n2, n3, -1 + n4, 1 + n5, -1 + n6)*rat(1, -1 + n4))/(2*mUV^2) - (n3*uvid(3,1,n1, n2, 1 + n3, -1 + n4, -1 + n5, n6)*rat(1, -1 + n4))/(6*mUV^2) - (n2*uvid(3,1,n1, 1 + n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/(3*mUV^2) - (n2*uvid(3,1,n1, 1 + n2, n3, -2 + n4, n5, n6)*rat(1, -1 + n4))/(2*mUV^2) + (n2*uvid(3,1,n1, 1 + n2, n3, -1 + n4, -1 + n5, n6)*rat(1, -1 + n4))/(3*mUV^2) + (n1*uvid(3,1,1 + n1, -1 + n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/(3*mUV^2) - (n1*uvid(3,1,1 + n1, n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/(6*mUV^2) - (n1*uvid(3,1,1 + n1, n2, n3, -2 + n4, n5, n6)*rat(1, -1 + n4))/(3*mUV^2) + (n1*uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, -1 + n6)*rat(1, -1 + n4))/(6*mUV^2);
-        id ifmatch->end`i' uvid(3,1,n1?{>0}, n2?{>0}, n3?{>1}, n4?{>0}, n5?{>0}, n6?{>0}) = uvid(3,1,n1, -1 + n2, n3, n4, n5, n6)/(2*mUV^2) - uvid(3,1,n1, n2, n3, n4, -1 + n5, n6)/(2*mUV^2) + (n2*uvid(3,1,-1 + n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/(2*mUV^2) + (n6*uvid(3,1,n1, n2, -1 + n3, -1 + n4, n5, 1 + n6)*rat(1, -1 + n3))/(2*mUV^2) - (n5*uvid(3,1,n1, n2, -1 + n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n3))/(2*mUV^2) - (n6*uvid(3,1,n1, n2, -1 + n3, n4, -1 + n5, 1 + n6)*rat(1, -1 + n3))/(2*mUV^2) + (uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/mUV^2 + (D*uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/(4*mUV^2) - (n3*uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3))/mUV^2 + (n5*uvid(3,1,n1, n2, -1 + n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n3))/(2*mUV^2) + (n4*uvid(3,1,n1, n2, -1 + n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n3))/(2*mUV^2) - (n4*uvid(3,1,n1, n2, -1 + n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n3))/(2*mUV^2) - (n2*uvid(3,1,n1, 1 + n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/mUV^2 - (n2*uvid(3,1,n1, 1 + n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n3))/(2*mUV^2) + (n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n3))/mUV^2 - (n1*uvid(3,1,1 + n1, n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3))/(2*mUV^2) + (n1*uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n3))/(2*mUV^2);
-        id ifmatch->end`i' uvid(3,1,n1?{>0}, n2?{>1}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>0}) = uvid(3,1,-1 + n1, n2, n3, n4, n5, n6)/(2*mUV^2) - uvid(3,1,n1, n2, n3, -1 + n4, n5, n6)/(2*mUV^2) - (n3*uvid(3,1,n1, -2 + n2, 1 + n3, n4, n5, n6)*rat(1, -1 + n2))/(2*mUV^2) + (n6*uvid(3,1,n1, -1 + n2, n3, -1 + n4, n5, 1 + n6)*rat(1, -1 + n2))/(2*mUV^2) - (n5*uvid(3,1,n1, -1 + n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n2))/(2*mUV^2) - (n6*uvid(3,1,n1, -1 + n2, n3, n4, -1 + n5, 1 + n6)*rat(1, -1 + n2))/(2*mUV^2) + (uvid(3,1,n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/mUV^2 + (D*uvid(3,1,n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/(4*mUV^2) - (n2*uvid(3,1,n1, -1 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/mUV^2 + (n5*uvid(3,1,n1, -1 + n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n2))/(2*mUV^2) + (n4*uvid(3,1,n1, -1 + n2, n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n2))/(2*mUV^2) - (n4*uvid(3,1,n1, -1 + n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n2))/(2*mUV^2) + (n3*uvid(3,1,n1, -1 + n2, 1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n2))/(2*mUV^2) - (n1*uvid(3,1,1 + n1, -2 + n2, n3, n4, n5, n6)*rat(1, -1 + n2))/mUV^2 + (n1*uvid(3,1,1 + n1, -1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n2))/(2*mUV^2) + (n1*uvid(3,1,1 + n1, -1 + n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n2))/mUV^2 - (n1*uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n2))/(2*mUV^2);
-        id ifmatch->end`i' uvid(3,1,n1?{>1}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>0}) = uvid(3,1,n1, -1 + n2, n3, n4, n5, n6)/mUV^2 - uvid(3,1,n1, n2, -1 + n3, n4, n5, n6)/(2*mUV^2) - uvid(3,1,n1, n2, n3, -1 + n4, n5, n6)/mUV^2 + uvid(3,1,n1, n2, n3, n4, n5, -1 + n6)/(2*mUV^2) - (3*n2*uvid(3,1,-2 + n1, 1 + n2, n3, n4, n5, n6)*rat(1, -1 + n1))/(2*mUV^2) - (n3*uvid(3,1,-1 + n1, -1 + n2, 1 + n3, n4, n5, n6)*rat(1, -1 + n1))/(2*mUV^2) - (3*n6*uvid(3,1,-1 + n1, n2, n3, -1 + n4, n5, 1 + n6)*rat(1, -1 + n1))/(2*mUV^2) + (3*n5*uvid(3,1,-1 + n1, n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n1))/(2*mUV^2) + (3*n6*uvid(3,1,-1 + n1, n2, n3, n4, -1 + n5, 1 + n6)*rat(1, -1 + n1))/(2*mUV^2) + (uvid(3,1,-1 + n1, n2, n3, n4, n5, n6)*rat(1, -1 + n1))/mUV^2 + (D*uvid(3,1,-1 + n1, n2, n3, n4, n5, n6)*rat(1, -1 + n1))/(4*mUV^2) - (n1*uvid(3,1,-1 + n1, n2, n3, n4, n5, n6)*rat(1, -1 + n1))/mUV^2 - (3*n5*uvid(3,1,-1 + n1, n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n1))/(2*mUV^2) - (3*n4*uvid(3,1,-1 + n1, n2, n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n1))/(2*mUV^2) + (3*n4*uvid(3,1,-1 + n1, n2, n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n1))/(2*mUV^2) + (n3*uvid(3,1,-1 + n1, n2, 1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n1))/(2*mUV^2) + (n2*uvid(3,1,-1 + n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n1))/mUV^2 + (3*n2*uvid(3,1,-1 + n1, 1 + n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n1))/(2*mUV^2) - (n2*uvid(3,1,-1 + n1, 1 + n2, n3, n4, -1 + n5, n6)*rat(1, -1 + n1))/mUV^2;
-        id ifmatch->end`i' uvid(3,1,n1?{>0}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>1}) = uvid(3,1,1 + n1, n2, -1 + n3, n4, n5, n6) + (5*uvid(3,1,1 + n1, n2, n3, -1 + n4, n5, n6))/3 - (5*uvid(3,1,1 + n1, n2, n3, n4, -1 + n5, n6))/3 + n2*uvid(3,1,n1, 1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6) - n5*uvid(3,1,1 + n1, -1 + n2, n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) + (4*n3*uvid(3,1,1 + n1, -1 + n2, 1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3 + n5*uvid(3,1,1 + n1, n2, -1 + n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) - n5*uvid(3,1,1 + n1, n2, n3, -1 + n4, 1 + n5, -1 + n6)*rat(1, -1 + n6) + n5*uvid(3,1,1 + n1, n2, n3, n4, 1 + n5, -2 + n6)*rat(1, -1 + n6) + (4*n4*uvid(3,1,1 + n1, n2, n3, 1 + n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/3 - (4*n4*uvid(3,1,1 + n1, n2, n3, 1 + n4, n5, -2 + n6)*rat(1, -1 + n6))/3 - (4*n3*uvid(3,1,1 + n1, n2, 1 + n3, n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/3 - (5*n2*uvid(3,1,1 + n1, 1 + n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3 - n2*uvid(3,1,1 + n1, 1 + n2, n3, -1 + n4, n5, -1 + n6)*rat(1, -1 + n6) + (5*n2*uvid(3,1,1 + n1, 1 + n2, n3, n4, -1 + n5, -1 + n6)*rat(1, -1 + n6))/3 - (uvid(3,1,2 + n1, -1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3 - (n1*uvid(3,1,2 + n1, -1 + n2, n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3 - (uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3 - (n1*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n6))/3 + (uvid(3,1,2 + n1, n2, n3, -1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/3 + (n1*uvid(3,1,2 + n1, n2, n3, -1 + n4, n5, -1 + n6)*rat(1, -1 + n6))/3 + (uvid(3,1,2 + n1, n2, n3, n4, n5, -2 + n6)*rat(1, -1 + n6))/3 + (n1*uvid(3,1,2 + n1, n2, n3, n4, n5, -2 + n6)*rat(1, -1 + n6))/3;
-        id ifmatch->end`i' uvid(3,1,n1?{>0}, n2?{>0}, n3?{>0}, n4?{>1}, n5?{>0}, n6?{>0}) = uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, n6) + uvid(3,1,1 + n1, n2, n3, n4, -1 + n5, n6)/3 - uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6)/3 + n2*uvid(3,1,n1, 1 + n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4) + n5*uvid(3,1,1 + n1, -1 + n2, n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) - (2*n3*uvid(3,1,1 + n1, -1 + n2, 1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/3 - n5*uvid(3,1,1 + n1, n2, -1 + n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n4) + (2*n6*uvid(3,1,1 + n1, n2, n3, -2 + n4, n5, 1 + n6)*rat(1, -1 + n4))/3 - n5*uvid(3,1,1 + n1, n2, n3, -2 + n4, 1 + n5, n6)*rat(1, -1 + n4) - (2*n6*uvid(3,1,1 + n1, n2, n3, -1 + n4, -1 + n5, 1 + n6)*rat(1, -1 + n4))/3 + n5*uvid(3,1,1 + n1, n2, n3, -1 + n4, 1 + n5, -1 + n6)*rat(1, -1 + n4) + (2*n3*uvid(3,1,1 + n1, n2, 1 + n3, -1 + n4, -1 + n5, n6)*rat(1, -1 + n4))/3 + (n2*uvid(3,1,1 + n1, 1 + n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/3 - n2*uvid(3,1,1 + n1, 1 + n2, n3, -2 + n4, n5, n6)*rat(1, -1 + n4) - (n2*uvid(3,1,1 + n1, 1 + n2, n3, -1 + n4, -1 + n5, n6)*rat(1, -1 + n4))/3 - (4*uvid(3,1,2 + n1, -1 + n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/3 - (4*n1*uvid(3,1,2 + n1, -1 + n2, n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/3 + (2*uvid(3,1,2 + n1, n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/3 + (2*n1*uvid(3,1,2 + n1, n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n4))/3 + (4*uvid(3,1,2 + n1, n2, n3, -2 + n4, n5, n6)*rat(1, -1 + n4))/3 + (4*n1*uvid(3,1,2 + n1, n2, n3, -2 + n4, n5, n6)*rat(1, -1 + n4))/3 - (2*uvid(3,1,2 + n1, n2, n3, -1 + n4, n5, -1 + n6)*rat(1, -1 + n4))/3 - (2*n1*uvid(3,1,2 + n1, n2, n3, -1 + n4, n5, -1 + n6)*rat(1, -1 + n4))/3;
-        id ifmatch->end`i' uvid(3,1,n1?{>0}, n2?{>0}, n3?{>1}, n4?{>0}, n5?{>0}, n6?{>0}) = uvid(3,1,1 + n1, -1 + n2, n3, n4, n5, n6) - uvid(3,1,1 + n1, n2, n3, n4, -1 + n5, n6) + uvid(3,1,1 + n1, n2, n3, n4, n5, -1 + n6) + n2*uvid(3,1,n1, 1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3) + 2*n6*uvid(3,1,1 + n1, n2, -1 + n3, -1 + n4, n5, 1 + n6)*rat(1, -1 + n3) - 2*n5*uvid(3,1,1 + n1, n2, -1 + n3, -1 + n4, 1 + n5, n6)*rat(1, -1 + n3) - 2*n6*uvid(3,1,1 + n1, n2, -1 + n3, n4, -1 + n5, 1 + n6)*rat(1, -1 + n3) + 2*n5*uvid(3,1,1 + n1, n2, -1 + n3, n4, 1 + n5, -1 + n6)*rat(1, -1 + n3) + 2*n4*uvid(3,1,1 + n1, n2, -1 + n3, 1 + n4, -1 + n5, n6)*rat(1, -1 + n3) - 2*n4*uvid(3,1,1 + n1, n2, -1 + n3, 1 + n4, n5, -1 + n6)*rat(1, -1 + n3) - n2*uvid(3,1,1 + n1, 1 + n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3) - n2*uvid(3,1,1 + n1, 1 + n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n3) + n2*uvid(3,1,1 + n1, 1 + n2, -1 + n3, n4, -1 + n5, n6)*rat(1, -1 + n3) - uvid(3,1,2 + n1, -1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3) - n1*uvid(3,1,2 + n1, -1 + n2, -1 + n3, n4, n5, n6)*rat(1, -1 + n3) + uvid(3,1,2 + n1, n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3) + n1*uvid(3,1,2 + n1, n2, -2 + n3, n4, n5, n6)*rat(1, -1 + n3) + uvid(3,1,2 + n1, n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n3) + n1*uvid(3,1,2 + n1, n2, -1 + n3, -1 + n4, n5, n6)*rat(1, -1 + n3) - uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n3) - n1*uvid(3,1,2 + n1, n2, -1 + n3, n4, n5, -1 + n6)*rat(1, -1 + n3);
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{<0}, n5?{>0}, n6?{>1}) =
+            + uvid(3,1,1 + n1, - 1 + n2,n3,1 + n4,n5, - 1 + n6)*rat(n1,n6 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,1 + n4,n5, - 1 + n6)*rat( - n1,2*n6 - 2)
+            + uvid(3,1,1 + n1,n2,n3,1 + n4,n5, - 2 + n6)*rat(n1,2*n6 - 2)
+            + uvid(3,1,1 + n1,n2,n3,1 + n4,n5, - 1 + n6)*mUV^2*rat( - n1,2*n6 - 2)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat( - n1,n6 - 1)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 1 + n5,n6)*rat(1,1)
+            + uvid(3,1,n1,n2,n3,1 + n4,n5, - 1 + n6)*rat( - 2*ep - n1 - 3*n4 + 1,2*n6 - 2)
+            + uvid(3,1,n1,n2,n3,2 + n4, - 1 + n5, - 1 + n6)*rat( - n4 - 1,2*n6 - 2)
+            + uvid(3,1,n1,n2,n3,2 + n4,n5, - 2 + n6)*rat(n4 + 1,2*n6 - 2)
+            + uvid(3,1,n1,n2,n3,2 + n4,n5, - 1 + n6)*mUV^2*rat( - 3*n4 - 3,2*n6 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{<1}, n3?{>0}, n4?{<1}, n5?{>0}, n6?{>1}) =
+            + uvid(3,1,1 + n1, - 1 + n2,n3,1 + n4,n5, - 1 + n6)*rat(n4,n6 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5,n6)*rat(1,1)
+            + uvid(3,1,1 + n1,n2,n3,1 + n4, - 1 + n5, - 1 + n6)*rat( - n4,2*n6 - 2)
+            + uvid(3,1,1 + n1,n2,n3,1 + n4,n5, - 2 + n6)*rat(n4,2*n6 - 2)
+            + uvid(3,1,1 + n1,n2,n3,1 + n4,n5, - 1 + n6)*mUV^2*rat( - n4,2*n6 - 2)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat( - 2*ep - 3*n1 - n4 + 1,2*n6 - 2)
+            + uvid(3,1,2 + n1,n2, - 1 + n3,n4,n5, - 1 + n6)*rat( - n1 - 1,2*n6 - 2)
+            + uvid(3,1,2 + n1,n2,n3,n4,n5, - 2 + n6)*rat(n1 + 1,2*n6 - 2)
+            + uvid(3,1,2 + n1,n2,n3,n4,n5, - 1 + n6)*mUV^2*rat( - 3*n1 - 3,2*n6 - 2)
+            + uvid(3,1,n1,n2,n3,1 + n4,n5, - 1 + n6)*rat( - n4,n6 - 1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{<0}, n5?{>1}, n6?{>0}) =
+            + uvid(3,1, - 1 + n1,1 + n2,n3,1 + n4, - 1 + n5,n6)*rat(n2,n5 - 1)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,1 + n4, - 1 + n5,n6)*rat( - n2,2*n5 - 2)
+            + uvid(3,1,n1,1 + n2,n3,1 + n4, - 2 + n5,n6)*rat(n2,2*n5 - 2)
+            + uvid(3,1,n1,1 + n2,n3,1 + n4, - 1 + n5,n6)*mUV^2*rat( - n2,2*n5 - 2)
+            + uvid(3,1,n1,1 + n2,n3,n4, - 1 + n5,n6)*rat( - n2,n5 - 1)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 1 + n5,n6)*rat( - 2*ep - n2 - 3*n4 + 1,2*n5 - 2)
+            + uvid(3,1,n1,n2,n3,1 + n4,n5, - 1 + n6)*rat(1,1)
+            + uvid(3,1,n1,n2,n3,2 + n4, - 2 + n5,n6)*rat(n4 + 1,2*n5 - 2)
+            + uvid(3,1,n1,n2,n3,2 + n4, - 1 + n5, - 1 + n6)*rat( - n4 - 1,2*n5 - 2)
+            + uvid(3,1,n1,n2,n3,2 + n4, - 1 + n5,n6)*mUV^2*rat( - 3*n4 - 3,2*n5 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<0}, n3?{>0}, n4?{<1}, n5?{>1}, n6?{>0}) =
+            + uvid(3,1, - 1 + n1,1 + n2,n3,1 + n4, - 1 + n5,n6)*rat(n4,n5 - 1)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4,n5,n6)*rat(1,1)
+            + uvid(3,1,n1,1 + n2,n3,1 + n4, - 2 + n5,n6)*rat(n4,2*n5 - 2)
+            + uvid(3,1,n1,1 + n2,n3,1 + n4, - 1 + n5, - 1 + n6)*rat( - n4,2*n5 - 2)
+            + uvid(3,1,n1,1 + n2,n3,1 + n4, - 1 + n5,n6)*mUV^2*rat( - n4,2*n5 - 2)
+            + uvid(3,1,n1,1 + n2,n3,n4, - 1 + n5,n6)*rat( - 2*ep - 3*n2 - n4 + 1,2*n5 - 2)
+            + uvid(3,1,n1,2 + n2, - 1 + n3,n4, - 1 + n5,n6)*rat( - n2 - 1,2*n5 - 2)
+            + uvid(3,1,n1,2 + n2,n3,n4, - 2 + n5,n6)*rat(n2 + 1,2*n5 - 2)
+            + uvid(3,1,n1,2 + n2,n3,n4, - 1 + n5,n6)*mUV^2*rat( - 3*n2 - 3,2*n5 - 2)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 1 + n5,n6)*rat( - n4,n5 - 1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<0}, n3?{>1}, n4?{<1}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1,1 + n1,1 + n2, - 2 + n3,n4,n5,n6)*rat(n1,2*n3 - 2)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3, - 1 + n4,n5,n6)*rat(n1,n3 - 1)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3,n4,n5, - 1 + n6)*rat( - n1,2*n3 - 2)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3,n4,n5,n6)*mUV^2*rat( - n1,2*n3 - 2)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5,n6)*rat( - n1,n3 - 1)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4,n5,n6)*rat( - 2*ep - n1 - 3*n2 + 1,2*n3 - 2)
+            + uvid(3,1,n1,1 + n2,n3,n4, - 1 + n5,n6)*rat(1,1)
+            + uvid(3,1,n1,2 + n2, - 2 + n3,n4,n5,n6)*rat(n2 + 1,2*n3 - 2)
+            + uvid(3,1,n1,2 + n2, - 1 + n3,n4, - 1 + n5,n6)*rat( - n2 - 1,2*n3 - 2)
+            + uvid(3,1,n1,2 + n2, - 1 + n3,n4,n5,n6)*mUV^2*rat( - 3*n2 - 3,2*n3 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{<1}, n3?{>1}, n4?{<1}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1,1 + n1,1 + n2, - 2 + n3,n4,n5,n6)*rat(n2,2*n3 - 2)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3, - 1 + n4,n5,n6)*rat(n2,n3 - 1)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3,n4, - 1 + n5,n6)*rat( - n2,2*n3 - 2)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3,n4,n5,n6)*mUV^2*rat( - n2,2*n3 - 2)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5,n6)*rat( - 2*ep - 3*n1 - n2 + 1,2*n3 - 2)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat(1,1)
+            + uvid(3,1,2 + n1,n2, - 2 + n3,n4,n5,n6)*rat(n1 + 1,2*n3 - 2)
+            + uvid(3,1,2 + n1,n2, - 1 + n3,n4,n5, - 1 + n6)*rat( - n1 - 1,2*n3 - 2)
+            + uvid(3,1,2 + n1,n2, - 1 + n3,n4,n5,n6)*mUV^2*rat( - 3*n1 - 3,2*n3 - 2)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4,n5,n6)*rat( - n2,n3 - 1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{<1}, n5?{>0}, n6?{>1}) =
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5, - 1 + n6)*mUV^-2*rat(n1,2*n6 - 2)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 2 + n6)*mUV^-2*rat( - n1,2*n6 - 2)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat( - n1,2*n6 - 2)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 1 + n5, - 1 + n6)*mUV^-2*rat(n4,2*n6 - 2)
+            + uvid(3,1,n1,n2,n3,1 + n4,n5, - 2 + n6)*mUV^-2*rat( - n4,2*n6 - 2)
+            + uvid(3,1,n1,n2,n3,1 + n4,n5, - 1 + n6)*rat( - n4,2*n6 - 2)
+            + uvid(3,1,n1,n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat( - 2*ep - n1 - n4 - 2*n6 + 6,2*n6 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{<1}, n5?{>1}, n6?{>0}) =
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4, - 1 + n5,n6)*mUV^-2*rat(n2,2*n5 - 2)
+            + uvid(3,1,n1,1 + n2,n3,n4, - 2 + n5,n6)*mUV^-2*rat( - n2,2*n5 - 2)
+            + uvid(3,1,n1,1 + n2,n3,n4, - 1 + n5,n6)*rat( - n2,2*n5 - 2)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 2 + n5,n6)*mUV^-2*rat( - n4,2*n5 - 2)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 1 + n5, - 1 + n6)*mUV^-2*rat(n4,2*n5 - 2)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 1 + n5,n6)*rat( - n4,2*n5 - 2)
+            + uvid(3,1,n1,n2,n3,n4, - 1 + n5,n6)*mUV^-2*rat( - 2*ep - n2 - n4 - 2*n5 + 6,2*n5 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>1}, n4?{<1}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1,1 + n1,n2, - 2 + n3,n4,n5,n6)*mUV^-2*rat( - n1,2*n3 - 2)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5, - 1 + n6)*mUV^-2*rat(n1,2*n3 - 2)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5,n6)*rat( - n1,2*n3 - 2)
+            + uvid(3,1,n1,1 + n2, - 2 + n3,n4,n5,n6)*mUV^-2*rat( - n2,2*n3 - 2)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4, - 1 + n5,n6)*mUV^-2*rat(n2,2*n3 - 2)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4,n5,n6)*rat( - n2,2*n3 - 2)
+            + uvid(3,1,n1,n2, - 1 + n3,n4,n5,n6)*mUV^-2*rat( - 2*ep - n1 - n2 - 2*n3 + 6,2*n3 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, 1, n4?{<0}, 1, 1) =
+            + uvid(3,1, - 1 + n1,1 + n2,1,1 + n4,1,1)*mUV^2*rat( - 2*n2,2*ep + n2 + n4 - 2)
+            + uvid(3,1,n1,1 + n2,0,1 + n4,1,1)*mUV^2*rat(n2,2*ep + n2 + n4 - 2)
+            + uvid(3,1,n1,1 + n2,0,n4,1,1)*rat(n2,2*ep + n2 + n4 - 2)
+            + uvid(3,1,n1,1 + n2,1,1 + n4,0,1)*mUV^2*rat( - n2,2*ep + n2 + n4 - 2)
+            + uvid(3,1,n1,1 + n2,1,1 + n4,1,1)*mUV^4*rat(n2,2*ep + n2 + n4 - 2)
+            + uvid(3,1,n1,1 + n2,1,n4,0,1)*rat( - n2,2*ep + n2 + n4 - 2)
+            + uvid(3,1,n1,1 + n2,1,n4,1,1)*mUV^2*rat(n2,2*ep + n2 + n4 - 2)
+            + uvid(3,1,n1,n2,1,1 + n4,0,1)*rat( - n4,2*ep + n2 + n4 - 2)
+            + uvid(3,1,n1,n2,1,1 + n4,1,0)*rat(n4,2*ep + n2 + n4 - 2)
+            + uvid(3,1,n1,n2,1,1 + n4,1,1)*mUV^2*rat(2*ep + n2 + 2*n4 - 1,2*ep + n2 + n4 - 2)
+            + uvid(3,1,n1,n2,1,1 + n4,2,0)*mUV^2*rat(-2,2*ep + n2 + n4 - 2)
+            + uvid(3,1,n1,n2,1,2 + n4,0,1)*mUV^2*rat( - n4 - 1,2*ep + n2 + n4 - 2)
+            + uvid(3,1,n1,n2,1,2 + n4,1,0)*mUV^2*rat(n4 + 1,2*ep + n2 + n4 - 2)
+            + uvid(3,1,n1,n2,1,2 + n4,1,1)*mUV^4*rat(3*n4 + 3,2*ep + n2 + n4 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<0}, 1, 0, 1, 1) =
+            + uvid(3,1,1 + n1,1 + n2,0,0,1,1)*mUV^2*rat( - n1,2*ep + n1 + n2 - 2)
+            + uvid(3,1,1 + n1,1 + n2,1,-1,1,1)*mUV^2*rat( - 2*n1,2*ep + n1 + n2 - 2)
+            + uvid(3,1,1 + n1,1 + n2,1,0,1,0)*mUV^2*rat(n1,2*ep + n1 + n2 - 2)
+            + uvid(3,1,1 + n1,1 + n2,1,0,1,1)*mUV^4*rat(n1,2*ep + n1 + n2 - 2)
+            + uvid(3,1,1 + n1,n2,0,0,1,1)*rat( - n1,2*ep + n1 + n2 - 2)
+            + uvid(3,1,1 + n1,n2,1,0,1,0)*rat(n1,2*ep + n1 + n2 - 2)
+            + uvid(3,1,1 + n1,n2,1,0,1,1)*mUV^2*rat(n1,2*ep + n1 + n2 - 2)
+            + uvid(3,1,n1,1 + n2,0,0,1,1)*rat( - n2,2*ep + n1 + n2 - 2)
+            + uvid(3,1,n1,1 + n2,1,0,0,1)*rat(n2,2*ep + n1 + n2 - 2)
+            + uvid(3,1,n1,1 + n2,1,0,1,1)*mUV^2*rat(2*ep + n1 + 2*n2 - 1,2*ep + n1 + n2 - 2)
+            + uvid(3,1,n1,1 + n2,2,0,0,1)*mUV^2*rat(-2,2*ep + n1 + n2 - 2)
+            + uvid(3,1,n1,2 + n2,0,0,1,1)*mUV^2*rat( - n2 - 1,2*ep + n1 + n2 - 2)
+            + uvid(3,1,n1,2 + n2,1,0,0,1)*mUV^2*rat(n2 + 1,2*ep + n1 + n2 - 2)
+            + uvid(3,1,n1,2 + n2,1,0,1,1)*mUV^4*rat(3*n2 + 3,2*ep + n1 + n2 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<0}, 0, 1, 0, 1, 1)=
+            + uvid(3,1,1 + n1,0,0,0,1,1)*rat( - n1,2*ep + n1 - 2)
+            + uvid(3,1,1 + n1,0,1,0,1,0)*rat(n1,2*ep + n1 - 2)
+            + uvid(3,1,1 + n1,0,1,0,1,1)*mUV^2*rat(2*ep + 2*n1 - 1,2*ep + n1 - 2)
+            + uvid(3,1,1 + n1,0,2,0,1,0)*mUV^2*rat(-2,2*ep + n1 - 2)
+            + uvid(3,1,2 + n1,0,0,0,1,1)*mUV^2*rat( - n1 - 1,2*ep + n1 - 2)
+            + uvid(3,1,2 + n1,0,1,0,1,0)*mUV^2*rat(n1 + 1,2*ep + n1 - 2)
+            + uvid(3,1,2 + n1,0,1,0,1,1)*mUV^4*rat(3*n1 + 3,2*ep + n1 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{<1}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>1}) =
+            + uvid(3,1,1 + n1, - 1 + n2,n3,1 + n4,n5, - 1 + n6)*rat(n4,n6 - 1)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3,n4,n5, - 1 + n6)*rat(n2,6*n6 - 6)
+            + uvid(3,1,1 + n1,1 + n2,n3, - 1 + n4,n5, - 1 + n6)*rat(n2,3*n6 - 3)
+            + uvid(3,1,1 + n1,1 + n2,n3,n4, - 1 + n5, - 1 + n6)*rat( - n2,6*n6 - 6)
+            + uvid(3,1,1 + n1,1 + n2,n3,n4,n5, - 1 + n6)*mUV^2*rat(n2,6*n6 - 6)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5,n6)*rat(1,1)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,1 + n5, - 1 + n6)*rat(n5,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2,n3,1 + n4, - 1 + n5, - 1 + n6)*rat( - 2*n4,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2,n3,1 + n4,n5, - 2 + n6)*rat(2*n4,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2,n3,n4,1 + n5, - 2 + n6)*rat( - n5,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat( - 4*ep - 9*n1 + n2 - 1,6*n6 - 6)
+            + uvid(3,1,2 + n1,n2, - 1 + n3,n4,n5, - 1 + n6)*rat( - n1 - 1,2*n6 - 2)
+            + uvid(3,1,2 + n1,n2,n3,n4,n5, - 2 + n6)*rat(n1 + 1,2*n6 - 2)
+            + uvid(3,1,2 + n1,n2,n3,n4,n5, - 1 + n6)*mUV^2*rat( - 3*n1 - 3,2*n6 - 2)
+            + uvid(3,1,n1,1 + n2,n3,n4,n5, - 1 + n6)*rat( - n2,3*n6 - 3)
+            + uvid(3,1,n1,n2,n3,1 + n4,n5, - 1 + n6)*rat( - n4,n6 - 1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<0}, n3?{>0}, n4?{>0}, n5?{>1}, n6?{>0}) =
+            + uvid(3,1, - 1 + n1,1 + n2,n3,1 + n4, - 1 + n5,n6)*rat(n4,n5 - 1)
+            + uvid(3,1, - 1 + n1,2 + n2,n3,n4, - 1 + n5,n6)*rat( - n2 - 1,3*n5 - 3)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4,n5,n6)*rat(1,1)
+            + uvid(3,1,n1,1 + n2,n3, - 1 + n4,n5,n6)*rat(1,3)
+            + uvid(3,1,n1,1 + n2,n3,1 + n4, - 2 + n5,n6)*rat(n4,3*n5 - 3)
+            + uvid(3,1,n1,1 + n2,n3,1 + n4, - 1 + n5, - 1 + n6)*rat( - n4,3*n5 - 3)
+            + uvid(3,1,n1,1 + n2,n3,n4, - 1 + n5,n6)*rat( - 2*ep - 4*n2,3*n5 - 3)
+            + uvid(3,1,n1,1 + n2,n3,n4,n5, - 1 + n6)*rat(-1,3)
+            + uvid(3,1,n1,2 + n2, - 1 + n3,n4, - 1 + n5,n6)*rat( - n2 - 1,3*n5 - 3)
+            + uvid(3,1,n1,2 + n2,n3, - 1 + n4, - 1 + n5,n6)*rat(n2 + 1,3*n5 - 3)
+            + uvid(3,1,n1,2 + n2,n3,n4, - 2 + n5,n6)*rat(n2 + 1,3*n5 - 3)
+            + uvid(3,1,n1,2 + n2,n3,n4, - 1 + n5,n6)*mUV^2*rat( - 4*n2 - 4,3*n5 - 3)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 1 + n5,n6)*rat( - n4,n5 - 1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<0}, n3?{>1}, n4?{>0}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1,1 + n1,1 + n2, - 2 + n3,n4,n5,n6)*rat(n1,2*n3 - 2)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3, - 1 + n4,n5,n6)*rat(n1,n3 - 1)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3,n4,n5, - 1 + n6)*rat( - n1,2*n3 - 2)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3,n4,n5,n6)*mUV^2*rat( - n1,2*n3 - 2)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5,n6)*rat( - n1,n3 - 1)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4,n5,n6)*rat( - 2*ep - n1 - 3*n2 + 1,2*n3 - 2)
+            + uvid(3,1,n1,1 + n2,n3,n4, - 1 + n5,n6)*rat(1,1)
+            + uvid(3,1,n1,2 + n2, - 2 + n3,n4,n5,n6)*rat(n2 + 1,2*n3 - 2)
+            + uvid(3,1,n1,2 + n2, - 1 + n3,n4, - 1 + n5,n6)*rat( - n2 - 1,2*n3 - 2)
+            + uvid(3,1,n1,2 + n2, - 1 + n3,n4,n5,n6)*mUV^2*rat( - 3*n2 - 3,2*n3 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{<1}, n3?{>1}, n4?{>0}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1,1 + n1,1 + n2, - 2 + n3,n4,n5,n6)*rat(n2,2*n3 - 2)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3, - 1 + n4,n5,n6)*rat(n2,n3 - 1)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3,n4, - 1 + n5,n6)*rat( - n2,2*n3 - 2)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3,n4,n5,n6)*mUV^2*rat( - n2,2*n3 - 2)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5,n6)*rat( - 2*ep - 3*n1 - n2 + 1,2*n3 - 2)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat(1,1)
+            + uvid(3,1,2 + n1,n2, - 2 + n3,n4,n5,n6)*rat(n1 + 1,2*n3 - 2)
+            + uvid(3,1,2 + n1,n2, - 1 + n3,n4,n5, - 1 + n6)*rat( - n1 - 1,2*n3 - 2)
+            + uvid(3,1,2 + n1,n2, - 1 + n3,n4,n5,n6)*mUV^2*rat( - 3*n1 - 3,2*n3 - 2)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4,n5,n6)*rat( - n2,n3 - 1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>1}) =
+            + uvid(3,1, - 1 + n1,1 + n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat( - n2,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5, - 1 + n6)*mUV^-2*rat(n1,2*n6 - 2)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 2 + n6)*mUV^-2*rat( - n1,2*n6 - 2)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat( - n1,2*n6 - 2)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4,n5, - 1 + n6)*mUV^-2*rat(n2,6*n6 - 6)
+            + uvid(3,1,n1,1 + n2,n3, - 1 + n4,n5, - 1 + n6)*mUV^-2*rat(n2,3*n6 - 3)
+            + uvid(3,1,n1,1 + n2,n3,n4, - 1 + n5, - 1 + n6)*mUV^-2*rat( - n2,6*n6 - 6)
+            + uvid(3,1,n1,1 + n2,n3,n4,n5, - 1 + n6)*rat(n2,6*n6 - 6)
+            + uvid(3,1,n1,n2,n3, - 1 + n4,1 + n5, - 1 + n6)*mUV^-2*rat(n5,3*n6 - 3)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 1 + n5, - 1 + n6)*mUV^-2*rat(n4,3*n6 - 3)
+            + uvid(3,1,n1,n2,n3,1 + n4,n5, - 2 + n6)*mUV^-2*rat( - n4,3*n6 - 3)
+            + uvid(3,1,n1,n2,n3,n4,1 + n5, - 2 + n6)*mUV^-2*rat( - n5,3*n6 - 3)
+            + uvid(3,1,n1,n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat( - 4*ep - 3*n1 + n2 - 6*n6 + 14,6*n6 - 6)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{>0}, n5?{>1}, n6?{>0}) =
+            + uvid(3,1, - 1 + n1,1 + n2,n3,n4, - 1 + n5,n6)*mUV^-2*rat( - n2,3*n5 - 3)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4, - 1 + n5,n6)*mUV^-2*rat(2*n2,3*n5 - 3)
+            + uvid(3,1,n1,1 + n2,n3, - 1 + n4, - 1 + n5,n6)*mUV^-2*rat(n2,3*n5 - 3)
+            + uvid(3,1,n1,1 + n2,n3,n4, - 2 + n5,n6)*mUV^-2*rat( - 2*n2,3*n5 - 3)
+            + uvid(3,1,n1,1 + n2,n3,n4, - 1 + n5,n6)*rat( - n2,3*n5 - 3)
+            + uvid(3,1,n1,n2,n3, - 1 + n4,n5,n6)*mUV^-2*rat(1,3)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 2 + n5,n6)*mUV^-2*rat( - 2*n4,3*n5 - 3)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 1 + n5, - 1 + n6)*mUV^-2*rat(2*n4,3*n5 - 3)
+            + uvid(3,1,n1,n2,n3,n4, - 1 + n5,n6)*mUV^-2*rat( - 2*ep - n2 - 3*n5 + 7,3*n5 - 3)
+            + uvid(3,1,n1,n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat(-1,3)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{>1}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1, - 1 + n1,1 + n2,n3, - 1 + n4,n5,n6)*mUV^-2*rat(2*n2,3*n4 - 3)
+            + uvid(3,1,n1,1 + n2, - 1 + n3, - 1 + n4,n5,n6)*mUV^-2*rat( - n2,3*n4 - 3)
+            + uvid(3,1,n1,1 + n2,n3, - 2 + n4,n5,n6)*mUV^-2*rat( - 2*n2,3*n4 - 3)
+            + uvid(3,1,n1,1 + n2,n3, - 1 + n4, - 1 + n5,n6)*mUV^-2*rat(n2,3*n4 - 3)
+            + uvid(3,1,n1,1 + n2,n3, - 1 + n4,n5,n6)*rat( - n2,3*n4 - 3)
+            + uvid(3,1,n1,n2,n3, - 2 + n4,1 + n5,n6)*mUV^-2*rat( - 2*n5,3*n4 - 3)
+            + uvid(3,1,n1,n2,n3, - 1 + n4,1 + n5, - 1 + n6)*mUV^-2*rat(2*n5,3*n4 - 3)
+            + uvid(3,1,n1,n2,n3, - 1 + n4,n5,n6)*mUV^-2*rat( - 2*ep - n2 - 3*n4 + 7,3*n4 - 3)
+            + uvid(3,1,n1,n2,n3,n4, - 1 + n5,n6)*mUV^-2*rat(1,3)
+            + uvid(3,1,n1,n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat(-1,3)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>1}, n4?{>0}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1,1 + n1,n2, - 2 + n3,n4,n5,n6)*mUV^-2*rat( - n1,2*n3 - 2)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5, - 1 + n6)*mUV^-2*rat(n1,2*n3 - 2)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5,n6)*rat( - n1,2*n3 - 2)
+            + uvid(3,1,n1,1 + n2, - 2 + n3,n4,n5,n6)*mUV^-2*rat( - n2,2*n3 - 2)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4, - 1 + n5,n6)*mUV^-2*rat(n2,2*n3 - 2)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4,n5,n6)*rat( - n2,2*n3 - 2)
+            + uvid(3,1,n1,n2, - 1 + n3,n4,n5,n6)*mUV^-2*rat( - 2*ep - n1 - n2 - 2*n3 + 6,2*n3 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>1}) =
+            + uvid(3,1, - 1 + n1,1 + n2,n3,1 + n4,n5, - 1 + n6)*rat( - n2,n6 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,1 + n4,n5, - 1 + n6)*rat(n1,n6 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,1 + n4,n5, - 1 + n6)*rat( - n1,2*n6 - 2)
+            + uvid(3,1,1 + n1,n2,n3,1 + n4,n5, - 2 + n6)*rat(n1,2*n6 - 2)
+            + uvid(3,1,1 + n1,n2,n3,1 + n4,n5, - 1 + n6)*mUV^2*rat( - n1,2*n6 - 2)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat( - n1,n6 - 1)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,1 + n4,n5, - 1 + n6)*rat(n2,2*n6 - 2)
+            + uvid(3,1,n1,1 + n2,n3,1 + n4, - 1 + n5, - 1 + n6)*rat( - n2,2*n6 - 2)
+            + uvid(3,1,n1,1 + n2,n3,1 + n4,n5, - 1 + n6)*mUV^2*rat(n2,2*n6 - 2)
+            + uvid(3,1,n1,1 + n2,n3,n4,n5, - 1 + n6)*rat(n2,n6 - 1)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 1 + n5,n6)*rat(1,1)
+            + uvid(3,1,n1,n2,n3,1 + n4,1 + n5, - 2 + n6)*rat( - n5,n6 - 1)
+            + uvid(3,1,n1,n2,n3,1 + n4,n5, - 1 + n6)*rat( - n1 + n2,2*n6 - 2)
+            + uvid(3,1,n1,n2,n3,2 + n4, - 1 + n5, - 1 + n6)*rat( - n4 - 1,n6 - 1)
+            + uvid(3,1,n1,n2,n3,2 + n4,n5, - 2 + n6)*rat(n4 + 1,n6 - 1)
+            + uvid(3,1,n1,n2,n3,n4,1 + n5, - 1 + n6)*rat(n5,n6 - 1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<0}, 1, 1, 1, 1) =
+            + uvid(3,1, - 2 + n1,2 + n2,1,1,1,1)*rat(n2 + 1,n1 - 1)
+            + uvid(3,1, - 1 + n1,1 + n2,1,0,1,2)*rat(1,n1 - 1)
+            + uvid(3,1, - 1 + n1,1 + n2,1,0,2,1)*rat(-1,n1 - 1)
+            + uvid(3,1, - 1 + n1,1 + n2,1,1,0,2)*rat(-1,n1 - 1)
+            + uvid(3,1, - 1 + n1,1 + n2,1,1,1,1)*rat(n1 - n2 - 2,2*n1 - 2)
+            + uvid(3,1, - 1 + n1,1 + n2,1,1,2,0)*rat(1,n1 - 1)
+            + uvid(3,1, - 1 + n1,1 + n2,1,2,0,1)*rat(1,n1 - 1)
+            + uvid(3,1, - 1 + n1,1 + n2,1,2,1,0)*rat(-1,n1 - 1)
+            + uvid(3,1, - 1 + n1,2 + n2,0,1,1,1)*rat( - n2 - 1,2*n1 - 2)
+            + uvid(3,1, - 1 + n1,2 + n2,1,0,1,1)*rat( - n2 - 1,n1 - 1)
+            + uvid(3,1, - 1 + n1,2 + n2,1,1,0,1)*rat(n2 + 1,2*n1 - 2)
+            + uvid(3,1, - 1 + n1,2 + n2,1,1,1,1)*mUV^2*rat( - n2 - 1,2*n1 - 2)
+            + uvid(3,1,n1,1 + n2,0,1,1,1)*rat(1,2)
+            + uvid(3,1,n1,1 + n2,1,0,1,1)*rat(1,1)
+            + uvid(3,1,n1,1 + n2,1,1,1,0)*rat(-1,2)
+            + uvid(3,1,n1,1 + n2,1,1,1,1)*mUV^2*rat(1,2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<0}, 0, 1, 1, 1, 1)=
+            + uvid(3,1,1 + n1,0,0,1,1,1)*rat( - n1,2*ep + n1 - 2)
+            + uvid(3,1,1 + n1,0,1,1,1,0)*rat(n1,2*ep + n1 - 2)
+            + uvid(3,1,1 + n1,0,1,1,1,1)*mUV^2*rat(2*ep + 2*n1 - 1,2*ep + n1 - 2)
+            + uvid(3,1,1 + n1,0,2,1,1,0)*mUV^2*rat(-2,2*ep + n1 - 2)
+            + uvid(3,1,2 + n1,0,0,1,1,1)*mUV^2*rat( - n1 - 1,2*ep + n1 - 2)
+            + uvid(3,1,2 + n1,0,1,1,1,0)*mUV^2*rat(n1 + 1,2*ep + n1 - 2)
+            + uvid(3,1,2 + n1,0,1,1,1,1)*mUV^4*rat(3*n1 + 3,2*ep + n1 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{<0}, n6?{>1}) =
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,1 + n5, - 1 + n6)*rat( - n1,n6 - 1)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,1 + n5, - 1 + n6)*rat(n1,n6 - 1)
+            + uvid(3,1,n1,1 + n2,n3,n4,1 + n5, - 1 + n6)*mUV^2*rat( - n2,n6 - 1)
+            + uvid(3,1,n1,n2,1 + n3,n4,1 + n5, - 1 + n6)*mUV^2*rat( - n3,n6 - 1)
+            + uvid(3,1,n1,n2,n3, - 1 + n4,1 + n5,n6)*rat(1,1)
+            + uvid(3,1,n1,n2,n3,1 + n4,1 + n5, - 1 + n6)*mUV^2*rat(n4,n6 - 1)
+            + uvid(3,1,n1,n2,n3,n4,1 + n5, - 1 + n6)*rat( - ep - n2 - n3 + n4 - n5 + 1,n6 - 1)
+            + uvid(3,1,n1,n2,n3,n4,2 + n5, - 1 + n6)*mUV^2*rat( - n5 - 1,n6 - 1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{<1}, n6?{>1}) =
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,1 + n5, - 1 + n6)*rat( - n5,n6 - 1)
+            + uvid(3,1,1 + n1,1 + n2,n3,n4,n5, - 1 + n6)*mUV^2*rat( - n2,n6 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,1 + n5, - 1 + n6)*rat(n5,n6 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5,n6)*rat(1,1)
+            + uvid(3,1,1 + n1,n2,1 + n3,n4,n5, - 1 + n6)*mUV^2*rat(n3,n6 - 1)
+            + uvid(3,1,1 + n1,n2,n3,1 + n4,n5, - 1 + n6)*mUV^2*rat( - n4,n6 - 1)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat( - ep - n1 - n2 + n3 - n4 + 1,n6 - 1)
+            + uvid(3,1,2 + n1,n2,n3,n4,n5, - 1 + n6)*mUV^2*rat( - n1 - 1,n6 - 1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>0}, n3?{>0}, n4?{>1}, n5?{<0}, n6?{>0}) =
+            + uvid(3,1,1 + n1,n2, - 1 + n3, - 1 + n4,1 + n5,n6)*rat( - n1,n4 - 1)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,1 + n5, - 1 + n6)*rat(n1,n4 - 1)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,1 + n5,n6)*mUV^2*rat( - n1,n4 - 1)
+            + uvid(3,1,n1,1 + n2,n3, - 1 + n4,1 + n5,n6)*mUV^2*rat( - 2*n2,n4 - 1)
+            + uvid(3,1,n1,n2,1 + n3, - 1 + n4,1 + n5,n6)*mUV^2*rat( - 2*n3,n4 - 1)
+            + uvid(3,1,n1,n2,n3, - 1 + n4,1 + n5,n6)*rat( - 4*ep - n1 - 2*n2 - 2*n3 - n4 - 2*n5 + 7,n4 - 1)
+            + uvid(3,1,n1,n2,n3, - 1 + n4,2 + n5,n6)*mUV^2*rat( - 2*n5 - 2,n4 - 1)
+            + uvid(3,1,n1,n2,n3,n4,1 + n5, - 1 + n6)*rat(1,1)
+            + uvid(3,1,n1,n2,n3,n4,1 + n5,n6)*mUV^2*rat(-1,1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{>0}, n3?{>0}, n4?{>1}, n5?{<1}, n6?{>0}) =
+            + uvid(3,1,1 + n1, - 1 + n2,n3, - 1 + n4,1 + n5,n6)*rat(n5,n4 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,n5,n6)*rat(1,1)
+            + uvid(3,1,1 + n1,1 + n2,n3, - 1 + n4,n5,n6)*mUV^2*rat(2*n2,n4 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3, - 1 + n4,1 + n5,n6)*rat( - n5,n4 - 1)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,1 + n5,n6)*mUV^2*rat(n5,n4 - 1)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,n5,n6)*rat(2*ep + 2*n2 + n4 + n5 - 5,n4 - 1)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5,n6)*mUV^2*rat(1,1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>0}, n3?{>1}, n4?{>0}, n5?{<0}, n6?{>0}) =
+            + uvid(3,1,1 + n1, - 1 + n2, - 1 + n3,n4,1 + n5,n6)*rat(n1,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3, - 1 + n4,1 + n5,n6)*rat( - n1,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,1 + n5,n6)*mUV^2*rat(n1,n3 - 1)
+            + uvid(3,1,n1, - 1 + n2,n3,n4,1 + n5,n6)*rat(1,1)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4,1 + n5,n6)*mUV^2*rat(2*n2,n3 - 1)
+            + uvid(3,1,n1,n2, - 1 + n3,n4,1 + n5,n6)*rat(2*ep + n1 + 2*n2 + n3 - 5,n3 - 1)
+            + uvid(3,1,n1,n2,n3,n4,1 + n5,n6)*mUV^2*rat(1,1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{>0}, n3?{>1}, n4?{>0}, n5?{<1}, n6?{>0}) =
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3,n4,n5,n6)*mUV^2*rat( - 2*n2,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3, - 1 + n4,1 + n5,n6)*rat( - n5,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,1 + n4,n5,n6)*mUV^2*rat( - 2*n4,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,1 + n5, - 1 + n6)*rat(n5,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,1 + n5,n6)*mUV^2*rat( - n5,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5,n6)*rat( - 4*ep - 2*n1 - 2*n2 - n3 - 2*n4 - n5 + 7,n3 - 1)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat(1,1)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5,n6)*mUV^2*rat(-1,1)
+            + uvid(3,1,2 + n1,n2, - 1 + n3,n4,n5,n6)*mUV^2*rat( - 2*n1 - 2,n3 - 1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>1}, n3?{>0}, n4?{>0}, n5?{<0}, n6?{>0}) =
+            + uvid(3,1,1 + n1, - 1 + n2, - 1 + n3,n4,1 + n5,n6)*rat(n1,n2 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,1 + n5, - 1 + n6)*rat( - n1,n2 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,1 + n5,n6)*mUV^2*rat(n1,n2 - 1)
+            + uvid(3,1,n1, - 1 + n2,1 + n3,n4,1 + n5,n6)*mUV^2*rat(2*n3,n2 - 1)
+            + uvid(3,1,n1, - 1 + n2,n3,n4,1 + n5,n6)*rat(2*ep + n1 + n2 + 2*n3 - 5,n2 - 1)
+            + uvid(3,1,n1,n2, - 1 + n3,n4,1 + n5,n6)*rat(1,1)
+            + uvid(3,1,n1,n2,n3,n4,1 + n5,n6)*mUV^2*rat(1,1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{>1}, n3?{>0}, n4?{>0}, n5?{<1}, n6?{>0}) =
+            + uvid(3,1,1 + n1, - 1 + n2,n3, - 1 + n4,1 + n5,n6)*rat(n5,n2 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,1 + n4,n5,n6)*mUV^2*rat(2*n4,n2 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,1 + n5, - 1 + n6)*rat( - n5,n2 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,1 + n5,n6)*mUV^2*rat(n5,n2 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,n5,n6)*rat(2*ep + n2 + 2*n4 + n5 - 5,n2 - 1)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,n5,n6)*rat(1,1)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5,n6)*mUV^2*rat(1,1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{<1}, n6?{>1}) =
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat( - n1,n6 - 1)
+            + uvid(3,1,n1,1 + n2,n3,n4,n5, - 1 + n6)*rat( - n2,n6 - 1)
+            + uvid(3,1,n1,n2,1 + n3,n4,n5, - 1 + n6)*rat( - n3,n6 - 1)
+            + uvid(3,1,n1,n2,n3,1 + n4,n5, - 1 + n6)*rat( - n4,n6 - 1)
+            + uvid(3,1,n1,n2,n3,n4,1 + n5, - 1 + n6)*rat( - n5,n6 - 1)
+            + uvid(3,1,n1,n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat( - 3*ep - n1 - n2 - n3 - n4 - n5 - n6 + 7,n6 - 1)
+            ;
+        id ifmatch->end`i' uvid(3,1,0, n2?{>0}, n3?{>0}, n4?{>2}, 0, 1)=
+            + uvid(3,1,0, - 1 + n2,1 + n3, - 1 + n4,0,1)*mUV^-2*rat( - n3,2*n4 - 2)
+            + uvid(3,1,0,1 + n2,1 + n3, - 2 + n4,0,1)*n3*rat( - n2,n4^2 - 3*n4 + 2)
+            + uvid(3,1,0,1 + n2,n3, - 1 + n4,0,1)*rat( - n2,n4 - 1)
+            + uvid(3,1,0,n2,1 + n3, - 2 + n4,0,1)*mUV^-2*rat( - ep*n3 + 3*n3,n4^2 - 3*n4 + 2)
+            + uvid(3,1,0,n2,1 + n3, - 2 + n4,0,1)*mUV^-2*n4*rat( - n3,2*n4^2 - 6*n4 + 4)
+            + uvid(3,1,0,n2,1 + n3, - 2 + n4,0,1)*mUV^-2*n3*rat( - n2,n4^2 - 3*n4 + 2)
+            + uvid(3,1,0,n2,1 + n3, - 1 + n4,0,0)*mUV^-2*rat(n3,2*n4 - 2)
+            + uvid(3,1,0,n2,1 + n3, - 1 + n4,0,1)*rat( - n3,n4 - 1)
+            + uvid(3,1,0,n2,n3, - 1 + n4,0,1)*mUV^-2*rat( - 4*ep - 2*n2 - n3 - 2*n4 + 10,2*n4 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,0, n2?{>0}, n3?{>1}, 2, 0, 1) =
+            + uvid(3,1,0, - 1 + n2,n3,2,0,1)*mUV^-2*rat(-1,2)
+            + uvid(3,1,0,1 + n2, - 1 + n3,2,0,1)*rat( - n2,n3 - 1)
+            + uvid(3,1,0,1 + n2,n3,1,0,1)*rat( - n2,1)
+            + uvid(3,1,0,n2, - 1 + n3,2,0,1)*mUV^-2*rat( - 2*ep - 2*n2 - n3 + 5,2*n3 - 2)
+            + uvid(3,1,0,n2,1 + n3,1,0,1)*rat( - n3,1)
+            + uvid(3,1,0,n2,n3,1,0,1)*mUV^-2*rat( - 4*ep - 2*n2 - 2*n3 + 7,2)
+            + uvid(3,1,0,n2,n3,2,0,0)*mUV^-2*rat(1,2)
+            ;
+        id ifmatch->end`i' uvid(3,1,0, n2?{>0}, n3?{>2}, 1, 0, 1) =
+            + uvid(3,1,0,1 + n2, - 2 + n3,1,0,1)*mUV^-2*rat(ep*n2 + n2^2 - n2,n3^2 - 3*n3 + 2)
+            + uvid(3,1,0,2 + n2, - 2 + n3,1,0,1)*rat(n2^2 + n2,n3^2 - 3*n3 + 2)
+            + uvid(3,1,0,n2, - 1 + n3,1,0,1)*mUV^-2*rat( - ep - n3 + 3,n3 - 1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, 1, 1, 1, n5?{<0}, 1) =
+            + uvid(3,1,1 + n1,1,1,1,1 + n5,1)*mUV^4*rat( - n1,3*ep + n1 + n5 - 2)
+            + uvid(3,1,1 + n1,1,1,1,n5,1)*mUV^2*rat( - n1,3*ep + n1 + n5 - 2)
+            + uvid(3,1,n1,0,2,1,1 + n5,1)*mUV^2*rat(-1,3*ep + n1 + n5 - 2)
+            + uvid(3,1,n1,1,1,0,1 + n5,2)*mUV^2*rat(-1,3*ep + n1 + n5 - 2)
+            + uvid(3,1,n1,1,1,1,1 + n5,1)*mUV^2*rat(ep - n1 + 2*n5 + 1,3*ep + n1 + n5 - 2)
+            + uvid(3,1,n1,1,1,1,2 + n5,1)*mUV^4*rat(3*n5 + 3,3*ep + n1 + n5 - 2)
+            + uvid(3,1,n1,1,1,2,1 + n5,0)*mUV^2*rat(-1,3*ep + n1 + n5 - 2)
+            + uvid(3,1,n1,2,0,1,1 + n5,1)*mUV^2*rat(-1,3*ep + n1 + n5 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,0, n2?{>0}, 1, 2, 0, 1)=
+            + uvid(3,1,0, - 1 + n2,1,2,0,1)*mUV^-2*rat( - 2*ep - n2 + 3,2*ep + n2 - 2)
+            + uvid(3,1,0,1 + n2,1,1,0,1)*rat( - 3*n2,1)
+            + uvid(3,1,0,n2,0,2,0,2)*rat(-1,2*ep + n2 - 2)
+            + uvid(3,1,0,n2,1,1,0,1)*mUV^-2*rat( - 9*ep*n2 - 8*ep - 3*n2^2 + 12*n2 - 11,2*ep + n2 - 2)
+            + uvid(3,1,0,n2,1,1,0,1)*ep*mUV^-2*rat(24,2*ep + n2 - 2)
+            + uvid(3,1,0,n2,1,1,0,1)*ep^2*mUV^-2*rat(-6,2*ep + n2 - 2)
+            + uvid(3,1,0,n2,2,2,0,0)*rat(-1,2*ep + n2 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,0, n2?{>0}, 2, 1, 0, 1)=
+            + uvid(3,1,0, - 1 + n2,2,1,0,1)*mUV^-2*rat( - 2*ep - n2 + 3,2*ep + n2 - 2)
+            + uvid(3,1,0,1 + n2,1,1,0,1)*rat( - 3*n2,1)
+            + uvid(3,1,0,n2,1,1,0,1)*mUV^-2*rat( - 9*ep*n2 - 8*ep - 3*n2^2 + 12*n2 - 11,2*ep + n2 - 2)
+            + uvid(3,1,0,n2,1,1,0,1)*ep*mUV^-2*rat(24,2*ep + n2 - 2)
+            + uvid(3,1,0,n2,1,1,0,1)*ep^2*mUV^-2*rat(-6,2*ep + n2 - 2)
+            + uvid(3,1,0,n2,2,0,0,2)*rat(-1,2*ep + n2 - 2)
+            + uvid(3,1,0,n2,2,2,0,0)*rat(-1,2*ep + n2 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,0, n2?{>1}, 1, 1, 0, 1)=
+            + uvid(3,1,0, - 2 + n2,2,1,0,1)*mUV^-2*rat( - 6*ep - 3*n2 + 12,16*ep*n2 - 16*ep + 8*n2^2 - 32*n2 + 24)
+            + uvid(3,1,0, - 1 + n2,1,1,0,1)*mUV^-2*rat( - 22*ep*n2 + 10*ep - 8*n2^2 + 47*n2 - 66,16*ep*n2 - 16*ep + 8*n2^2 - 32*n2 + 24)
+            + uvid(3,1,0, - 1 + n2,1,1,0,1)*ep*mUV^-2*rat(6,2*ep*n2 - 2*ep + n2^2 - 4*n2 + 3)
+            + uvid(3,1,0, - 1 + n2,1,1,0,1)*ep^2*mUV^-2*rat(-3,4*ep*n2 - 4*ep + 2*n2^2 - 8*n2 + 6)
+            + uvid(3,1,0, - 1 + n2,2,0,0,1)*mUV^-2*rat( - 3*n2 + 6,16*ep*n2 - 16*ep + 8*n2^2 - 32*n2 + 24)
+            + uvid(3,1,0, - 1 + n2,2,1,0,0)*mUV^-2*rat(3*n2 - 6,16*ep*n2 - 16*ep + 8*n2^2 - 32*n2 + 24)
+            + uvid(3,1,0, - 1 + n2,2,2,0,0)*rat(-3,8*ep*n2 - 8*ep + 4*n2^2 - 16*n2 + 12)
+            + uvid(3,1,0,n2,0,1,0,2)*rat(-1,8*ep + 4*n2 - 12)
+            + uvid(3,1,0,n2,1,0,0,2)*rat(1,8*ep + 4*n2 - 12)
+            + uvid(3,1,0,n2,2,0,0,1)*rat(-1,4*ep + 2*n2 - 6)
+            + uvid(3,1,0,n2,2,1,0,0)*rat(1,4*ep + 2*n2 - 6)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<0}, 1, 1, 1, 0, 1)=
+            + uvid(3,1,1 + n1,0,1,2,0,1)*mUV^2*rat(-1,3*ep + n1 - 2)
+            + uvid(3,1,1 + n1,1,0,1,0,2)*mUV^2*rat(-1,3*ep + n1 - 2)
+            + uvid(3,1,1 + n1,1,1,1,0,1)*mUV^2*rat(ep + 2*n1 + 1,3*ep + n1 - 2)
+            + uvid(3,1,1 + n1,1,2,1,0,0)*mUV^2*rat(-1,3*ep + n1 - 2)
+            + uvid(3,1,1 + n1,2,1,0,0,1)*mUV^2*rat(-1,3*ep + n1 - 2)
+            + uvid(3,1,2 + n1,1,1,1,0,1)*mUV^4*rat(3*n1 + 3,3*ep + n1 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>1}) =
+            + uvid(3,1,1 + n1, - 1 + n2,1 + n3,n4,n5, - 1 + n6)*rat(n3,n6 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,1 + n5, - 1 + n6)*rat( - n5,n6 - 1)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3,n4,n5, - 1 + n6)*rat( - n2,n6 - 1)
+            + uvid(3,1,1 + n1,1 + n2,n3,n4, - 1 + n5, - 1 + n6)*rat(n2,n6 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,1 + n5, - 1 + n6)*rat(n5,n6 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5,n6)*rat(1,1)
+            + uvid(3,1,1 + n1,n2,1 + n3,n4, - 1 + n5, - 1 + n6)*rat( - n3,n6 - 1)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,n5,n6)*rat(2,3)
+            + uvid(3,1,1 + n1,n2,n3,1 + n4, - 1 + n5, - 1 + n6)*rat(n4,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2,n3,1 + n4,n5, - 2 + n6)*rat( - n4,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2,n3,n4, - 1 + n5,n6)*rat(-2,3)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat( - ep - 2*n1,3*n6 - 3)
+            + uvid(3,1,2 + n1, - 1 + n2,n3,n4,n5, - 1 + n6)*rat(n1 + 1,3*n6 - 3)
+            + uvid(3,1,2 + n1,n2, - 1 + n3,n4,n5, - 1 + n6)*rat( - 2*n1 - 2,3*n6 - 3)
+            + uvid(3,1,2 + n1,n2,n3, - 1 + n4,n5, - 1 + n6)*rat( - n1 - 1,3*n6 - 3)
+            + uvid(3,1,2 + n1,n2,n3,n4,n5, - 2 + n6)*rat(2*n1 + 2,3*n6 - 3)
+            + uvid(3,1,2 + n1,n2,n3,n4,n5, - 1 + n6)*mUV^2*rat( - 2*n1 - 2,3*n6 - 3)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{>0}, n3?{>0}, n4?{>1}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1,1 + n1, - 1 + n2,1 + n3, - 1 + n4,n5,n6)*rat( - n3,n4 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3, - 1 + n4,1 + n5,n6)*rat(n5,n4 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,n5,n6)*rat(1,1)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3, - 1 + n4,n5,n6)*rat(n2,n4 - 1)
+            + uvid(3,1,1 + n1,1 + n2,n3, - 1 + n4, - 1 + n5,n6)*rat( - n2,n4 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3, - 1 + n4,1 + n5,n6)*rat( - n5,n4 - 1)
+            + uvid(3,1,1 + n1,n2,1 + n3, - 1 + n4, - 1 + n5,n6)*rat(n3,n4 - 1)
+            + uvid(3,1,1 + n1,n2,n3, - 2 + n4,n5,1 + n6)*rat( - n6,3*n4 - 3)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4, - 1 + n5,1 + n6)*rat(n6,3*n4 - 3)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,n5,n6)*rat( - ep - 2*n1,3*n4 - 3)
+            + uvid(3,1,1 + n1,n2,n3,n4, - 1 + n5,n6)*rat(-2,3)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat(2,3)
+            + uvid(3,1,2 + n1, - 1 + n2,n3, - 1 + n4,n5,n6)*rat( - 2*n1 - 2,3*n4 - 3)
+            + uvid(3,1,2 + n1,n2, - 1 + n3, - 1 + n4,n5,n6)*rat(n1 + 1,3*n4 - 3)
+            + uvid(3,1,2 + n1,n2,n3, - 2 + n4,n5,n6)*rat(2*n1 + 2,3*n4 - 3)
+            + uvid(3,1,2 + n1,n2,n3, - 1 + n4,n5, - 1 + n6)*rat( - n1 - 1,3*n4 - 3)
+            + uvid(3,1,2 + n1,n2,n3, - 1 + n4,n5,n6)*mUV^2*rat( - 2*n1 - 2,3*n4 - 3)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{>0}, n3?{>1}, n4?{>0}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,n5,n6)*rat(2,3)
+            + uvid(3,1,1 + n1,1 + n2, - 2 + n3,n4,n5,n6)*rat( - n2,3*n3 - 3)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3,n4, - 1 + n5,n6)*rat(n2,3*n3 - 3)
+            + uvid(3,1,1 + n1,n2, - 1 + n3, - 1 + n4,1 + n5,n6)*rat( - n5,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3, - 1 + n4,n5,1 + n6)*rat(n6,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,1 + n4, - 1 + n5,n6)*rat(n4,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,1 + n4,n5, - 1 + n6)*rat( - n4,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4, - 1 + n5,1 + n6)*rat( - n6,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,1 + n5, - 1 + n6)*rat(n5,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5,n6)*rat( - ep - 2*n1,3*n3 - 3)
+            + uvid(3,1,1 + n1,n2,n3,n4, - 1 + n5,n6)*rat(-2,3)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat(1,1)
+            + uvid(3,1,2 + n1, - 1 + n2, - 1 + n3,n4,n5,n6)*rat( - n1 - 1,3*n3 - 3)
+            + uvid(3,1,2 + n1,n2, - 2 + n3,n4,n5,n6)*rat(2*n1 + 2,3*n3 - 3)
+            + uvid(3,1,2 + n1,n2, - 1 + n3, - 1 + n4,n5,n6)*rat(n1 + 1,3*n3 - 3)
+            + uvid(3,1,2 + n1,n2, - 1 + n3,n4,n5, - 1 + n6)*rat( - 2*n1 - 2,3*n3 - 3)
+            + uvid(3,1,2 + n1,n2, - 1 + n3,n4,n5,n6)*mUV^2*rat( - 2*n1 - 2,3*n3 - 3)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<0}, n2?{>1}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1,1 + n1, - 2 + n2,1 + n3,n4,n5,n6)*rat( - n3,3*n2 - 3)
+            + uvid(3,1,1 + n1, - 1 + n2,1 + n3,n4, - 1 + n5,n6)*rat(n3,3*n2 - 3)
+            + uvid(3,1,1 + n1, - 1 + n2,n3, - 1 + n4,1 + n5,n6)*rat(n5,n2 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3, - 1 + n4,n5,1 + n6)*rat( - n6,n2 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,1 + n4, - 1 + n5,n6)*rat( - n4,n2 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,1 + n4,n5, - 1 + n6)*rat(n4,n2 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4, - 1 + n5,1 + n6)*rat(n6,n2 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,1 + n5, - 1 + n6)*rat( - n5,n2 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,n5,n6)*rat( - ep - 2*n1,3*n2 - 3)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5,n6)*rat(2,3)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,n5,n6)*rat(1,1)
+            + uvid(3,1,1 + n1,n2,n3,n4, - 1 + n5,n6)*rat(-2,3)
+            + uvid(3,1,2 + n1, - 2 + n2,n3,n4,n5,n6)*rat(2*n1 + 2,3*n2 - 3)
+            + uvid(3,1,2 + n1, - 1 + n2, - 1 + n3,n4,n5,n6)*rat( - n1 - 1,3*n2 - 3)
+            + uvid(3,1,2 + n1, - 1 + n2,n3, - 1 + n4,n5,n6)*rat( - 2*n1 - 2,3*n2 - 3)
+            + uvid(3,1,2 + n1, - 1 + n2,n3,n4,n5, - 1 + n6)*rat(n1 + 1,3*n2 - 3)
+            + uvid(3,1,2 + n1, - 1 + n2,n3,n4,n5,n6)*mUV^2*rat( - 2*n1 - 2,3*n2 - 3)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>1}) =
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat( - n1,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5, - 1 + n6)*mUV^-2*rat(2*n1,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,n5, - 1 + n6)*mUV^-2*rat(n1,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 2 + n6)*mUV^-2*rat( - 2*n1,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat( - n1,3*n6 - 3)
+            + uvid(3,1,n1,n2,n3, - 1 + n4,n5,n6)*mUV^-2*rat(1,3)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 1 + n5, - 1 + n6)*mUV^-2*rat(2*n4,3*n6 - 3)
+            + uvid(3,1,n1,n2,n3,1 + n4,n5, - 2 + n6)*mUV^-2*rat( - 2*n4,3*n6 - 3)
+            + uvid(3,1,n1,n2,n3,n4, - 1 + n5,n6)*mUV^-2*rat(-1,3)
+            + uvid(3,1,n1,n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat( - 2*ep - n1 - 3*n6 + 7,3*n6 - 3)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{>1}, n6?{>0}) =
+            + uvid(3,1,1 + n1,n2,n3,n4, - 1 + n5,n6)*rat(n1,3*n5 - 3)
+            + uvid(3,1,n1, - 1 + n2,1 + n3,n4, - 1 + n5,n6)*mUV^-2*rat(n3,3*n5 - 3)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4, - 1 + n5,n6)*mUV^-2*rat(n2,3*n5 - 3)
+            + uvid(3,1,n1,1 + n2,n3,n4, - 2 + n5,n6)*mUV^-2*rat( - n2,3*n5 - 3)
+            + uvid(3,1,n1,n2,1 + n3,n4, - 2 + n5,n6)*mUV^-2*rat( - n3,3*n5 - 3)
+            + uvid(3,1,n1,n2,n3, - 1 + n4, - 1 + n5,1 + n6)*mUV^-2*rat(n6,3*n5 - 3)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 2 + n5,n6)*mUV^-2*rat( - n4,3*n5 - 3)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 1 + n5, - 1 + n6)*mUV^-2*rat(n4,3*n5 - 3)
+            + uvid(3,1,n1,n2,n3,n4, - 2 + n5,1 + n6)*mUV^-2*rat( - n6,3*n5 - 3)
+            + uvid(3,1,n1,n2,n3,n4, - 1 + n5,n6)*mUV^-2*rat( - ep + n1 - 3*n5 + 5,3*n5 - 3)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>0}, n3?{>0}, n4?{>1}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1,1 + n1, - 1 + n2,n3, - 1 + n4,n5,n6)*mUV^-2*rat(2*n1,3*n4 - 3)
+            + uvid(3,1,1 + n1,n2, - 1 + n3, - 1 + n4,n5,n6)*mUV^-2*rat( - n1,3*n4 - 3)
+            + uvid(3,1,1 + n1,n2,n3, - 2 + n4,n5,n6)*mUV^-2*rat( - 2*n1,3*n4 - 3)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,n5, - 1 + n6)*mUV^-2*rat(n1,3*n4 - 3)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,n5,n6)*rat( - n1,3*n4 - 3)
+            + uvid(3,1,n1,n2,n3, - 2 + n4,n5,1 + n6)*mUV^-2*rat( - 2*n6,3*n4 - 3)
+            + uvid(3,1,n1,n2,n3, - 1 + n4, - 1 + n5,1 + n6)*mUV^-2*rat(2*n6,3*n4 - 3)
+            + uvid(3,1,n1,n2,n3, - 1 + n4,n5,n6)*mUV^-2*rat( - 2*ep - n1 - 3*n4 + 7,3*n4 - 3)
+            + uvid(3,1,n1,n2,n3,n4, - 1 + n5,n6)*mUV^-2*rat(-1,3)
+            + uvid(3,1,n1,n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat(1,3)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>0}, n3?{>1}, n4?{>0}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1,1 + n1, - 1 + n2, - 1 + n3,n4,n5,n6)*mUV^-2*rat(n1,3*n3 - 3)
+            + uvid(3,1,1 + n1,n2, - 2 + n3,n4,n5,n6)*mUV^-2*rat( - 2*n1,3*n3 - 3)
+            + uvid(3,1,1 + n1,n2, - 1 + n3, - 1 + n4,n5,n6)*mUV^-2*rat( - n1,3*n3 - 3)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5, - 1 + n6)*mUV^-2*rat(2*n1,3*n3 - 3)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5,n6)*rat( - n1,3*n3 - 3)
+            + uvid(3,1,n1, - 1 + n2,n3,n4,n5,n6)*mUV^-2*rat(1,3)
+            + uvid(3,1,n1,1 + n2, - 2 + n3,n4,n5,n6)*mUV^-2*rat( - 2*n2,3*n3 - 3)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4, - 1 + n5,n6)*mUV^-2*rat(2*n2,3*n3 - 3)
+            + uvid(3,1,n1,n2, - 1 + n3,n4,n5,n6)*mUV^-2*rat( - 2*ep - n1 - 3*n3 + 7,3*n3 - 3)
+            + uvid(3,1,n1,n2,n3,n4, - 1 + n5,n6)*mUV^-2*rat(-1,3)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{>1}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1,1 + n1, - 2 + n2,n3,n4,n5,n6)*mUV^-2*rat( - 2*n1,3*n2 - 3)
+            + uvid(3,1,1 + n1, - 1 + n2, - 1 + n3,n4,n5,n6)*mUV^-2*rat(n1,3*n2 - 3)
+            + uvid(3,1,1 + n1, - 1 + n2,n3, - 1 + n4,n5,n6)*mUV^-2*rat(2*n1,3*n2 - 3)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat( - n1,3*n2 - 3)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,n5,n6)*rat( - n1,3*n2 - 3)
+            + uvid(3,1,n1, - 2 + n2,1 + n3,n4,n5,n6)*mUV^-2*rat( - 2*n3,3*n2 - 3)
+            + uvid(3,1,n1, - 1 + n2,1 + n3,n4, - 1 + n5,n6)*mUV^-2*rat(2*n3,3*n2 - 3)
+            + uvid(3,1,n1, - 1 + n2,n3,n4,n5,n6)*mUV^-2*rat( - 2*ep - n1 - 3*n2 + 7,3*n2 - 3)
+            + uvid(3,1,n1,n2, - 1 + n3,n4,n5,n6)*mUV^-2*rat(1,3)
+            + uvid(3,1,n1,n2,n3,n4, - 1 + n5,n6)*mUV^-2*rat(-1,3)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{<0}, 1, 1, 1, 1, 1) =
+            + uvid(3,1,1 + n1,0,1,1,1,1)*rat( - 2*n1,2*ep + n1 - 1)
+            + uvid(3,1,1 + n1,0,2,1,1,1)*mUV^2*rat(1,2*ep + n1 - 1)
+            + uvid(3,1,1 + n1,1,0,1,1,1)*rat(n1,2*ep + n1 - 1)
+            + uvid(3,1,1 + n1,1,1,0,1,1)*rat(2*n1,2*ep + n1 - 1)
+            + uvid(3,1,1 + n1,1,1,0,1,2)*mUV^2*rat(3,2*ep + n1 - 1)
+            + uvid(3,1,1 + n1,1,1,0,2,1)*mUV^2*rat(-3,2*ep + n1 - 1)
+            + uvid(3,1,1 + n1,1,1,1,0,2)*mUV^2*rat(-3,2*ep + n1 - 1)
+            + uvid(3,1,1 + n1,1,1,1,1,0)*rat( - n1,2*ep + n1 - 1)
+            + uvid(3,1,1 + n1,1,1,1,1,1)*mUV^2*rat(ep + n1,2*ep + n1 - 1)
+            + uvid(3,1,1 + n1,1,1,1,2,0)*mUV^2*rat(3,2*ep + n1 - 1)
+            + uvid(3,1,1 + n1,1,1,2,0,1)*mUV^2*rat(3,2*ep + n1 - 1)
+            + uvid(3,1,1 + n1,1,1,2,1,0)*mUV^2*rat(-3,2*ep + n1 - 1)
+            + uvid(3,1,1 + n1,1,2,1,0,1)*mUV^2*rat(-1,2*ep + n1 - 1)
+            + uvid(3,1,1 + n1,2,0,1,1,1)*mUV^2*rat(-2,2*ep + n1 - 1)
+            + uvid(3,1,1 + n1,2,1,0,1,1)*mUV^2*rat(-3,2*ep + n1 - 1)
+            + uvid(3,1,1 + n1,2,1,1,0,1)*mUV^2*rat(2,2*ep + n1 - 1)
+            + uvid(3,1,2 + n1,0,1,1,1,1)*mUV^2*rat( - 2*n1 - 2,2*ep + n1 - 1)
+            + uvid(3,1,2 + n1,1,0,1,1,1)*mUV^2*rat(n1 + 1,2*ep + n1 - 1)
+            + uvid(3,1,2 + n1,1,1,0,1,1)*mUV^2*rat(2*n1 + 2,2*ep + n1 - 1)
+            + uvid(3,1,2 + n1,1,1,1,1,0)*mUV^2*rat( - n1 - 1,2*ep + n1 - 1)
+            + uvid(3,1,2 + n1,1,1,1,1,1)*mUV^4*rat(2*n1 + 2,2*ep + n1 - 1)
+            + uvid(3,1,n1,0,2,1,1,1)*rat(-2,2*ep + n1 - 1)
+            + uvid(3,1,n1,1,2,1,0,1)*rat(2,2*ep + n1 - 1)
+            + uvid(3,1,n1,2,0,1,1,1)*rat(1,2*ep + n1 - 1)
+            + uvid(3,1,n1,2,1,1,0,1)*rat(-1,2*ep + n1 - 1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{>0}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>1}) =
+            + uvid(3,1, - 1 + n1,1 + n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat(n2,2*n6 - 2)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat( - 2*n1,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5, - 1 + n6)*mUV^-2*rat(5*n1,6*n6 - 6)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,n5, - 1 + n6)*mUV^-2*rat(2*n1,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 2 + n6)*mUV^-2*rat( - 5*n1,6*n6 - 6)
+            + uvid(3,1,n1, - 1 + n2,1 + n3,n4,n5, - 1 + n6)*mUV^-2*rat(n3,6*n6 - 6)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4,n5, - 1 + n6)*mUV^-2*rat( - n2,3*n6 - 3)
+            + uvid(3,1,n1,1 + n2,n3, - 1 + n4,n5, - 1 + n6)*mUV^-2*rat( - n2,2*n6 - 2)
+            + uvid(3,1,n1,1 + n2,n3,n4, - 1 + n5, - 1 + n6)*mUV^-2*rat(n2,3*n6 - 3)
+            + uvid(3,1,n1,n2,1 + n3,n4, - 1 + n5, - 1 + n6)*mUV^-2*rat( - n3,6*n6 - 6)
+            + uvid(3,1,n1,n2,n3, - 1 + n4,1 + n5, - 1 + n6)*mUV^-2*rat( - n5,2*n6 - 2)
+            + uvid(3,1,n1,n2,n3, - 1 + n4,n5,n6)*mUV^-2*rat(5,6)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 1 + n5, - 1 + n6)*mUV^-2*rat(7*n4,6*n6 - 6)
+            + uvid(3,1,n1,n2,n3,1 + n4,n5, - 2 + n6)*mUV^-2*rat( - 7*n4,6*n6 - 6)
+            + uvid(3,1,n1,n2,n3,n4, - 1 + n5,n6)*mUV^-2*rat(-5,6)
+            + uvid(3,1,n1,n2,n3,n4,1 + n5, - 2 + n6)*mUV^-2*rat(n5,2*n6 - 2)
+            + uvid(3,1,n1,n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat( - ep - 2*n6 + 4,2*n6 - 2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{>0}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{>1}, n6?{>0}) =
+            + uvid(3,1, - 1 + n1,1 + n2,n3,n4, - 1 + n5,n6)*mUV^-2*rat( - n2,2*n5 - 2)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4, - 1 + n5,n6)*mUV^-2*rat(n1,3*n5 - 3)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4, - 1 + n5,n6)*mUV^-2*rat( - n1,6*n5 - 6)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4, - 1 + n5,n6)*mUV^-2*rat( - n1,3*n5 - 3)
+            + uvid(3,1,1 + n1,n2,n3,n4, - 1 + n5, - 1 + n6)*mUV^-2*rat(n1,6*n5 - 6)
+            + uvid(3,1,n1, - 1 + n2,1 + n3,n4, - 1 + n5,n6)*mUV^-2*rat(n3,6*n5 - 6)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4, - 1 + n5,n6)*mUV^-2*rat(2*n2,3*n5 - 3)
+            + uvid(3,1,n1,1 + n2,n3, - 1 + n4, - 1 + n5,n6)*mUV^-2*rat(n2,2*n5 - 2)
+            + uvid(3,1,n1,1 + n2,n3,n4, - 2 + n5,n6)*mUV^-2*rat( - 2*n2,3*n5 - 3)
+            + uvid(3,1,n1,n2,1 + n3,n4, - 2 + n5,n6)*mUV^-2*rat( - n3,6*n5 - 6)
+            + uvid(3,1,n1,n2,n3, - 1 + n4, - 1 + n5,1 + n6)*mUV^-2*rat( - n6,6*n5 - 6)
+            + uvid(3,1,n1,n2,n3, - 1 + n4,n5,n6)*mUV^-2*rat(1,2)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 2 + n5,n6)*mUV^-2*rat( - 5*n4,6*n5 - 6)
+            + uvid(3,1,n1,n2,n3,1 + n4, - 1 + n5, - 1 + n6)*mUV^-2*rat(5*n4,6*n5 - 6)
+            + uvid(3,1,n1,n2,n3,n4, - 2 + n5,1 + n6)*mUV^-2*rat(n6,6*n5 - 6)
+            + uvid(3,1,n1,n2,n3,n4, - 1 + n5,n6)*mUV^-2*rat( - ep - 2*n5 + 4,2*n5 - 2)
+            + uvid(3,1,n1,n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat(-1,2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{>0}, n2?{>0}, n3?{>0}, n4?{>1}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1, - 1 + n1,1 + n2,n3, - 1 + n4,n5,n6)*mUV^-2*rat(n2,2*n4 - 2)
+            + uvid(3,1,1 + n1, - 1 + n2,n3, - 1 + n4,n5,n6)*mUV^-2*rat(n1,3*n4 - 3)
+            + uvid(3,1,1 + n1,n2, - 1 + n3, - 1 + n4,n5,n6)*mUV^-2*rat( - n1,6*n4 - 6)
+            + uvid(3,1,1 + n1,n2,n3, - 2 + n4,n5,n6)*mUV^-2*rat( - n1,3*n4 - 3)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,n5, - 1 + n6)*mUV^-2*rat(n1,6*n4 - 6)
+            + uvid(3,1,n1, - 1 + n2,1 + n3, - 1 + n4,n5,n6)*mUV^-2*rat(n3,6*n4 - 6)
+            + uvid(3,1,n1,1 + n2, - 1 + n3, - 1 + n4,n5,n6)*mUV^-2*rat( - n2,3*n4 - 3)
+            + uvid(3,1,n1,1 + n2,n3, - 2 + n4,n5,n6)*mUV^-2*rat( - n2,2*n4 - 2)
+            + uvid(3,1,n1,1 + n2,n3, - 1 + n4, - 1 + n5,n6)*mUV^-2*rat(n2,3*n4 - 3)
+            + uvid(3,1,n1,n2,1 + n3, - 1 + n4, - 1 + n5,n6)*mUV^-2*rat( - n3,6*n4 - 6)
+            + uvid(3,1,n1,n2,n3, - 2 + n4,1 + n5,n6)*mUV^-2*rat( - n5,2*n4 - 2)
+            + uvid(3,1,n1,n2,n3, - 2 + n4,n5,1 + n6)*mUV^-2*rat( - n6,6*n4 - 6)
+            + uvid(3,1,n1,n2,n3, - 1 + n4, - 1 + n5,1 + n6)*mUV^-2*rat(n6,6*n4 - 6)
+            + uvid(3,1,n1,n2,n3, - 1 + n4,1 + n5, - 1 + n6)*mUV^-2*rat(n5,2*n4 - 2)
+            + uvid(3,1,n1,n2,n3, - 1 + n4,n5,n6)*mUV^-2*rat( - ep - 2*n4 + 4,2*n4 - 2)
+            + uvid(3,1,n1,n2,n3,n4, - 1 + n5,n6)*mUV^-2*rat(1,6)
+            + uvid(3,1,n1,n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat(-1,6)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{>0}, n2?{>0}, n3?{>1}, n4?{>0}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1, - 1 + n1,1 + n2, - 1 + n3,n4,n5,n6)*mUV^-2*rat(n2,2*n3 - 2)
+            + uvid(3,1,1 + n1,n2, - 2 + n3,n4,n5,n6)*mUV^-2*rat( - n1,2*n3 - 2)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5, - 1 + n6)*mUV^-2*rat(n1,2*n3 - 2)
+            + uvid(3,1,n1, - 1 + n2,n3,n4,n5,n6)*mUV^-2*rat(1,2)
+            + uvid(3,1,n1,1 + n2, - 2 + n3,n4,n5,n6)*mUV^-2*rat( - n2,n3 - 1)
+            + uvid(3,1,n1,1 + n2, - 1 + n3, - 1 + n4,n5,n6)*mUV^-2*rat( - n2,2*n3 - 2)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4, - 1 + n5,n6)*mUV^-2*rat(n2,n3 - 1)
+            + uvid(3,1,n1,n2, - 1 + n3, - 1 + n4,1 + n5,n6)*mUV^-2*rat( - n5,2*n3 - 2)
+            + uvid(3,1,n1,n2, - 1 + n3, - 1 + n4,n5,1 + n6)*mUV^-2*rat(n6,2*n3 - 2)
+            + uvid(3,1,n1,n2, - 1 + n3,1 + n4, - 1 + n5,n6)*mUV^-2*rat(n4,2*n3 - 2)
+            + uvid(3,1,n1,n2, - 1 + n3,1 + n4,n5, - 1 + n6)*mUV^-2*rat( - n4,2*n3 - 2)
+            + uvid(3,1,n1,n2, - 1 + n3,n4, - 1 + n5,1 + n6)*mUV^-2*rat( - n6,2*n3 - 2)
+            + uvid(3,1,n1,n2, - 1 + n3,n4,1 + n5, - 1 + n6)*mUV^-2*rat(n5,2*n3 - 2)
+            + uvid(3,1,n1,n2, - 1 + n3,n4,n5,n6)*mUV^-2*rat( - ep - 2*n3 + 4,2*n3 - 2)
+            + uvid(3,1,n1,n2,n3,n4, - 1 + n5,n6)*mUV^-2*rat(-1,2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{>0}, n2?{>1}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1, - 1 + n1,n2,n3,n4,n5,n6)*mUV^-2*rat(1,2)
+            + uvid(3,1,1 + n1, - 2 + n2,n3,n4,n5,n6)*mUV^-2*rat( - n1,n2 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2, - 1 + n3,n4,n5,n6)*mUV^-2*rat(n1,2*n2 - 2)
+            + uvid(3,1,1 + n1, - 1 + n2,n3, - 1 + n4,n5,n6)*mUV^-2*rat(n1,n2 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat( - n1,2*n2 - 2)
+            + uvid(3,1,n1, - 2 + n2,1 + n3,n4,n5,n6)*mUV^-2*rat( - n3,2*n2 - 2)
+            + uvid(3,1,n1, - 1 + n2,1 + n3,n4, - 1 + n5,n6)*mUV^-2*rat(n3,2*n2 - 2)
+            + uvid(3,1,n1, - 1 + n2,n3, - 1 + n4,1 + n5,n6)*mUV^-2*rat( - n5,2*n2 - 2)
+            + uvid(3,1,n1, - 1 + n2,n3, - 1 + n4,n5,1 + n6)*mUV^-2*rat(n6,2*n2 - 2)
+            + uvid(3,1,n1, - 1 + n2,n3,1 + n4, - 1 + n5,n6)*mUV^-2*rat(n4,2*n2 - 2)
+            + uvid(3,1,n1, - 1 + n2,n3,1 + n4,n5, - 1 + n6)*mUV^-2*rat( - n4,2*n2 - 2)
+            + uvid(3,1,n1, - 1 + n2,n3,n4, - 1 + n5,1 + n6)*mUV^-2*rat( - n6,2*n2 - 2)
+            + uvid(3,1,n1, - 1 + n2,n3,n4,1 + n5, - 1 + n6)*mUV^-2*rat(n5,2*n2 - 2)
+            + uvid(3,1,n1, - 1 + n2,n3,n4,n5,n6)*mUV^-2*rat( - ep - 2*n2 + 4,2*n2 - 2)
+            + uvid(3,1,n1,n2,n3, - 1 + n4,n5,n6)*mUV^-2*rat(-1,2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{>1}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1, - 2 + n1,1 + n2,n3,n4,n5,n6)*mUV^-2*rat( - 3*n2,2*n1 - 2)
+            + uvid(3,1, - 1 + n1, - 1 + n2,1 + n3,n4,n5,n6)*mUV^-2*rat( - n3,2*n1 - 2)
+            + uvid(3,1, - 1 + n1,1 + n2, - 1 + n3,n4,n5,n6)*mUV^-2*rat(n2,n1 - 1)
+            + uvid(3,1, - 1 + n1,1 + n2,n3, - 1 + n4,n5,n6)*mUV^-2*rat(3*n2,2*n1 - 2)
+            + uvid(3,1, - 1 + n1,1 + n2,n3,n4, - 1 + n5,n6)*mUV^-2*rat( - n2,n1 - 1)
+            + uvid(3,1, - 1 + n1,n2,1 + n3,n4, - 1 + n5,n6)*mUV^-2*rat(n3,2*n1 - 2)
+            + uvid(3,1, - 1 + n1,n2,n3, - 1 + n4,1 + n5,n6)*mUV^-2*rat(3*n5,2*n1 - 2)
+            + uvid(3,1, - 1 + n1,n2,n3, - 1 + n4,n5,1 + n6)*mUV^-2*rat( - 3*n6,2*n1 - 2)
+            + uvid(3,1, - 1 + n1,n2,n3,1 + n4, - 1 + n5,n6)*mUV^-2*rat( - 3*n4,2*n1 - 2)
+            + uvid(3,1, - 1 + n1,n2,n3,1 + n4,n5, - 1 + n6)*mUV^-2*rat(3*n4,2*n1 - 2)
+            + uvid(3,1, - 1 + n1,n2,n3,n4, - 1 + n5,1 + n6)*mUV^-2*rat(3*n6,2*n1 - 2)
+            + uvid(3,1, - 1 + n1,n2,n3,n4,1 + n5, - 1 + n6)*mUV^-2*rat( - 3*n5,2*n1 - 2)
+            + uvid(3,1, - 1 + n1,n2,n3,n4,n5,n6)*mUV^-2*rat( - ep - 2*n1 + 4,2*n1 - 2)
+            + uvid(3,1,n1, - 1 + n2,n3,n4,n5,n6)*mUV^-2*rat(1,1)
+            + uvid(3,1,n1,n2, - 1 + n3,n4,n5,n6)*mUV^-2*rat(-1,2)
+            + uvid(3,1,n1,n2,n3, - 1 + n4,n5,n6)*mUV^-2*rat(-1,1)
+            + uvid(3,1,n1,n2,n3,n4,n5, - 1 + n6)*mUV^-2*rat(1,2)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{>0}, n2?{>0}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{>1}) =
+            + uvid(3,1,1 + n1, - 1 + n2,1 + n3,n4,n5, - 1 + n6)*rat(4*n3,3*n6 - 3)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,1 + n5, - 1 + n6)*rat( - n5,n6 - 1)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3,n4,n5, - 1 + n6)*rat( - 5*n2,3*n6 - 3)
+            + uvid(3,1,1 + n1,1 + n2,n3, - 1 + n4,n5, - 1 + n6)*rat( - n2,n6 - 1)
+            + uvid(3,1,1 + n1,1 + n2,n3,n4, - 1 + n5, - 1 + n6)*rat(5*n2,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,1 + n5, - 1 + n6)*rat(n5,n6 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,n5,n6)*rat(1,1)
+            + uvid(3,1,1 + n1,n2,1 + n3,n4, - 1 + n5, - 1 + n6)*rat( - 4*n3,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,1 + n5, - 1 + n6)*rat( - n5,n6 - 1)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,n5,n6)*rat(5,3)
+            + uvid(3,1,1 + n1,n2,n3,1 + n4, - 1 + n5, - 1 + n6)*rat(4*n4,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2,n3,1 + n4,n5, - 2 + n6)*rat( - 4*n4,3*n6 - 3)
+            + uvid(3,1,1 + n1,n2,n3,n4, - 1 + n5,n6)*rat(-5,3)
+            + uvid(3,1,1 + n1,n2,n3,n4,1 + n5, - 2 + n6)*rat(n5,n6 - 1)
+            + uvid(3,1,2 + n1, - 1 + n2,n3,n4,n5, - 1 + n6)*rat( - n1 - 1,3*n6 - 3)
+            + uvid(3,1,2 + n1,n2, - 1 + n3,n4,n5, - 1 + n6)*rat( - n1 - 1,3*n6 - 3)
+            + uvid(3,1,2 + n1,n2,n3, - 1 + n4,n5, - 1 + n6)*rat(n1 + 1,3*n6 - 3)
+            + uvid(3,1,2 + n1,n2,n3,n4,n5, - 2 + n6)*rat(n1 + 1,3*n6 - 3)
+            + uvid(3,1,n1,1 + n2,n3,n4,n5, - 1 + n6)*rat(n2,n6 - 1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{>0}, n2?{>0}, n3?{>0}, n4?{>1}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1,1 + n1, - 1 + n2,1 + n3, - 1 + n4,n5,n6)*rat( - 2*n3,3*n4 - 3)
+            + uvid(3,1,1 + n1, - 1 + n2,n3, - 1 + n4,1 + n5,n6)*rat(n5,n4 - 1)
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,n5,n6)*rat(1,1)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3, - 1 + n4,n5,n6)*rat(n2,3*n4 - 3)
+            + uvid(3,1,1 + n1,1 + n2,n3, - 2 + n4,n5,n6)*rat( - n2,n4 - 1)
+            + uvid(3,1,1 + n1,1 + n2,n3, - 1 + n4, - 1 + n5,n6)*rat( - n2,3*n4 - 3)
+            + uvid(3,1,1 + n1,n2, - 1 + n3, - 1 + n4,1 + n5,n6)*rat( - n5,n4 - 1)
+            + uvid(3,1,1 + n1,n2,1 + n3, - 1 + n4, - 1 + n5,n6)*rat(2*n3,3*n4 - 3)
+            + uvid(3,1,1 + n1,n2,n3, - 2 + n4,1 + n5,n6)*rat( - n5,n4 - 1)
+            + uvid(3,1,1 + n1,n2,n3, - 2 + n4,n5,1 + n6)*rat(2*n6,3*n4 - 3)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4, - 1 + n5,1 + n6)*rat( - 2*n6,3*n4 - 3)
+            + uvid(3,1,1 + n1,n2,n3, - 1 + n4,1 + n5, - 1 + n6)*rat(n5,n4 - 1)
+            + uvid(3,1,1 + n1,n2,n3,n4, - 1 + n5,n6)*rat(1,3)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat(-1,3)
+            + uvid(3,1,2 + n1, - 1 + n2,n3, - 1 + n4,n5,n6)*rat( - 4*n1 - 4,3*n4 - 3)
+            + uvid(3,1,2 + n1,n2, - 1 + n3, - 1 + n4,n5,n6)*rat(2*n1 + 2,3*n4 - 3)
+            + uvid(3,1,2 + n1,n2,n3, - 2 + n4,n5,n6)*rat(4*n1 + 4,3*n4 - 3)
+            + uvid(3,1,2 + n1,n2,n3, - 1 + n4,n5, - 1 + n6)*rat( - 2*n1 - 2,3*n4 - 3)
+            + uvid(3,1,n1,1 + n2,n3, - 1 + n4,n5,n6)*rat(n2,n4 - 1)
+            ;
+        id ifmatch->end`i' uvid(3,1,n1?{>0}, n2?{>0}, n3?{>1}, n4?{>0}, n5?{>0}, n6?{>0}) =
+            + uvid(3,1,1 + n1, - 1 + n2,n3,n4,n5,n6)*rat(1,1)
+            + uvid(3,1,1 + n1,1 + n2, - 2 + n3,n4,n5,n6)*rat( - n2,n3 - 1)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3, - 1 + n4,n5,n6)*rat( - n2,n3 - 1)
+            + uvid(3,1,1 + n1,1 + n2, - 1 + n3,n4, - 1 + n5,n6)*rat(n2,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3, - 1 + n4,1 + n5,n6)*rat( - 2*n5,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3, - 1 + n4,n5,1 + n6)*rat(2*n6,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,1 + n4, - 1 + n5,n6)*rat(2*n4,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,1 + n4,n5, - 1 + n6)*rat( - 2*n4,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4, - 1 + n5,1 + n6)*rat( - 2*n6,n3 - 1)
+            + uvid(3,1,1 + n1,n2, - 1 + n3,n4,1 + n5, - 1 + n6)*rat(2*n5,n3 - 1)
+            + uvid(3,1,1 + n1,n2,n3,n4, - 1 + n5,n6)*rat(-1,1)
+            + uvid(3,1,1 + n1,n2,n3,n4,n5, - 1 + n6)*rat(1,1)
+            + uvid(3,1,2 + n1, - 1 + n2, - 1 + n3,n4,n5,n6)*rat( - n1 - 1,n3 - 1)
+            + uvid(3,1,2 + n1,n2, - 2 + n3,n4,n5,n6)*rat(n1 + 1,n3 - 1)
+            + uvid(3,1,2 + n1,n2, - 1 + n3, - 1 + n4,n5,n6)*rat(n1 + 1,n3 - 1)
+            + uvid(3,1,2 + n1,n2, - 1 + n3,n4,n5, - 1 + n6)*rat( - n1 - 1,n3 - 1)
+            + uvid(3,1,n1,1 + n2, - 1 + n3,n4,n5,n6)*rat(n2,n3 - 1)
+            ;
 
         id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{>0}, n5?{<1}, n6?{>0}) = uvid(3,1,n5, 0, n4, n1, n3, n6)*(uvid(3,1,-1, 0, 0, 0, 0, 0)- uvid(3,1,0, -1, 0, 0, 0, 0) + uvid(3,1,0, 0, -1, 0, 0, 0) + uvid(3,1,0, 0,0, -1, 0, 0) + uvid(3,1,0, 0, 0, 0, -1, 0) - uvid(3,1,0, 0, 0, 0, 0, -1) + mUV^2*uvid(3,1,0, 0, 0, 0, 0, 0))^-n2;
         id ifmatch->end`i' uvid(3,1,n1?{<1}, n2?{<1}, n3?{>0}, n4?{>0}, n5?{>0}, n6?{<1}) = uvid(3,1,0, n6, n4, n2, n5, n3)*(-uvid(3,1,-1, 0, 0, 0, 0, 0) + uvid(3,1,0, -1, 0, 0, 0, 0) + uvid(3,1,0,0, -1, 0, 0, 0) + uvid(3,1,0, 0, 0, -1, 0, 0) - uvid(3,1,0, 0, 0, 0, -1, 0)+ uvid(3,1,0, 0, 0, 0, 0, -1) + mUV^2*uvid(3,1,0, 0, 0, 0, 0, 0))^-n1;
@@ -362,6 +1102,7 @@ CF uvid;
         label end`i';
         redefine i "0";
         label realend;
+* The two lines below wh
         id D = rat(4-2*ep, 1);
         Multiply replace_(D, 4-2*ep);
 
@@ -397,25 +1138,54 @@ CF uvid;
     endif;
 #endprocedure
 
+*#procedure Masters()
+*    id uvid(1,1) = rat(ep,1) * mUV^2 * (rat(1,ep) + 1 + (1 + 1/12*pi^2)*rat(ep,1) + (1 + 1/12*pi^2 - 1/3*z3)*rat(ep^2,1) + alarmt1m3*rat(ep^3,1));
+*    id uvid(2,1) = rat(ep^2,1) * (rat(1,ep^2) + pi^2/6 - 2/3*z3 * rat(ep, 1) + alarmt2m21*rat(ep^2,1));
+*    id uvid(2,2) = 2 * ( -8453430797319808/21639331090712481 + 28375860251062315/42167665933747557 * rat(ep, 1) + alarmt2m22*rat(ep^2,1));
+*
+** mercedes
+*    id uvid(3,1,1,1,1,1,1,1) = (2 * z3*rat(1,ep) + 1/55 * (-23459561604811217099/24730222849782180 + 330 * z3) + alarmt3m111111*rat(ep,1));
+** 5-edge
+*    id uvid(3,1,0,1,1,1,1,1) = mUV^2*(rat(1,ep^3) + rat(17/3,ep^2) + 62425469161433460/3513164752244341 * rat(1,ep)
+*        + 693238079765918839/11778746848918154 + alarmt3m011111*rat(ep,1));
+** banana
+*    id uvid(3,1,0,1,1,1,0,1) = mUV^4*(rat(2,ep^3) + rat(23,3 * ep^2) + (35 + pi^2)*rat(1,2 * ep) + 1/12 * (275 + 23 * pi^2 - 24 * z3)
+*        + 531237557421164097/8442111747388969*rat(ep,1) + alarmt3m011101*rat(ep^2,1));
+** sunrise-bubble
+*    id uvid(3,1,0,0,1,1,1,1) = mUV^4*(rat(3,2 * ep^3) + rat(6,ep^2) + 1287900757431154619/9648502930354515*rat(1,8 * ep)
+*        + 650828837758949887/14793500421610002 + alarmt3m001111*rat(ep,1));
+** triple-bubble
+*    id uvid(3,1,0,0,1,0,1,1) = mUV^6*(rat(1,ep^3) + rat(3,ep^2) + (24 + pi^2)*rat(1,4 * ep) + 1/4 * (40 + 3 * pi^2 - 4 * z3)
+*        + 1/480*(7200 + 720*pi^2 + 19*pi^4 - 1440*z3)*rat(ep,1) + alarmt3m001011*rat(ep^2,1));
+*#endprocedure
+
 #procedure Masters()
+
     id uvid(1,1) = rat(ep,1) * mUV^2 * (rat(1,ep) + 1 + (1 + 1/12*pi^2)*rat(ep,1) + (1 + 1/12*pi^2 - 1/3*z3)*rat(ep^2,1) + alarmt1m3*rat(ep^3,1));
+
     id uvid(2,1) = rat(ep^2,1) * (rat(1,ep^2) + pi^2/6 - 2/3*z3 * rat(ep, 1) + alarmt2m21*rat(ep^2,1));
-    id uvid(2,2) = 2 * ( -8453430797319808/21639331090712481 + 28375860251062315/42167665933747557 * rat(ep, 1) + alarmt2m22*rat(ep^2,1));
+
+    id uvid(2,2) = 2 * ( -2/9*sqrt3*cl2 + MASTER2m22EP * rat(ep, 1) + alarmt2m22*rat(ep^2,1));
 
 * mercedes
-    id uvid(3,1,1,1,1,1,1,1) = (2 * z3*rat(1,ep) + 1/55 * (-23459561604811217099/24730222849782180 + 330 * z3) + alarmt3m111111*rat(ep,1));
+    id uvid(3,1,1,1,1,1,1,1) = (2 * z3*rat(1,ep) + 1/55 * (MASTER3m111111FINPIECE + 330 * z3) + alarmt3m111111*rat(ep,1));
+
 * 5-edge
-    id uvid(3,1,0,1,1,1,1,1) = mUV^2*(rat(1,ep^3) + rat(17/3,ep^2) + 62425469161433460/3513164752244341 * rat(1,ep)
-        + 693238079765918839/11778746848918154 + alarmt3m011111*rat(ep,1));
+    id uvid(3,1,0,1,1,1,1,1) = mUV^2*(rat(1,ep^3) + rat(17/3,ep^2) + (67/3 - 4*sqrt3*cl2 + pi^2/4) * rat(1,ep)
+        + MASTER3m011111FIN + alarmt3m011111*rat(ep,1));
+
 * banana
     id uvid(3,1,0,1,1,1,0,1) = mUV^4*(rat(2,ep^3) + rat(23,3 * ep^2) + (35 + pi^2)*rat(1,2 * ep) + 1/12 * (275 + 23 * pi^2 - 24 * z3)
-        + 531237557421164097/8442111747388969*rat(ep,1) + alarmt3m011101*rat(ep^2,1));
+        + MASTER3m011101EP*rat(ep,1) + alarmt3m011101*rat(ep^2,1));
+
 * sunrise-bubble
-    id uvid(3,1,0,0,1,1,1,1) = mUV^4*(rat(3,2 * ep^3) + rat(6,ep^2) + 1287900757431154619/9648502930354515*rat(1,8 * ep)
-        + 650828837758949887/14793500421610002 + alarmt3m001111*rat(ep,1));
+    id uvid(3,1,0,0,1,1,1,1) = mUV^4*(rat(3,2 * ep^3) + rat(6,ep^2) + (-16*sqrt3*cl2 + 3*(44 + pi^2))*rat(1,8 * ep)
+        + MASTER3m001111FIN + alarmt3m001111*rat(ep,1));
+
 * triple-bubble
     id uvid(3,1,0,0,1,0,1,1) = mUV^6*(rat(1,ep^3) + rat(3,ep^2) + (24 + pi^2)*rat(1,4 * ep) + 1/4 * (40 + 3 * pi^2 - 4 * z3)
         + 1/480*(7200 + 720*pi^2 + 19*pi^4 - 1440*z3)*rat(ep,1) + alarmt3m001011*rat(ep^2,1));
+
 #endprocedure
 
 #procedure SubstituteMasters()
@@ -426,18 +1196,6 @@ CF uvid;
     .sort:masters-1;
     PolyRatFun rat(expand,ep,{`MAXPOLE'+`SELECTEDEPSILONORDER'+`SPURIOUSPOLE'});
     Keep brackets;
-
-
-* Normalize with alphaLoop convention
-*#ifndef `PYSECDECCOMPARE'
-*    id uvid(n?,?a) = uvid(n,?a) * (-i_*16*pi^2)^-n;
-*#else
-*    id uvid(n?,?a) = uvid(n,?a) * (1 - eulergamma*rat(ep,1) + 1/2*eulergamma^2*rat(ep^2,1) - 1/6*eulergamma^3*rat(ep^3,1) + 1/24*eulergamma^4*rat(ep^4,1)-1/120*eulergamma^5*rat(ep^5,1))^n;
-*    id eulergamma = 4509740178/7812920633;
-*#endif
-
-* add log(mUV^2/mu^2)-dependence
-*    id uvid(n?,?a) = uvid(n,?a) * (1 - logmUVmu * rat(ep, 1) + 1/2 * logmUVmu^2 * rat(ep^2, 1) - 1/6 * logmUVmu^3 * rat(ep^3, 1))^n;
 
     .sort
     #call TruncateExpansion(`SPURIOUSPOLE')
@@ -453,9 +1211,8 @@ CF uvid;
     .sort:truncation;
     PolyRatFun rat(expand,ep,{`MAXPOLE'+`SELECTEDEPSILONORDER'});
 
-
 * fill in constants, they have not been substituted before to have exact cancellation
 *    id pi = 30246273033735921/9627687726852338;
-   id z3 = 15408859284534249/12818743641862727;
+*   id z3 = 15408859284534249/12818743641862727;
 
 #endprocedure

@@ -1,6 +1,7 @@
 mod test_utils;
 use vakint::{
-    EvaluationMethod, EvaluationOrder, FMFTOptions, LoopNormalizationFactor, MATADOptions,
+    AlphaLoopOptions, EvaluationMethod, EvaluationOrder, FMFTOptions, LoopNormalizationFactor,
+    MATADOptions,
 };
 
 use std::vec;
@@ -21,12 +22,16 @@ const N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS: u32 = 32;
 
 #[test_log::test]
 fn test_integrate_1l_a() {
-    let vakint = get_vakint(VakintSettings {
+    let mut vakint = get_vakint(VakintSettings {
         allow_unknown_integrals: false,
         use_dot_product_notation: true,
         mu_r_sq_symbol: format!("{}::mursq", vakint::NAMESPACE),
         integral_normalization_factor: vakint::LoopNormalizationFactor::MSbar,
         run_time_decimal_precision: 16,
+        evaluation_order: EvaluationOrder(vec![EvaluationMethod::AlphaLoop(AlphaLoopOptions {
+            susbstitute_masters: false,
+            ..AlphaLoopOptions::default()
+        })]),
         ..VakintSettings::default()
     });
 
@@ -64,7 +69,7 @@ fn test_integrate_1l_a() {
         ),
         (
             "ε^2",
-            "(7/16*vakint::muvsq^2*vakint::g(1,2)+1/48*𝜋^2*vakint::muvsq^2*vakint::g(1,2))*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))+1/2*(1/4*vakint::muvsq^2*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+3/8*𝜋^2*vakint::𝑖*vakint::muvsq^2*vakint::g(1,2))*log(vakint::muvsq)^2-(𝜋^2*vakint::𝑖*(7/16*vakint::muvsq^2*vakint::g(1,2)+1/48*𝜋^2*vakint::muvsq^2*vakint::g(1,2))+3/8*vakint::muvsq^2*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+1/4*vakint::muvsq^2*(1/2*𝜋^2*vakint::𝑖*log(𝜋)^2+1/2*𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq)^2-𝜋^2*vakint::𝑖*log(𝜋)*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2))*log(vakint::muvsq)+𝜋^2*vakint::𝑖*(151190863202516241/410199796539607264*vakint::muvsq^2*vakint::g(1,2)+1/32*𝜋^2*vakint::muvsq^2*vakint::g(1,2))+3/8*vakint::muvsq^2*(1/2*𝜋^2*vakint::𝑖*log(𝜋)^2+1/2*𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq)^2-𝜋^2*vakint::𝑖*log(𝜋)*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+1/4*vakint::muvsq^2*(-1/6*𝜋^2*vakint::𝑖*log(𝜋)^3+1/6*𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq)^3+1/2*𝜋^2*vakint::𝑖*log(𝜋)^2*log(1/4*𝜋^-1*vakint::mursq)-1/2*𝜋^2*vakint::𝑖*log(𝜋)*log(1/4*𝜋^-1*vakint::mursq)^2)*vakint::g(1,2)-1/24*𝜋^2*vakint::𝑖*vakint::muvsq^2*log(vakint::muvsq)^3*vakint::g(1,2)",
+            "(7/16*vakint::muvsq^2*vakint::g(1,2)+1/48*𝜋^2*vakint::muvsq^2*vakint::g(1,2))*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))+1/2*(1/4*vakint::muvsq^2*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+3/8*𝜋^2*vakint::𝑖*vakint::muvsq^2*vakint::g(1,2))*log(vakint::muvsq)^2-(𝜋^2*vakint::𝑖*(7/16*vakint::muvsq^2*vakint::g(1,2)+1/48*𝜋^2*vakint::muvsq^2*vakint::g(1,2))+3/8*vakint::muvsq^2*(-𝜋^2*vakint::𝑖*log(𝜋)+𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+1/4*vakint::muvsq^2*(1/2*𝜋^2*vakint::𝑖*log(𝜋)^2+1/2*𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq)^2-𝜋^2*vakint::𝑖*log(𝜋)*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2))*log(vakint::muvsq)+𝜋^2*vakint::𝑖*(-1/12*vakint::muvsq^2*vakint::z3*vakint::g(1,2)+15/32*vakint::muvsq^2*vakint::g(1,2)+1/32*𝜋^2*vakint::muvsq^2*vakint::g(1,2))+3/8*vakint::muvsq^2*(1/2*𝜋^2*vakint::𝑖*log(𝜋)^2+1/2*𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq)^2-𝜋^2*vakint::𝑖*log(𝜋)*log(1/4*𝜋^-1*vakint::mursq))*vakint::g(1,2)+1/4*vakint::muvsq^2*(-1/6*𝜋^2*vakint::𝑖*log(𝜋)^3+1/6*𝜋^2*vakint::𝑖*log(1/4*𝜋^-1*vakint::mursq)^3+1/2*𝜋^2*vakint::𝑖*log(𝜋)^2*log(1/4*𝜋^-1*vakint::mursq)-1/2*𝜋^2*vakint::𝑖*log(𝜋)*log(1/4*𝜋^-1*vakint::mursq)^2)*vakint::g(1,2)-1/24*𝜋^2*vakint::𝑖*vakint::muvsq^2*log(vakint::muvsq)^3*vakint::g(1,2)",
         ),
     ] {
         targets.insert(
@@ -82,6 +87,15 @@ fn test_integrate_1l_a() {
             targets.get(&v.to_owned()).unwrap().to_owned(),
         );
     }
+
+    // Now let's re-evaluate but now substituting the masters with their numerical expressions so as to proceed with numerical comparisons.
+    vakint.settings.evaluation_order =
+        EvaluationOrder(vec![EvaluationMethod::AlphaLoop(AlphaLoopOptions {
+            susbstitute_masters: true,
+            ..AlphaLoopOptions::default()
+        })]);
+    let evaluated_integral_res = vakint.evaluate_integral(integral.as_view());
+    let evaluated_integral = evaluated_integral_res.unwrap();
 
     //debug!("Evaluated integral: {}", evaluated_integral);
     let mut params = HashMap::default();
@@ -385,7 +399,7 @@ fn test_integrate_3l_rank_4() {
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + p(1,11)*k(3,11)*k(3,22)*p(2,22)
-                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22)
              )
             *topo(\
                  prop(1,edge(1,2),k(1),muvsq,1)\
@@ -423,7 +437,7 @@ fn test_integrate_3l_rank_4_additional_symbols_numerator() {
             "(
                   user_space::A*k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + user_space::B*p(1,11)*k(3,11)*k(3,22)*p(2,22)
-                + user_space::C*p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+                + user_space::C*p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22)
              )
             *topo(\
                  prop(1,edge(1,2),k(1),muvsq,1)\
@@ -464,7 +478,7 @@ fn test_integrate_3l_rank_4_matad() {
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + p(1,11)*k(3,11)*k(3,22)*p(2,22)
-                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22)
              )
             *topo(\
                  prop(1,edge(1,2),k(1),muvsq,1)\
@@ -503,7 +517,7 @@ fn test_integrate_3l_rank_4_matad_additional_symbols_numerator() {
             "(
                   user_space::A*k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + user_space::B*p(1,11)*k(3,11)*k(3,22)*p(2,22)
-                + user_space::C*p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+                + user_space::C*p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22)
              )
             *topo(\
                  prop(1,edge(1,2),k(1),muvsq,1)\
@@ -649,7 +663,7 @@ fn test_integrate_4l_h_rank_4() {
             "(
                   k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + p(1,11)*k(3,11)*k(3,22)*p(2,22)
-                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+                + p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22)
              )*topo(\
                  prop(1,edge(5,1),k(1),muvsq,1)\
                 *prop(2,edge(2,6),k(2),muvsq,1)\
@@ -691,7 +705,7 @@ fn test_integrate_4l_h_rank_4_additional_symbols_numerator() {
             "(
                   user_space::A*k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + user_space::B*p(1,11)*k(3,11)*k(3,22)*p(2,22)
-                + user_space::C*p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+                + user_space::C*p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22)
              )*topo(\
                  prop(1,edge(5,1),k(1),muvsq,1)\
                 *prop(2,edge(2,6),k(2),muvsq,1)\
@@ -728,7 +742,7 @@ fn test_integrate_4l_h_rank_4_additional_symbols_numerator() {
 fn test_integrate_4l_PR9d_from_H() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5, 
+        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5,
             run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
         vakint_parse!(
@@ -768,7 +782,7 @@ fn test_integrate_4l_PR9d_from_H() {
 fn test_integrate_4l_PR9d_from_X() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5, 
+        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5,
             run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
         vakint_parse!(
@@ -808,7 +822,7 @@ fn test_integrate_4l_PR9d_from_X() {
 fn test_integrate_4l_PR9d_from_H_pinch() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5, 
+        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5,
             run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
         vakint_parse!(
@@ -846,7 +860,7 @@ fn test_integrate_4l_PR9d_from_H_pinch() {
 fn test_integrate_4l_PR9d_from_FG() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5, 
+        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5,
             run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
         vakint_parse!(
@@ -885,7 +899,7 @@ fn test_integrate_4l_PR9d_from_FG() {
 fn test_integrate_4l_PR9d_from_FG_pinch() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5, 
+        VakintSettings { integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, number_of_terms_in_epsilon_expansion: 5,
                          run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
         vakint_parse!(
@@ -957,7 +971,7 @@ fn test_integrate_4l_PR11d() {
 fn test_integrate_4l_clover() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings { 
+        VakintSettings {
             integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD,
             number_of_terms_in_epsilon_expansion: 5, run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS, ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
@@ -1061,17 +1075,17 @@ fn test_integrate_4l_dotted_clover() {
 fn test_integrate_4l_clover_with_numerator() {
     #[rustfmt::skip]
     compare_vakint_evaluation_vs_reference(
-        VakintSettings { 
-            number_of_terms_in_epsilon_expansion: 5, 
+        VakintSettings {
+            number_of_terms_in_epsilon_expansion: 5,
             run_time_decimal_precision: N_DIGITS_ANLYTICAL_EVALUATION_FOR_TESTS,
-            integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD, 
+            integral_normalization_factor: LoopNormalizationFactor::FMFTandMATAD,
             ..VakintSettings::default() },
         EvaluationOrder(vec![EvaluationMethod::FMFT(FMFTOptions {..FMFTOptions::default()} )]),
         vakint_parse!(
-            "( 
+            "(
                   user_space::A * k(1,11)*k(2,11)*k(1,22)*k(2,22)
                 + user_space::B * p(1,11)*k(3,11)*k(3,22)*p(2,22)
-                + user_space::C * p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22) 
+                + user_space::C * p(1,11)*p(2,11)*(k(2,22)+k(1,22))*k(2,22)
              )*topo(
                 prop(1, edge(1, 1), k(1), muvsq, 2)*\
                 prop(2, edge(1, 1), k(2), muvsq, 1)*\

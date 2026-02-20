@@ -1,4 +1,5 @@
 #![allow(mixed_script_confusables)]
+pub mod alphaloop_numerics;
 pub mod fmft;
 pub mod fmft_numerics;
 pub mod graph;
@@ -8,6 +9,7 @@ pub mod symbols;
 pub mod topologies;
 pub mod utils;
 
+use crate::utils::set_precision_in_polynomial_atom;
 use ahash::RandomState;
 use anyhow::Result;
 use colored::Colorize;
@@ -34,6 +36,8 @@ use string_template_plus::{Render, RenderOptions, Template};
 use symbolica::domains::float::{FloatLike, RealLike};
 #[cfg(feature = "symbolica_community_module")]
 pub mod symbolica_community_module;
+
+use crate::alphaloop_numerics::DIRECT_SUBSTITUTIONS;
 
 #[allow(unused)]
 use symbolica::{
@@ -1560,6 +1564,24 @@ impl fmt::Display for FMFTOptions {
 }
 
 #[derive(Debug, Clone)]
+pub struct AlphaLoopOptions {
+    pub susbstitute_masters: bool,
+}
+
+impl fmt::Display for AlphaLoopOptions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "susbstitute_masters={}", self.susbstitute_masters,)
+    }
+}
+
+impl Default for AlphaLoopOptions {
+    fn default() -> Self {
+        AlphaLoopOptions {
+            susbstitute_masters: true,
+        }
+    }
+}
+#[derive(Debug, Clone)]
 pub struct MATADOptions {
     pub expand_masters: bool,
     pub susbstitute_masters: bool,
@@ -1599,7 +1621,7 @@ pub enum VakintDependency {
 
 #[derive(Debug, Clone)]
 pub enum EvaluationMethod {
-    AlphaLoop,
+    AlphaLoop(AlphaLoopOptions),
     MATAD(MATADOptions),
     FMFT(FMFTOptions),
     PySecDec(PySecDecOptions),
@@ -1608,7 +1630,7 @@ pub enum EvaluationMethod {
 impl fmt::Display for EvaluationMethod {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            EvaluationMethod::AlphaLoop => write!(f, "AlphaLoop"),
+            EvaluationMethod::AlphaLoop(opts) => write!(f, "AlphaLoop ({})", opts),
             EvaluationMethod::MATAD(opts) => write!(f, "MATAD ({})", opts),
             EvaluationMethod::FMFT(opts) => write!(f, "FMFT ({})", opts),
             EvaluationMethod::PySecDec(opts) => {
@@ -1622,13 +1644,13 @@ impl fmt::Display for EvaluationMethod {
 impl EvaluationMethod {
     pub fn supports(&self, settings: &VakintSettings, topology: &Topology) -> bool {
         match self {
-            EvaluationMethod::AlphaLoop => {
+            EvaluationMethod::AlphaLoop(_) => {
                 topology
                     .get_integral()
                     .applicable_evaluation_methods
                     .0
                     .iter()
-                    .any(|m| matches!(m, EvaluationMethod::AlphaLoop))
+                    .any(|m| matches!(m, EvaluationMethod::AlphaLoop(_)))
                     && topology.get_integral().alphaloop_expression.is_some()
                     && settings.number_of_terms_in_epsilon_expansion <= 4
                     && topology.get_integral().n_loops <= 3
@@ -1664,7 +1686,7 @@ impl EvaluationMethod {
 
     pub fn dependencies(&self) -> Vec<VakintDependency> {
         match self {
-            EvaluationMethod::AlphaLoop => {
+            EvaluationMethod::AlphaLoop(_) => {
                 vec![VakintDependency::FORM]
             }
             EvaluationMethod::MATAD(_) => {
@@ -1688,7 +1710,7 @@ impl EvaluationMethod {
         numerical_external_momenta: &HashMap<usize, Momentum, RandomState>,
     ) {
         match self {
-            EvaluationMethod::AlphaLoop => {}
+            EvaluationMethod::AlphaLoop(_) => {}
             EvaluationMethod::MATAD(_) => {}
             EvaluationMethod::FMFT(_) => {}
             EvaluationMethod::PySecDec(opts) => {
@@ -1737,8 +1759,8 @@ impl EvaluationMethod {
         integral_specs: &ReplacementRules,
     ) -> Result<Atom, VakintError> {
         let result = match self {
-            EvaluationMethod::AlphaLoop => {
-                vakint.alphaloop_evaluate(settings, numerator, integral_specs)
+            EvaluationMethod::AlphaLoop(opts) => {
+                vakint.alphaloop_evaluate(settings, numerator, integral_specs, opts)
             }
             EvaluationMethod::MATAD(opts) => {
                 vakint.matad_evaluate(settings, numerator, integral_specs, opts)
@@ -1761,7 +1783,7 @@ pub struct EvaluationOrder(pub Vec<EvaluationMethod>);
 impl Default for EvaluationOrder {
     fn default() -> Self {
         EvaluationOrder(vec![
-            EvaluationMethod::AlphaLoop,
+            EvaluationMethod::AlphaLoop(AlphaLoopOptions::default()),
             EvaluationMethod::MATAD(MATADOptions::default()),
             EvaluationMethod::FMFT(FMFTOptions::default()),
             EvaluationMethod::PySecDec(PySecDecOptions::default()),
@@ -1789,13 +1811,15 @@ impl EvaluationOrder {
     }
     pub fn analytic_only() -> Self {
         EvaluationOrder(vec![
-            EvaluationMethod::AlphaLoop,
+            EvaluationMethod::AlphaLoop(AlphaLoopOptions::default()),
             EvaluationMethod::MATAD(MATADOptions::default()),
             EvaluationMethod::FMFT(FMFTOptions::default()),
         ])
     }
     pub fn alphaloop_only() -> Self {
-        EvaluationOrder(vec![EvaluationMethod::AlphaLoop])
+        EvaluationOrder(vec![EvaluationMethod::AlphaLoop(
+            AlphaLoopOptions::default(),
+        )])
     }
     pub fn matad_only(matad_options: Option<MATADOptions>) -> Self {
         EvaluationOrder(vec![EvaluationMethod::MATAD(
@@ -1826,7 +1850,7 @@ impl EvaluationOrder {
     }
     pub fn all() -> Self {
         EvaluationOrder(vec![
-            EvaluationMethod::AlphaLoop,
+            EvaluationMethod::AlphaLoop(AlphaLoopOptions::default()),
             EvaluationMethod::MATAD(MATADOptions::default()),
             EvaluationMethod::FMFT(FMFTOptions::default()),
             EvaluationMethod::PySecDec(PySecDecOptions::default()),
@@ -1834,7 +1858,7 @@ impl EvaluationOrder {
     }
     pub fn all_but_fmft() -> Self {
         EvaluationOrder(vec![
-            EvaluationMethod::AlphaLoop,
+            EvaluationMethod::AlphaLoop(AlphaLoopOptions::default()),
             EvaluationMethod::MATAD(MATADOptions::default()),
             EvaluationMethod::PySecDec(PySecDecOptions::default()),
         ])
@@ -4052,6 +4076,7 @@ Evaluated (n_loops=1, mu_r=1) :
         settings: &VakintSettings,
         numerator: AtomView,
         integral_specs: &ReplacementRules,
+        opts: &AlphaLoopOptions,
     ) -> Result<Atom, VakintError> {
         let integral = integral_specs.canonical_topology.get_integral();
 
@@ -4255,6 +4280,40 @@ Evaluated (n_loops=1, mu_r=1) :
             Symbol::LOG,
             Atom::var(vk_symbol!(settings.mu_r_sq_symbol.as_str()))
         );
+        if opts.susbstitute_masters {
+            let processed_constants = DIRECT_SUBSTITUTIONS
+                .iter()
+                .map(|(src, (trgt, condition))| {
+                    (
+                        src,
+                        (
+                            set_precision_in_polynomial_atom(
+                                trgt.as_view(),
+                                vk_symbol!("ep"),
+                                &settings,
+                            ),
+                            condition.clone(),
+                        ),
+                    )
+                })
+                .collect::<Vec<_>>();
+            // for (a, (b, _c)) in processed_constants.clone() {
+            //     println!("{} -> {}", a, b);
+            // }
+
+            let mut r = evaluated_integral.to_owned();
+            r.repeat_map(Box::new(move |av: AtomView| {
+                let mut res = av.to_owned();
+                for (src, (trgt, matching_condition)) in processed_constants.iter() {
+                    res = res
+                        .replace(src.to_pattern())
+                        .when(matching_condition)
+                        .with(trgt.to_pattern());
+                }
+                res
+            }));
+            evaluated_integral = r;
+        }
 
         //*((2*𝜋)^(2*{eps}))\
         //*((4*𝜋*exp(EulerGamma)))^{eps}
