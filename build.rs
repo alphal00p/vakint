@@ -1,6 +1,7 @@
 use std::path::Path;
 
 fn main() {
+/*
     if cfg!(target_os = "macos") {
         let lib_dir = "/opt/local/lib/libgcc";
         let lib_name = "gcc_s.1.1";
@@ -11,4 +12,5 @@ fn main() {
             println!("cargo:rustc-link-arg=-l{}", lib_name);
         }
     }
+*/
 }
