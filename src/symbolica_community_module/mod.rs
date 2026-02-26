@@ -14,9 +14,9 @@ use symbolica::domains::float::{Complex, Float, RealLike};
 
 use crate::symbols::S;
 use crate::{
-    EvaluationMethod, EvaluationOrder, FMFTOptions, LoopNormalizationFactor, MATADOptions,
-    NumericalEvaluationResult, PySecDecOptions, Vakint, VakintError, VakintExpression,
-    VakintSettings, vakint_symbol,
+    AlphaLoopOptions, EvaluationMethod, EvaluationOrder, FMFTOptions, LoopNormalizationFactor,
+    MATADOptions, NumericalEvaluationResult, PySecDecOptions, Vakint, VakintError,
+    VakintExpression, VakintSettings, vakint_symbol,
 };
 
 #[cfg(feature = "python_stubgen")]
@@ -340,7 +340,7 @@ impl VakintEvaluationMethodWrapper {
         _cls: &Bound<'_, PyType>,
     ) -> PyResult<VakintEvaluationMethodWrapper> {
         Ok(VakintEvaluationMethodWrapper {
-            method: EvaluationMethod::AlphaLoop,
+            method: EvaluationMethod::AlphaLoop(AlphaLoopOptions::default()),
         })
     }
 
