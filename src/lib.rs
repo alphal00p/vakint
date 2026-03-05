@@ -33,7 +33,10 @@ use std::{
     vec,
 };
 use string_template_plus::{Render, RenderOptions, Template};
-use symbolica::domains::float::{FloatLike, RealLike};
+use symbolica::{
+    coefficient::{Coefficient, CoefficientView},
+    domains::float::{FloatLike, RealLike},
+};
 #[cfg(feature = "symbolica_community_module")]
 pub mod symbolica_community_module;
 
@@ -1885,6 +1888,12 @@ impl EvaluationOrder {
 }
 
 #[derive(Debug, Clone)]
+pub enum InputFloatRationalizationPrecision {
+    FullPrecision,
+    TargetPrecision,
+}
+
+#[derive(Debug, Clone)]
 pub struct VakintSettings {
     #[allow(unused)]
     pub epsilon_symbol: String,
@@ -1902,6 +1911,7 @@ pub struct VakintSettings {
     //   a) for the nested one-loop integrals appearing, the single pole, finite term *and* order-epsilon term will need to be considered.
     //   b) for the two-loop integrals, the double pole, single pole and finite terms will be needed, so again three terms
     pub number_of_terms_in_epsilon_expansion: i64,
+    pub precision_for_input_float_rationalization: InputFloatRationalizationPrecision,
     pub use_dot_product_notation: bool,
     pub temporary_directory: Option<String>,
 }
@@ -2108,6 +2118,8 @@ impl Default for VakintSettings {
             evaluation_order: EvaluationOrder::default(),
             // Default to a three-loop UV subtraction problem, for which alphaLoop implementation can be used.
             number_of_terms_in_epsilon_expansion: 4,
+            precision_for_input_float_rationalization:
+                InputFloatRationalizationPrecision::FullPrecision,
             use_dot_product_notation: false,
             temporary_directory: None,
         }
@@ -2444,7 +2456,7 @@ impl VakintTerm {
 
         let mut vars: HashMap<String, String> = HashMap::new();
         let (form_header_additions, form_expression, indices) =
-            vakint.prepare_expression_for_form(settings, form_numerator, true)?;
+            vakint.prepare_expression_for_form(settings, form_numerator, true, &[])?;
         vars.insert("numerator".into(), form_expression);
         vars.insert("additional_symbols".into(), form_header_additions);
 
@@ -4210,7 +4222,7 @@ Evaluated (n_loops=1, mu_r=1) :
         let mut vars: HashMap<String, String> = HashMap::new();
 
         let (form_header_additions, form_expression, indices) =
-            self.prepare_expression_for_form(settings, form_expression, true)?;
+            self.prepare_expression_for_form(settings, form_expression, true, &[])?;
 
         vars.insert("numerator".into(), form_expression);
         vars.insert("additional_symbols".into(), form_header_additions);
@@ -4634,13 +4646,34 @@ Evaluated (n_loops=1, mu_r=1) :
         substitute_indices: bool,
         additional_user_symbols: &[Symbol],
     ) -> Result<(String, String, Vec<Atom>), VakintError> {
+        let mut expression = expression.to_owned();
+
+        // If there are floats in the expression we must rationalize them to target precision
+        // because the FORM version we want to support here does not necessarily support floats.
+        let binary_prec = settings.get_binary_precision();
+        expression = expression.map_coefficient(|c| match c {
+            CoefficientView::Float(re, im) => {
+                let mut re = re.to_float();
+                let mut im = im.to_float();
+                match settings.precision_for_input_float_rationalization {
+                    InputFloatRationalizationPrecision::FullPrecision => {}
+                    InputFloatRationalizationPrecision::TargetPrecision => {
+                        re.set_prec(binary_prec);
+                        im.set_prec(binary_prec);
+                    }
+                };
+                Coefficient::from(Complex::new(re.to_rational(), im.to_rational()))
+            }
+            _ => c.to_owned(),
+        });
+
         // let mut processed_str =
         //     AtomPrinter::new_with_options(processed.as_view(), PrintOptions::file_no_namespace())
         //         .to_string();
         let mut processed_str = expression.to_canonical_string();
         // println!("Original expression: {}", expression.to_canonical_string());
         // Identify user indices in p and k structures
-        let mut indices = Vakint::identify_vector_indices(expression)?;
+        let mut indices = Vakint::identify_vector_indices(expression.as_view())?;
         // println!(
         //     "Indices: {}",
         //     indices
@@ -4841,14 +4874,19 @@ Evaluated (n_loops=1, mu_r=1) :
         settings: &VakintSettings,
         expression: Atom,
         substitute_indices: bool,
+        additional_user_symbols: &[Symbol],
     ) -> Result<(String, String, Vec<Atom>), VakintError> {
-        let processed = expression.clone();
-        let processed = processed
+        let mut processed = expression.clone();
+        processed = processed
             .replace(vk_parse!(&settings.epsilon_symbol).unwrap().to_pattern())
             .with(vk_parse!("ep").unwrap().to_pattern());
 
-        let (form_header_additions, expression_str, indices) =
-            self.sanitize_user_expressions(settings, processed.as_view(), substitute_indices, &[])?;
+        let (form_header_additions, expression_str, indices) = self.sanitize_user_expressions(
+            settings,
+            processed.as_view(),
+            substitute_indices,
+            additional_user_symbols,
+        )?;
 
         Ok((form_header_additions, expression_str, indices))
     }
