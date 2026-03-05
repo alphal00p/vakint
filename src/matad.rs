@@ -621,7 +621,7 @@ impl Vakint {
             .replace(vk_parse!("M").unwrap().to_pattern())
             .when(Condition::from((S.pow_, odd_condition())))
             .with(
-                vk_parse!(format!("{}", muv_atom.to_canonical_string()).as_str())
+                vk_parse!(muv_atom.to_canonical_string().as_str())
                     .unwrap()
                     .to_pattern(),
             );

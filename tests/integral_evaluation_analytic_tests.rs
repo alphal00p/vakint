@@ -30,7 +30,6 @@ fn test_integrate_1l_a() {
         run_time_decimal_precision: 16,
         evaluation_order: EvaluationOrder(vec![EvaluationMethod::AlphaLoop(AlphaLoopOptions {
             susbstitute_masters: false,
-            ..AlphaLoopOptions::default()
         })]),
         ..VakintSettings::default()
     });
@@ -92,7 +91,6 @@ fn test_integrate_1l_a() {
     vakint.settings.evaluation_order =
         EvaluationOrder(vec![EvaluationMethod::AlphaLoop(AlphaLoopOptions {
             susbstitute_masters: true,
-            ..AlphaLoopOptions::default()
         })]);
     let evaluated_integral_res = vakint.evaluate_integral(integral.as_view());
     let evaluated_integral = evaluated_integral_res.unwrap();

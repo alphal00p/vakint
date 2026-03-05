@@ -136,52 +136,52 @@ pub static SYMBOL_REGISTRY: LazyLock<HashSet<Symbol>> = LazyLock::new(|| {
     let s = &*S;
 
     [
-        s.uedge.clone(),
-        s.dot.clone(),
-        s.dot_pow.clone(),
-        s.vkdot.clone(),
-        s.g.clone(),
-        s.g_form.clone(),
-        s.x.clone(),
-        s.y.clone(),
-        s.x_.clone(),
-        s.y_.clone(),
-        s.error_flag_symbol.clone(),
-        s.p.clone(),
-        s.k.clone(),
-        s.id1_.clone(),
-        s.id2_.clone(),
-        s.pow.clone(),
-        s.pow_.clone(),
-        s.fun_.clone(),
-        s.any___.clone(),
-        s.n_.clone(),
-        s.a_.clone(),
-        s.b_.clone(),
-        s.c_.clone(),
-        s.lambda.clone(),
-        s.cmplx_i.clone(),
-        s.prop.clone(),
-        s.edge.clone(),
-        s.mom.clone(),
-        s.dot_dummy_ind.clone(),
-        s.topo.clone(),
-        s.metric.clone(),
-        s.uvprop.clone(),
-        s.vxs.clone(),
-        s.vec.clone(),
-        s.vec1.clone(),
-        s.form_epsilon.clone(),
-        s.form_dimension.clone(),
+        s.uedge,
+        s.dot,
+        s.dot_pow,
+        s.vkdot,
+        s.g,
+        s.g_form,
+        s.x,
+        s.y,
+        s.x_,
+        s.y_,
+        s.error_flag_symbol,
+        s.p,
+        s.k,
+        s.id1_,
+        s.id2_,
+        s.pow,
+        s.pow_,
+        s.fun_,
+        s.any___,
+        s.n_,
+        s.a_,
+        s.b_,
+        s.c_,
+        s.lambda,
+        s.cmplx_i,
+        s.prop,
+        s.edge,
+        s.mom,
+        s.dot_dummy_ind,
+        s.topo,
+        s.metric,
+        s.uvprop,
+        s.vxs,
+        s.vec,
+        s.vec1,
+        s.form_epsilon,
+        s.form_dimension,
     ]
     .into_iter()
     .collect()
 });
 impl VakintSymbols {
     pub fn should_symbol_be_escaped_in_form(&self, symbol: &Symbol) -> bool {
-        return symbol.get_namespace() != crate::NAMESPACE
+        symbol.get_namespace() != crate::NAMESPACE
             || (!SYMBOL_REGISTRY.contains(symbol)
-                && !MOMENTUM_WITH_INDEX_RE.is_match(symbol.get_name()));
+                && !MOMENTUM_WITH_INDEX_RE.is_match(symbol.get_name()))
     }
 
     // pub fn should_symbol_be_escaped_in_form(&self, symbol: &Symbol) -> bool {

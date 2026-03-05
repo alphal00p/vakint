@@ -1256,24 +1256,20 @@ impl Integral {
                         if let Some(mtmp) = m1
                             .match_stack
                             .get(vk_symbol!(format!("pow{}_", var_prop_id).as_str()))
-                        {
-                            if let Entry::Vacant(e) = replacement_rules
+                            && let Entry::Vacant(e) = replacement_rules
                                 .canonical_expression_substitutions
                                 .entry(vk_parse!(format!("pow({})", var_prop_id).as_str()).unwrap())
-                            {
-                                e.insert(mtmp.to_atom());
-                            }
+                        {
+                            e.insert(mtmp.to_atom());
                         }
                         if let Some(mtmp) = m1
                             .match_stack
                             .get(vk_symbol!(format!("msq{}_", var_prop_id)))
-                        {
-                            if let Entry::Vacant(e) = replacement_rules
+                            && let Entry::Vacant(e) = replacement_rules
                                 .canonical_expression_substitutions
                                 .entry(vk_parse!(format!("msq({})", var_prop_id).as_str()).unwrap())
-                            {
-                                e.insert(mtmp.to_atom());
-                            }
+                        {
+                            e.insert(mtmp.to_atom());
                         }
                     }
 
@@ -2018,7 +2014,7 @@ impl LoopNormalizationFactor {
 
         let mut params: HashMap<String, Float, _> = HashMap::default();
         params.insert(
-            get_full_name(&vk_symbol!(settings.mu_r_sq_symbol.as_str())).into(),
+            get_full_name(&vk_symbol!(settings.mu_r_sq_symbol.as_str())),
             settings.real_to_prec("1"),
         );
         let num_res = match Vakint::full_numerical_evaluation_without_error(
@@ -2884,7 +2880,7 @@ impl NumericalEvaluationResult {
                 self.get_epsilon_coefficient(power),
                 other.get_epsilon_coefficient(power),
             );
-            let comparisons = vec![
+            let comparisons = [
                 (
                     "real",
                     self_val.re.clone(),
@@ -2902,20 +2898,21 @@ impl NumericalEvaluationResult {
                 let f_max_pull = Float::with_val(r.prec(), max_pull);
                 let f_threshold = Float::with_val(r.prec(), threshold);
                 let delta = (r.clone() - o).norm();
-                if let Some(err) = e {
-                    if !err.norm().is_zero() && delta > f_max_pull * err.norm() {
-                        return (
-                            false,
-                            format!(
-                                "{} part of ε^{} coefficient does not match within max pull: {} != {} (pull = {})",
-                                part,
-                                power,
-                                r,
-                                o,
-                                delta / err.norm()
-                            ),
-                        );
-                    }
+                if let Some(err) = e
+                    && !err.norm().is_zero()
+                    && delta > f_max_pull * err.norm()
+                {
+                    return (
+                        false,
+                        format!(
+                            "{} part of ε^{} coefficient does not match within max pull: {} != {} (pull = {})",
+                            part,
+                            power,
+                            r,
+                            o,
+                            delta / err.norm()
+                        ),
+                    );
                 }
                 let scale = (r.norm() + o.norm()) / Float::with_val(r.prec(), 2.0);
                 if scale.is_zero() {
@@ -3744,7 +3741,7 @@ Evaluated (n_loops=1, mu_r=1) :
             for additional_param in sorted_additional_numerator_symbols.iter() {
                 real_parameters.push(format!(
                     "'{}'",
-                    pysecdec_encode(&undress_vakint_symbols(&get_full_name(&additional_param)))
+                    pysecdec_encode(&undress_vakint_symbols(&get_full_name(additional_param)))
                 ));
             }
 
@@ -3827,7 +3824,7 @@ Evaluated (n_loops=1, mu_r=1) :
                     options
                         .numerical_masses
                         .get(to_symbol(&alternative_form.clone())?.get_name()),
-                    |e| Some(e),
+                    Some,
                 );
                 // println!("Accessing: {}", cooked_m_symbol);
                 if let Some(num_m) = entry {
@@ -3855,11 +3852,11 @@ Evaluated (n_loops=1, mu_r=1) :
                 let entry = options
                     .numerical_masses
                     .get(&param_first_form)
-                    .map_or(options.numerical_masses.get(&alternative_form), |e| Some(e));
+                    .map_or(options.numerical_masses.get(&alternative_form), Some);
 
                 if let Some(num_additional_param) = entry {
                     default_masses.push((
-                        pysecdec_encode(&undress_vakint_symbols(&get_full_name(&additional_param))),
+                        pysecdec_encode(&undress_vakint_symbols(&get_full_name(additional_param))),
                         num_additional_param,
                     ));
                 } else {
@@ -4302,7 +4299,7 @@ Evaluated (n_loops=1, mu_r=1) :
                             set_precision_in_polynomial_atom(
                                 trgt.as_view(),
                                 vk_symbol!("ep"),
-                                &settings,
+                                settings,
                             ),
                             condition.clone(),
                         ),
@@ -4809,12 +4806,12 @@ Evaluated (n_loops=1, mu_r=1) :
 
         user_variables.insert(vk_symbol!(settings.mu_r_sq_symbol.clone()));
         for s in additional_user_symbols {
-            user_variables.insert(s.clone());
+            user_variables.insert(*s);
         }
         let mut string_replacements: HashMap<String, String, ahash::RandomState> =
             HashMap::default();
         for user_f in user_functions.iter() {
-            let litteral_form_name = format!("[{}]", get_full_name(&user_f));
+            let litteral_form_name = format!("[{}]", get_full_name(user_f));
             if user_f.get_namespace() == NAMESPACE || user_f.get_namespace() == "symbolica" {
                 //            if (user_f.get_namespace() == NAMESPACE || user_f.get_namespace() == "symbolica") && user_f.get_attributes().is_empty() {
                 string_replacements.insert(
@@ -4823,13 +4820,12 @@ Evaluated (n_loops=1, mu_r=1) :
                 );
                 // processed_str = processed_str.replace(user_f.get_stripped_name(), &litteral_form_name);
             } else {
-                string_replacements
-                    .insert(get_full_name(&user_f).into(), litteral_form_name.clone());
+                string_replacements.insert(get_full_name(user_f), litteral_form_name.clone());
             }
             form_header_functions.push(litteral_form_name);
         }
         for user_v in user_variables.iter() {
-            let litteral_form_name = format!("[{}]", get_full_name(&user_v));
+            let litteral_form_name = format!("[{}]", get_full_name(user_v));
             if user_v.get_namespace() == NAMESPACE || user_v.get_namespace() == "symbolica" {
                 //            if (user_v.get_namespace() == NAMESPACE || user_v.get_namespace() == "symbolica") && user_v.get_attributes().is_empty() {
                 string_replacements.insert(
@@ -4838,8 +4834,7 @@ Evaluated (n_loops=1, mu_r=1) :
                 );
                 // processed_str = processed_str.replace(user_v.get_stripped_name(), &litteral_form_name);
             } else {
-                string_replacements
-                    .insert(get_full_name(&user_v).into(), litteral_form_name.clone());
+                string_replacements.insert(get_full_name(user_v), litteral_form_name.clone());
             }
             form_header_symbols.push(litteral_form_name);
         }
@@ -5262,7 +5257,9 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::unnecessary_operation)]
     fn undo_dots() {
+        // Force lazy symbol initialization before parsing literal `dot(...)` in this test.
         S.dot;
         let expr = parse_lit!(
             -UFO::GC_10

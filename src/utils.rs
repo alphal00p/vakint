@@ -236,7 +236,7 @@ pub fn could_match(pattern: &Pattern, target: AtomView) -> bool {
 }
 
 pub fn get_full_name(symbol: &Symbol) -> String {
-    Atom::var(symbol.clone()).to_canonical_string()
+    Atom::var(*symbol).to_canonical_string()
 }
 
 pub fn undress_vakint_symbols(expression: &str) -> String {
@@ -344,7 +344,7 @@ pub fn split_linear_atom(a: AtomView, variable: AtomView) -> (Atom, Atom) {
                 .join("\n")
         );
     } else {
-        let res = (
+        (
             split_atom
                 .get(&variable.to_owned())
                 .unwrap_or(&Atom::Zero)
@@ -353,8 +353,7 @@ pub fn split_linear_atom(a: AtomView, variable: AtomView) -> (Atom, Atom) {
                 .get(&Atom::num(1))
                 .unwrap_or(&Atom::Zero)
                 .to_owned(),
-        );
-        res
+        )
     }
 }
 

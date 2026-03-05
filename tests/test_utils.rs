@@ -376,11 +376,11 @@ pub fn compare_two_evaluations(
         format!("{}", mod_evaluation_order_a).green(),
         benchmark_central.clone()
     );
-    if benchmark_error.is_some() {
+    if let Some(err) = &benchmark_error {
         debug!(
             "Benchmark {} :: error   :\n{}",
             format!("{}", mod_evaluation_order_a).green(),
-            benchmark_error.as_ref().unwrap().clone()
+            err.clone()
         );
     }
 
@@ -425,11 +425,11 @@ pub fn compare_two_evaluations(
         format!("{}", mod_evaluation_order_b).green(),
         tested_central.clone()
     );
-    if tested_error.is_some() {
+    if let Some(err) = &tested_error {
         debug!(
             "Tested {} :: error   :\n{}",
             format!("{}", mod_evaluation_order_b).green(),
-            tested_error.as_ref().unwrap().clone()
+            err.clone()
         );
     }
 
@@ -452,11 +452,11 @@ pub fn compare_two_evaluations(
             format!("{}", mod_evaluation_order_a).green(),
             benchmark_central
         );
-        if benchmark_error.is_some() {
+        if let Some(err) = &benchmark_error {
             println!(
                 "Benchmark {} :: error   :\n{}",
                 format!("{}", mod_evaluation_order_a).green(),
-                benchmark_error.unwrap()
+                err
             );
         }
         println!(
@@ -464,11 +464,11 @@ pub fn compare_two_evaluations(
             format!("{}", mod_evaluation_order_b).green(),
             tested_central
         );
-        if tested_error.is_some() {
+        if let Some(err) = &tested_error {
             println!(
                 "Tested {} :: error   :\n{}",
                 format!("{}", mod_evaluation_order_b).green(),
-                tested_error.unwrap()
+                err
             );
         }
         println!("{}", msg);
@@ -480,11 +480,11 @@ pub fn compare_two_evaluations(
             format!("{}", mod_evaluation_order_a).green(),
             benchmark_central
         );
-        if benchmark_error.is_some() {
+        if let Some(err) = &benchmark_error {
             info!(
                 "Benchmark {} :: error   :\n{}",
                 format!("{}", mod_evaluation_order_a).green(),
-                benchmark_error.unwrap()
+                err
             );
         }
         info!(
@@ -492,11 +492,11 @@ pub fn compare_two_evaluations(
             format!("{}", mod_evaluation_order_b).green(),
             tested_central
         );
-        if tested_error.is_some() {
+        if let Some(err) = &tested_error {
             info!(
                 "Tested {} :: error   :\n{}",
                 format!("{}", mod_evaluation_order_b).green(),
-                tested_error.unwrap()
+                err
             );
         }
         info!("{}", msg);
@@ -590,8 +590,8 @@ pub fn compare_vakint_evaluation_vs_reference(
             format!("{}", mod_evaluation_order).green(),
             result
         );
-        if error.is_some() {
-            println!("Error:\n{}", error.unwrap());
+        if let Some(err) = &error {
+            println!("Error:\n{}", err);
         }
         println!("Reference:\n{}", reference);
         println!("{}", msg)
@@ -601,8 +601,8 @@ pub fn compare_vakint_evaluation_vs_reference(
             format!("{}", mod_evaluation_order).green(),
             result
         );
-        if error.is_some() {
-            debug!("Error:\n{}", error.unwrap());
+        if let Some(err) = &error {
+            debug!("Error:\n{}", err);
         }
         debug!("Reference:\n{}", reference);
         debug!("{}", msg)
